@@ -11,9 +11,9 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/aux-ai/aux-cli/internal/tui/styles"
-	"github.com/aux-ai/aux-cli/internal/tui/theme"
-	"github.com/aux-ai/aux-cli/internal/viewmodel"
+	"github.com/kaiau00/aux-cli/internal/tui/styles"
+	"github.com/kaiau00/aux-cli/internal/tui/theme"
+	"github.com/kaiau00/aux-cli/internal/viewmodel"
 )
 
 // KindLabel returns the human-readable stage label for an activity kind.

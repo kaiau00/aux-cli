@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aux-ai/aux-cli/internal/llm/models"
-	"github.com/aux-ai/aux-cli/internal/llm/provider"
-	"github.com/aux-ai/aux-cli/internal/message"
-	"github.com/aux-ai/aux-cli/internal/pubsub"
+	"github.com/kaiau00/aux-cli/internal/llm/models"
+	"github.com/kaiau00/aux-cli/internal/llm/provider"
+	"github.com/kaiau00/aux-cli/internal/message"
+	"github.com/kaiau00/aux-cli/internal/pubsub"
 )
 
 // modelOnlyProvider satisfies provider.Provider for turns that never reach a

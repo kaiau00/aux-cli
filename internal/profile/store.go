@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aux-ai/aux-cli/internal/db"
+	"github.com/kaiau00/aux-cli/internal/db"
 )
 
 func nowMillis() int64 { return time.Now().UnixMilli() }

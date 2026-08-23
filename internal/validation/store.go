@@ -8,8 +8,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aux-ai/aux-cli/internal/db"
-	"github.com/aux-ai/aux-cli/internal/ids"
+	"github.com/kaiau00/aux-cli/internal/db"
+	"github.com/kaiau00/aux-cli/internal/ids"
 )
 
 // Store persists validation runs and evidence.

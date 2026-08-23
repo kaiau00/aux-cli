@@ -16,13 +16,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/tui/components/activity"
-	"github.com/aux-ai/aux-cli/internal/tui/components/contextbudget"
-	"github.com/aux-ai/aux-cli/internal/tui/components/core"
-	"github.com/aux-ai/aux-cli/internal/tui/components/workbench"
-	"github.com/aux-ai/aux-cli/internal/tui/theme"
-	"github.com/aux-ai/aux-cli/internal/viewmodel"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/kaiau00/aux-cli/internal/tui/components/activity"
+	"github.com/kaiau00/aux-cli/internal/tui/components/contextbudget"
+	"github.com/kaiau00/aux-cli/internal/tui/components/core"
+	"github.com/kaiau00/aux-cli/internal/tui/components/workbench"
+	"github.com/kaiau00/aux-cli/internal/tui/theme"
+	"github.com/kaiau00/aux-cli/internal/viewmodel"
 	"github.com/muesli/termenv"
 )
 

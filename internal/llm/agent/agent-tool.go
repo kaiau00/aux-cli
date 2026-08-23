@@ -8,17 +8,17 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/aux-ai/aux-cli/internal/checkpoint"
-	"github.com/aux-ai/aux-cli/internal/config"
-	"github.com/aux-ai/aux-cli/internal/hooks"
-	"github.com/aux-ai/aux-cli/internal/ids"
-	"github.com/aux-ai/aux-cli/internal/impact"
-	"github.com/aux-ai/aux-cli/internal/llm/tools"
-	"github.com/aux-ai/aux-cli/internal/logging"
-	"github.com/aux-ai/aux-cli/internal/lsp"
-	"github.com/aux-ai/aux-cli/internal/message"
-	"github.com/aux-ai/aux-cli/internal/permission"
-	"github.com/aux-ai/aux-cli/internal/worktree"
+	"github.com/kaiau00/aux-cli/internal/checkpoint"
+	"github.com/kaiau00/aux-cli/internal/config"
+	"github.com/kaiau00/aux-cli/internal/hooks"
+	"github.com/kaiau00/aux-cli/internal/ids"
+	"github.com/kaiau00/aux-cli/internal/impact"
+	"github.com/kaiau00/aux-cli/internal/llm/tools"
+	"github.com/kaiau00/aux-cli/internal/logging"
+	"github.com/kaiau00/aux-cli/internal/lsp"
+	"github.com/kaiau00/aux-cli/internal/message"
+	"github.com/kaiau00/aux-cli/internal/permission"
+	"github.com/kaiau00/aux-cli/internal/worktree"
 )
 
 type agentTool struct {

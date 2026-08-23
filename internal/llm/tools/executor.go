@@ -7,8 +7,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/aux-ai/aux-cli/internal/hooks"
-	"github.com/aux-ai/aux-cli/internal/ids"
+	"github.com/kaiau00/aux-cli/internal/hooks"
+	"github.com/kaiau00/aux-cli/internal/ids"
 )
 
 // Execution status values recorded by the executor.

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"os"
 
-	"github.com/aux-ai/aux-cli/internal/config"
+	"github.com/kaiau00/aux-cli/internal/config"
 )
 
 type ToolInfo struct {

@@ -5,19 +5,19 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/aux-ai/aux-cli/internal/app"
-	"github.com/aux-ai/aux-cli/internal/message"
-	"github.com/aux-ai/aux-cli/internal/pubsub"
-	"github.com/aux-ai/aux-cli/internal/session"
-	"github.com/aux-ai/aux-cli/internal/tui/components/dialog"
-	"github.com/aux-ai/aux-cli/internal/tui/styles"
-	"github.com/aux-ai/aux-cli/internal/tui/theme"
-	"github.com/aux-ai/aux-cli/internal/tui/util"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/kaiau00/aux-cli/internal/app"
+	"github.com/kaiau00/aux-cli/internal/message"
+	"github.com/kaiau00/aux-cli/internal/pubsub"
+	"github.com/kaiau00/aux-cli/internal/session"
+	"github.com/kaiau00/aux-cli/internal/tui/components/dialog"
+	"github.com/kaiau00/aux-cli/internal/tui/styles"
+	"github.com/kaiau00/aux-cli/internal/tui/theme"
+	"github.com/kaiau00/aux-cli/internal/tui/util"
 )
 
 type cacheItem struct {

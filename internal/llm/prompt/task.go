@@ -3,7 +3,7 @@ package prompt
 import (
 	"fmt"
 
-	"github.com/aux-ai/aux-cli/internal/llm/models"
+	"github.com/kaiau00/aux-cli/internal/llm/models"
 )
 
 func TaskPrompt(_ models.ModelProvider) string {

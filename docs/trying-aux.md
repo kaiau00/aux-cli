@@ -31,7 +31,7 @@ is ideal.
 Requires Go 1.24+.
 
 ```
-git clone https://github.com/kaiau00/Aux && cd Aux && go build -o aux .
+git clone https://github.com/kaiau00/aux-cli && cd aux-cli && go build -o aux .
 ```
 
 Set a key for one provider:

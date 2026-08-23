@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/aux-ai/aux-cli/internal/ids"
+	"github.com/kaiau00/aux-cli/internal/ids"
 )
 
 // Service compiles and reads project profiles.

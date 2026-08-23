@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/bundle"
-	"github.com/aux-ai/aux-cli/internal/db/dbtest"
-	"github.com/aux-ai/aux-cli/internal/govpolicy"
-	"github.com/aux-ai/aux-cli/internal/skill"
+	"github.com/kaiau00/aux-cli/internal/bundle"
+	"github.com/kaiau00/aux-cli/internal/db/dbtest"
+	"github.com/kaiau00/aux-cli/internal/govpolicy"
+	"github.com/kaiau00/aux-cli/internal/skill"
 )
 
 // seedActive creates one active skill and one active policy in a source db.

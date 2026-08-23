@@ -8,11 +8,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/aux-ai/aux-cli/internal/diff"
-	"github.com/aux-ai/aux-cli/internal/history"
-	"github.com/aux-ai/aux-cli/internal/logging"
-	"github.com/aux-ai/aux-cli/internal/lsp"
-	"github.com/aux-ai/aux-cli/internal/permission"
+	"github.com/kaiau00/aux-cli/internal/diff"
+	"github.com/kaiau00/aux-cli/internal/history"
+	"github.com/kaiau00/aux-cli/internal/logging"
+	"github.com/kaiau00/aux-cli/internal/lsp"
+	"github.com/kaiau00/aux-cli/internal/permission"
 )
 
 type PatchParams struct {

@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/db/dbtest"
-	"github.com/aux-ai/aux-cli/internal/govpolicy"
+	"github.com/kaiau00/aux-cli/internal/db/dbtest"
+	"github.com/kaiau00/aux-cli/internal/govpolicy"
 )
 
 func newService(t *testing.T) *govpolicy.Service {

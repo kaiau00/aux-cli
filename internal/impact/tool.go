@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/aux-ai/aux-cli/internal/llm/tools"
+	"github.com/kaiau00/aux-cli/internal/llm/tools"
 )
 
 // AnalyzeToolName is the tool an impact-analyst subagent uses to query the

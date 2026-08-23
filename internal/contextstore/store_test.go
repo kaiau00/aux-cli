@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/contextstore"
-	"github.com/aux-ai/aux-cli/internal/db/dbtest"
+	"github.com/kaiau00/aux-cli/internal/contextstore"
+	"github.com/kaiau00/aux-cli/internal/db/dbtest"
 )
 
 func TestPageAndVersionDedup(t *testing.T) {

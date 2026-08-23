@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/aux-ai/aux-cli/internal/logging"
+	"github.com/kaiau00/aux-cli/internal/logging"
 )
 
 const modelsDevAPI = "https://models.dev/api.json"

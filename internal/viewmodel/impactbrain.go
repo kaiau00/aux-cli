@@ -3,7 +3,7 @@ package viewmodel
 import (
 	"context"
 
-	"github.com/aux-ai/aux-cli/internal/impact"
+	"github.com/kaiau00/aux-cli/internal/impact"
 )
 
 // ImpactNodeVM is one impact-graph node for display.

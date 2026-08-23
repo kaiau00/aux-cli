@@ -4,13 +4,13 @@ import (
 	"context"
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/artifact"
-	"github.com/aux-ai/aux-cli/internal/checkpoint"
-	"github.com/aux-ai/aux-cli/internal/db"
-	"github.com/aux-ai/aux-cli/internal/db/dbtest"
-	"github.com/aux-ai/aux-cli/internal/history"
-	"github.com/aux-ai/aux-cli/internal/mutationcp"
-	"github.com/aux-ai/aux-cli/internal/session"
+	"github.com/kaiau00/aux-cli/internal/artifact"
+	"github.com/kaiau00/aux-cli/internal/checkpoint"
+	"github.com/kaiau00/aux-cli/internal/db"
+	"github.com/kaiau00/aux-cli/internal/db/dbtest"
+	"github.com/kaiau00/aux-cli/internal/history"
+	"github.com/kaiau00/aux-cli/internal/mutationcp"
+	"github.com/kaiau00/aux-cli/internal/session"
 )
 
 func setup(t *testing.T) (*mutationcp.Checkpointer, history.Service, *checkpoint.Store, string) {

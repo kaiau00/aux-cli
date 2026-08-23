@@ -3,12 +3,12 @@ package agent
 import (
 	"context"
 
-	"github.com/aux-ai/aux-cli/internal/history"
-	"github.com/aux-ai/aux-cli/internal/hooks"
-	"github.com/aux-ai/aux-cli/internal/impact"
-	"github.com/aux-ai/aux-cli/internal/llm/tools"
-	"github.com/aux-ai/aux-cli/internal/lsp"
-	"github.com/aux-ai/aux-cli/internal/permission"
+	"github.com/kaiau00/aux-cli/internal/history"
+	"github.com/kaiau00/aux-cli/internal/hooks"
+	"github.com/kaiau00/aux-cli/internal/impact"
+	"github.com/kaiau00/aux-cli/internal/llm/tools"
+	"github.com/kaiau00/aux-cli/internal/lsp"
+	"github.com/kaiau00/aux-cli/internal/permission"
 )
 
 func CoderAgentTools(

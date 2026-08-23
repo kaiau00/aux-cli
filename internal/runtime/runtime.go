@@ -11,7 +11,7 @@ package runtime
 import (
 	"context"
 
-	"github.com/aux-ai/aux-cli/internal/message"
+	"github.com/kaiau00/aux-cli/internal/message"
 )
 
 // TurnResult is the outcome of running one turn: the assistant message and the

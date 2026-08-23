@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aux-ai/aux-cli/internal/llm/tools"
+	"github.com/kaiau00/aux-cli/internal/llm/tools"
 )
 
 // ArtifactToolName is the tool the model uses to retrieve virtualized output.

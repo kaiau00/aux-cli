@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aux-ai/aux-cli/internal/db"
-	"github.com/aux-ai/aux-cli/internal/ids"
-	"github.com/aux-ai/aux-cli/internal/pubsub"
+	"github.com/kaiau00/aux-cli/internal/db"
+	"github.com/kaiau00/aux-cli/internal/ids"
+	"github.com/kaiau00/aux-cli/internal/pubsub"
 )
 
 // Service appends and reads durable domain events and notifies subscribers after

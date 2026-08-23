@@ -3,7 +3,7 @@ package hooks
 import (
 	"context"
 
-	"github.com/aux-ai/aux-cli/internal/logging"
+	"github.com/kaiau00/aux-cli/internal/logging"
 )
 
 // RegisterObservability attaches the built-in handlers for every lifecycle

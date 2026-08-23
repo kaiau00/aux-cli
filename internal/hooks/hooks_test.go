@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/hooks"
+	"github.com/kaiau00/aux-cli/internal/hooks"
 )
 
 func TestDispatchRunsHandlersInOrder(t *testing.T) {

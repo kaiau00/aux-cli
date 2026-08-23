@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/db/dbtest"
-	"github.com/aux-ai/aux-cli/internal/relatedproject"
+	"github.com/kaiau00/aux-cli/internal/db/dbtest"
+	"github.com/kaiau00/aux-cli/internal/relatedproject"
 )
 
 func TestDeriveFromModules(t *testing.T) {

@@ -3,9 +3,9 @@ package viewmodel
 import (
 	"context"
 
-	"github.com/aux-ai/aux-cli/internal/profile"
-	"github.com/aux-ai/aux-cli/internal/project"
-	"github.com/aux-ai/aux-cli/internal/relatedproject"
+	"github.com/kaiau00/aux-cli/internal/profile"
+	"github.com/kaiau00/aux-cli/internal/project"
+	"github.com/kaiau00/aux-cli/internal/relatedproject"
 )
 
 // ProjectBrainVM is the project identity, compiled effective profile, and

@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aux-ai/aux-cli/internal/lsp"
-	"github.com/aux-ai/aux-cli/internal/lsp/protocol"
+	"github.com/kaiau00/aux-cli/internal/lsp"
+	"github.com/kaiau00/aux-cli/internal/lsp/protocol"
 )
 
 type DiagnosticsParams struct {

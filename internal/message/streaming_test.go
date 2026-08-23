@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aux-ai/aux-cli/internal/db"
+	"github.com/kaiau00/aux-cli/internal/db"
 )
 
 // countingQuerier records every durable UpdateMessage so tests can assert on

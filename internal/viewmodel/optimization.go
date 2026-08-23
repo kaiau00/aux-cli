@@ -3,8 +3,8 @@ package viewmodel
 import (
 	"context"
 
-	"github.com/aux-ai/aux-cli/internal/eval"
-	"github.com/aux-ai/aux-cli/internal/govpolicy"
+	"github.com/kaiau00/aux-cli/internal/eval"
+	"github.com/kaiau00/aux-cli/internal/govpolicy"
 )
 
 // ExperimentVM is one experiment for the dashboard's Optimization view.

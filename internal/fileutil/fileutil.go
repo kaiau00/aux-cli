@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aux-ai/aux-cli/internal/logging"
 	"github.com/bmatcuk/doublestar/v4"
+	"github.com/kaiau00/aux-cli/internal/logging"
 )
 
 var (

@@ -3,8 +3,8 @@ package viewmodel
 import (
 	"context"
 
-	"github.com/aux-ai/aux-cli/internal/memory"
-	"github.com/aux-ai/aux-cli/internal/skill"
+	"github.com/kaiau00/aux-cli/internal/memory"
+	"github.com/kaiau00/aux-cli/internal/skill"
 )
 
 // MemoryVM is one memory record for the dashboard's Memory view (roadmapplan.md

@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/aux-ai/aux-cli/internal/config"
-	"github.com/aux-ai/aux-cli/internal/db"
-	"github.com/aux-ai/aux-cli/internal/permission"
-	"github.com/aux-ai/aux-cli/internal/profile"
-	"github.com/aux-ai/aux-cli/internal/project"
-	"github.com/aux-ai/aux-cli/internal/task"
-	"github.com/aux-ai/aux-cli/internal/validation"
+	"github.com/kaiau00/aux-cli/internal/config"
+	"github.com/kaiau00/aux-cli/internal/db"
+	"github.com/kaiau00/aux-cli/internal/permission"
+	"github.com/kaiau00/aux-cli/internal/profile"
+	"github.com/kaiau00/aux-cli/internal/project"
+	"github.com/kaiau00/aux-cli/internal/task"
+	"github.com/kaiau00/aux-cli/internal/validation"
 	"github.com/spf13/cobra"
 )
 

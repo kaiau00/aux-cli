@@ -3,7 +3,7 @@ package cost
 import (
 	"fmt"
 
-	"github.com/aux-ai/aux-cli/internal/llm/tools"
+	"github.com/kaiau00/aux-cli/internal/llm/tools"
 )
 
 // Waste detectors (roadmapplan.md §9.4). All deterministic. They start as

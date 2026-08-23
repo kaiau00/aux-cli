@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aux-ai/aux-cli/internal/logging"
+	"github.com/kaiau00/aux-cli/internal/logging"
 )
 
 // Indexer builds the impact graph from deterministic Go source analysis

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aux-ai/aux-cli/internal/ids"
+	"github.com/kaiau00/aux-cli/internal/ids"
 )
 
 // OwnerRef identifies who a stored artifact belongs to.

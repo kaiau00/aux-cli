@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aux-ai/aux-cli/internal/llm/tools"
-	"github.com/aux-ai/aux-cli/internal/message"
-	"github.com/aux-ai/aux-cli/internal/permission"
+	"github.com/kaiau00/aux-cli/internal/llm/tools"
+	"github.com/kaiau00/aux-cli/internal/message"
+	"github.com/kaiau00/aux-cli/internal/permission"
 )
 
 // probeTool records concurrency and can be made to block, deny, or stall.

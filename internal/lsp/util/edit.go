@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/aux-ai/aux-cli/internal/lsp/protocol"
+	"github.com/kaiau00/aux-cli/internal/lsp/protocol"
 )
 
 func applyTextEdits(uri protocol.DocumentUri, edits []protocol.TextEdit) error {

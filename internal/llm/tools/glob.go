@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aux-ai/aux-cli/internal/fileutil"
-	"github.com/aux-ai/aux-cli/internal/logging"
-	"github.com/aux-ai/aux-cli/internal/permission"
+	"github.com/kaiau00/aux-cli/internal/fileutil"
+	"github.com/kaiau00/aux-cli/internal/logging"
+	"github.com/kaiau00/aux-cli/internal/permission"
 )
 
 const (

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/aux-ai/aux-cli/internal/impact"
-	"github.com/aux-ai/aux-cli/internal/llm/tools"
+	"github.com/kaiau00/aux-cli/internal/impact"
+	"github.com/kaiau00/aux-cli/internal/llm/tools"
 )
 
 // Role specializes a subagent's tool set, prompt, and expected output for a

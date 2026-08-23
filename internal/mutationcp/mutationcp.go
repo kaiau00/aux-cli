@@ -11,8 +11,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/aux-ai/aux-cli/internal/checkpoint"
-	"github.com/aux-ai/aux-cli/internal/history"
+	"github.com/kaiau00/aux-cli/internal/checkpoint"
+	"github.com/kaiau00/aux-cli/internal/history"
 )
 
 // FileLister reads recorded file versions for a session (the history service).

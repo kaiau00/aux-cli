@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/db/dbtest"
-	"github.com/aux-ai/aux-cli/internal/eval"
-	"github.com/aux-ai/aux-cli/internal/eventstore"
+	"github.com/kaiau00/aux-cli/internal/db/dbtest"
+	"github.com/kaiau00/aux-cli/internal/eval"
+	"github.com/kaiau00/aux-cli/internal/eventstore"
 )
 
 func TestRunCompilerExperimentPersists(t *testing.T) {

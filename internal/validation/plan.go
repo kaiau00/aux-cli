@@ -1,6 +1,6 @@
 package validation
 
-import "github.com/aux-ai/aux-cli/internal/ids"
+import "github.com/kaiau00/aux-cli/internal/ids"
 
 // CommandSpec is one runnable validation command discovered for a project,
 // usually from its compiled profile (a test or build command).

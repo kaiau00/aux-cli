@@ -4,7 +4,7 @@ package lsp
 import (
 	"context"
 
-	"github.com/aux-ai/aux-cli/internal/lsp/protocol"
+	"github.com/kaiau00/aux-cli/internal/lsp/protocol"
 )
 
 // Implementation sends a textDocument/implementation request to the LSP server.

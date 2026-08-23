@@ -3,9 +3,9 @@ package cost_test
 import (
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/cost"
-	"github.com/aux-ai/aux-cli/internal/eventstore"
-	"github.com/aux-ai/aux-cli/internal/llm/tools"
+	"github.com/kaiau00/aux-cli/internal/cost"
+	"github.com/kaiau00/aux-cli/internal/eventstore"
+	"github.com/kaiau00/aux-cli/internal/llm/tools"
 )
 
 func TestBudgetPressureAndExhaustion(t *testing.T) {

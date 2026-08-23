@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/aux-ai/aux-cli/internal/bundle"
-	"github.com/aux-ai/aux-cli/internal/config"
-	"github.com/aux-ai/aux-cli/internal/db"
-	"github.com/aux-ai/aux-cli/internal/govpolicy"
-	"github.com/aux-ai/aux-cli/internal/skill"
+	"github.com/kaiau00/aux-cli/internal/bundle"
+	"github.com/kaiau00/aux-cli/internal/config"
+	"github.com/kaiau00/aux-cli/internal/db"
+	"github.com/kaiau00/aux-cli/internal/govpolicy"
+	"github.com/kaiau00/aux-cli/internal/skill"
 	"github.com/spf13/cobra"
 )
 
