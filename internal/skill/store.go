@@ -177,8 +177,17 @@ func scanVersionOpt(row scanner) (Version, bool, error) {
 		}
 		return Version{}, false, err
 	}
-	_ = json.Unmarshal([]byte(content), &v.Content)
-	_ = json.Unmarshal([]byte(srcIDs), &v.SourceIDs)
+	// A version whose stored JSON will not parse is reported as missing rather
+	// than returned empty-but-valid. Silently yielding a skill with no content
+	// is the worst of the three outcomes: the caller injects nothing into the
+	// prompt and has no way to tell that from a skill that legitimately says
+	// nothing, so a corrupt skill looks exactly like a working one.
+	if err := json.Unmarshal([]byte(content), &v.Content); err != nil {
+		return Version{}, false, fmt.Errorf("skill version %s has unreadable content: %w", v.ID, err)
+	}
+	if err := json.Unmarshal([]byte(srcIDs), &v.SourceIDs); err != nil {
+		return Version{}, false, fmt.Errorf("skill version %s has unreadable source ids: %w", v.ID, err)
+	}
 	return v, true, nil
 }
 
