@@ -76,6 +76,9 @@ func MaybeShow(ctx context.Context, sessions session.Service, messages message.S
 	// defensively in case the data dir hasn't been created yet.
 	if cfg := config.Get(); cfg != nil && cfg.Data.Directory != "" {
 		_ = os.MkdirAll(cfg.Data.Directory, 0o755)
+		// Best effort: this flag only suppresses the intro on later starts. If it
+		// cannot be written the intro shows again, which is mildly annoying and
+		// never wrong -- and failing the first run over it would be worse.
 		_ = os.WriteFile(filepath.Join(cfg.Data.Directory, flagFilename), []byte{}, 0o644)
 	}
 

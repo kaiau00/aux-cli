@@ -269,6 +269,8 @@ func (app *App) resolveProject(ctx context.Context) {
 	}
 	// Record the profile-input fingerprint on the revision for staleness checks.
 	if fp, ferr := app.Profiles.InputFingerprint(ctx, res.Root.CanonicalPath); ferr == nil {
+		// Best effort: this is a cache fingerprint. Losing it costs one extra
+		// profile rebuild on the next resolve and cannot make anything wrong.
 		_ = app.Projects.Store().SetRevisionProfileInputHash(ctx, res.Revision.ID, fp)
 	}
 	logging.Debug("compiled effective profile", "entries", len(eff.Entries), "manifestTokens", eff.TokenEstimate)
