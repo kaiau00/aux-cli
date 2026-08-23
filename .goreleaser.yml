@@ -33,7 +33,7 @@ checksum:
 snapshot:
   name_template: "0.0.0-{{ .Timestamp }}"
 nfpms:
-  - maintainer: Foundry <kaimau6607@gmail.com>
+  - maintainer: kaiau00 <258971420+kaiau00@users.noreply.github.com>
     description: terminal based agent that can build anything
     formats:
       - deb

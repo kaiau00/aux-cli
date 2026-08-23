@@ -146,15 +146,21 @@ entries that have since become reachable so the list tightens rather than rots.
 **The first run found a fourth instance of the defect class**, in one command,
 in seconds — where the previous three took seven parallel hand-audits:
 
-| Dead | Size |
-| --- | --- |
-| `internal/welcome` | a complete first-run onboarding flow, never called |
-| `chat/sidebar.go` | an entire chat component, 13 functions |
-| `diff/patch.go` | a public patch-application API with no callers |
+| Dead | Size | Outcome |
+| --- | --- | --- |
+| `internal/welcome` | a complete first-run onboarding flow, never called | wired into startup |
+| `chat/sidebar.go` | an entire chat component, 13 functions | deleted |
+| `diff/patch.go` | a public patch-application API with no callers | the seven dead functions deleted |
 
-72 unreachable functions overall; 49 are design-system and provider-option
-surface and are accepted in the baseline with reasons. The 23 above are recorded
-as debt, **not** accepted — see P1.5 and P3.
+72 unreachable functions overall; 49 were design-system and provider-option
+surface, accepted in the baseline with reasons. The 23 above were recorded as
+debt, **not** accepted, and all 23 are now resolved — the baseline stands at 49,
+which is the accepted surface and nothing else.
+
+One correction from the deletion: `diff/patch.go` was not dead as a file. It
+holds both the unreachable public API and the live functions the patch tool
+runs on. Deleting it wholesale broke the build, which is how that was found;
+only the seven unreachable functions went.
 
 Known limitation, unchanged: `deadcode` traces from `main` and from tests, so a
 service that is constructed, stored on a struct, and never invoked still looks
@@ -370,14 +376,6 @@ Real, small, or low-confidence. Nothing here blocks production.
 - **C4 — correction detection.** "Propose, never auto-write" remains right; the
   heuristics are ~70% unreliable at telling one-shot from durable.
 - **A8 — grep spawns `rg` per call.** Measure before optimizing.
-- **Delete the dead chat sidebar.** `internal/tui/components/chat/sidebar.go` is
-  an entire component (13 functions) superseded by the context pane and never
-  removed. Listed as debt in `.deadcode-baseline`.
-- **Delete or use `diff/patch.go`'s patch API.** `AssembleChanges`, `LoadFiles`,
-  `ProcessPatch`, `ValidatePatch` and friends have no callers; the patch tool
-  takes a different path. Dead code in a file-mutating package is worse than
-  dead code elsewhere, because the next person to touch patching may reasonably
-  assume it is the real implementation.
 - **C1 — four-tier context model.** A principle for reviewing the above, not a
   task: saving tokens means moving Tier 2 → Tier 3, not deleting Tier 2.
 
@@ -407,6 +405,16 @@ handing it to someone costs ten minutes.
 P2 stays blocked on suite breadth. Optimising against five tasks in one Python
 repository is how a benchmark becomes a target, and the current comparison
 against opencode does not generalise past that repository.
+
+## Appendix: cleanup, 2026-08-23
+
+| Was | Outcome |
+| --- | --- |
+| Cleanup sweep | `.codebase-memory` (a 1.7MB binary index committed to git), the dead chat sidebar, the seven unreachable functions in `diff/patch.go`, an unreferenced script, a stray crash log, ten stale benchmark results, six merged branches. Baseline 69 → 49 |
+| `pubsub.Broker` race | `Publish` released the lock before sending while another goroutine closed those channels. A crash log from 2026-07-04 in the repository root had recorded it happening; the cleanup nearly deleted the evidence |
+| Module identity | `github.com/aux-ai/aux-cli` resolved to nothing — that organisation belongs to someone else. Repository renamed to `kaiau00/aux-cli` and the module with it, so `go install` can work. Go rejects `aux` as a path element at all: it is a reserved Windows device name |
+| Install instructions | Every method in the README was fictional. Now build-from-source, which is true |
+| Package maintainer | Named the upstream author, with his personal address, in files meant to ship to strangers |
 
 ## Appendix: what was removed
 
