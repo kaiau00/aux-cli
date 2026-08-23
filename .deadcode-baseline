@@ -52,7 +52,6 @@ internal/llm/provider/provider.go: WithGeminiOptions
 internal/llm/tools/shell/shell.go: PersistentShell.Close
 internal/logging/logger.go: DebugPersist
 internal/tui/components/chat/list.go: formatTimeDifference
-internal/tui/components/core/status.go: statusCmp.availableFooterMsgWidth
 internal/tui/layout/container.go: WithBorderHorizontal
 internal/tui/layout/container.go: WithBorderStyle
 internal/tui/layout/container.go: WithBorderVertical

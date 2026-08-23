@@ -127,29 +127,54 @@ func (m statusCmp) View() string {
 	modelID := config.Get().Agents[config.AgentCoder].Model
 	model := models.SupportedModels[modelID]
 
-	// Initialize the help widget
-	status := getHelpWidget()
+	help := getHelpWidget()
 
-	tokenInfoWidth := 0
+	tokenInfo := ""
+	tokensStyle := styles.Padded().
+		Background(t.Text()).
+		Foreground(t.BackgroundSecondary())
 	if m.session.ID != "" {
 		totalTokens := m.session.PromptTokens + m.session.CompletionTokens
-		tokens := formatTokensAndCost(totalTokens, model.ContextWindow, m.session.Cost)
-		tokensStyle := styles.Padded().
-			Background(t.Text()).
-			Foreground(t.BackgroundSecondary())
+		tokenInfo = formatTokensAndCost(totalTokens, model.ContextWindow, m.session.Cost)
 		percentage := (float64(totalTokens) / float64(model.ContextWindow)) * 100
 		if percentage > 80 {
 			tokensStyle = tokensStyle.Background(t.Warning())
 		}
-		tokenInfoWidth = lipgloss.Width(tokens) + 2
-		status += tokensStyle.Render(tokens)
 	}
 
 	diagnostics := styles.Padded().
 		Background(t.BackgroundDarker()).
 		Render(m.projectDiagnostics())
 
-	availableWidht := max(0, m.width-lipgloss.Width(helpWidget)-lipgloss.Width(m.model())-lipgloss.Width(diagnostics)-tokenInfoWidth)
+	// Budget the fixed segments before rendering any of them. The spacer below
+	// clamps at zero, so without this the fixed parts run past the edge of the
+	// terminal and it clips whatever is last -- which is the model name.
+	fit := fitStatus(
+		m.width,
+		lipgloss.Width(help),
+		lipgloss.Width(tokensStyle.Render(tokenInfo)),
+		lipgloss.Width(diagnostics),
+		lipgloss.Width(m.model()),
+	)
+
+	status := ""
+	usedWidth := 0
+	if fit.ShowHelp {
+		status += help
+		usedWidth += lipgloss.Width(help)
+	}
+	if fit.ShowTokens && tokenInfo != "" {
+		rendered := tokensStyle.Render(tokenInfo)
+		status += rendered
+		usedWidth += lipgloss.Width(rendered)
+	}
+	if !fit.ShowDiagnostics {
+		diagnostics = ""
+	}
+	modelSegment := m.modelFitted(fit.ModelBudget)
+	usedWidth += lipgloss.Width(diagnostics) + lipgloss.Width(modelSegment)
+
+	availableWidht := max(0, m.width-usedWidth)
 
 	if m.info.Msg != "" {
 		infoStyle := styles.Padded().
@@ -181,8 +206,44 @@ func (m statusCmp) View() string {
 	}
 
 	status += diagnostics
-	status += m.model()
+	status += modelSegment
 	return status
+}
+
+// modelFitted renders the model segment within a width budget, truncating the
+// name rather than the styled string so the escape sequences stay intact.
+func (m statusCmp) modelFitted(budget int) string {
+	full := m.model()
+	if budget <= 0 {
+		return ""
+	}
+	if lipgloss.Width(full) <= budget {
+		return full
+	}
+
+	t := theme.CurrentTheme()
+	name := modelName()
+	// Padded() adds one cell either side, and an ellipsis needs one more.
+	room := budget - 3
+	if room < 1 {
+		return ""
+	}
+	if len(name) > room {
+		name = name[:room] + "…"
+	}
+	return styles.Padded().
+		Background(t.Secondary()).
+		Foreground(t.Background()).
+		Render(name)
+}
+
+// modelName is the plain, unstyled name of the coder agent's model.
+func modelName() string {
+	coder, ok := config.Get().Agents[config.AgentCoder]
+	if !ok {
+		return "Unknown"
+	}
+	return models.SupportedModels[coder.Model].Name
 }
 
 func (m *statusCmp) projectDiagnostics() string {
@@ -264,29 +325,13 @@ func (m *statusCmp) projectDiagnostics() string {
 	return strings.Join(diagnostics, " ")
 }
 
-func (m statusCmp) availableFooterMsgWidth(diagnostics, tokenInfo string) int {
-	tokensWidth := 0
-	if m.session.ID != "" {
-		tokensWidth = lipgloss.Width(tokenInfo) + 2
-	}
-	return max(0, m.width-lipgloss.Width(helpWidget)-lipgloss.Width(m.model())-lipgloss.Width(diagnostics)-tokensWidth)
-}
-
 func (m statusCmp) model() string {
 	t := theme.CurrentTheme()
-
-	cfg := config.Get()
-
-	coder, ok := cfg.Agents[config.AgentCoder]
-	if !ok {
-		return "Unknown"
-	}
-	model := models.SupportedModels[coder.Model]
 
 	return styles.Padded().
 		Background(t.Secondary()).
 		Foreground(t.Background()).
-		Render(model.Name)
+		Render(modelName())
 }
 
 func NewStatusCmp(lspClients map[string]*lsp.Client) StatusCmp {

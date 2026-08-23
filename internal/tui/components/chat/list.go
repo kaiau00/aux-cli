@@ -118,6 +118,15 @@ func (m *messagesCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.rendering = false
 		return m, nil
 
+	case tea.MouseMsg:
+		// Forward the wheel to the viewport. Without this the terminal keeps the
+		// wheel to itself and scrolls its own scrollback, so scrolling up in a
+		// conversation showed the shell commands from before Aux started rather
+		// than the earlier messages.
+		u, cmd := m.viewport.Update(msg)
+		m.viewport = u
+		return m, cmd
+
 	case tea.KeyMsg:
 		// Forward scroll keys to the viewport: PgUp/PgDn, Ctrl+U/Ctrl+D,
 		// and Up/Down arrows. Without this, only the page-scroll keys work
@@ -387,9 +396,14 @@ func (m *messagesCmp) View() string {
 			)
 	}
 	if len(m.messages) == 0 {
+		// Two lines are spoken for below: the blank spacer and the help line.
+		// Reserving only one overflowed the pane by a line, and MaxHeight is
+		// what stops a greeting taller than the terminal from pushing the rest
+		// off the top -- Height alone sets a floor, not a ceiling.
 		content := baseStyle.
 			Width(m.width).
-			Height(m.height - 1).
+			Height(max(0, m.height-2)).
+			MaxHeight(max(1, m.height-2)).
 			Render(
 				m.initialScreen(),
 			)
