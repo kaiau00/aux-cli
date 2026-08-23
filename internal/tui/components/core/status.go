@@ -134,9 +134,9 @@ func (m statusCmp) View() string {
 		Background(t.Text()).
 		Foreground(t.BackgroundSecondary())
 	if m.session.ID != "" {
-		totalTokens := m.session.PromptTokens + m.session.CompletionTokens
-		tokenInfo = formatTokensAndCost(totalTokens, model.ContextWindow, m.session.Cost)
-		percentage := (float64(totalTokens) / float64(model.ContextWindow)) * 100
+		contextTokens := m.session.ContextTokens
+		tokenInfo = formatTokensAndCost(contextTokens, model.ContextWindow, m.session.Cost)
+		percentage := (float64(contextTokens) / float64(model.ContextWindow)) * 100
 		if percentage > 80 {
 			tokensStyle = tokensStyle.Background(t.Warning())
 		}

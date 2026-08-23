@@ -3,6 +3,7 @@ package cost
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/kaiau00/aux-cli/internal/db"
@@ -28,6 +29,11 @@ type Service interface {
 	SessionTotals(ctx context.Context, sessionID string) (Totals, error)
 	// TaskTotals aggregates completed/failed calls for a task.
 	TaskTotals(ctx context.Context, taskID string) (Totals, error)
+	// SessionContextTokens returns how many tokens the session's most recent
+	// completed call actually occupied in the model's context window. Unlike
+	// the Totals figures, which sum every call and answer "what did this
+	// cost", this answers "how full is the window right now".
+	SessionContextTokens(ctx context.Context, sessionID string) (int64, error)
 }
 
 type service struct {
@@ -159,6 +165,35 @@ func (s *service) SessionTotals(ctx context.Context, sessionID string) (Totals, 
 	}
 	t.Cost += childCost
 	return t, nil
+}
+
+// SessionContextTokens reports the occupancy of the session's latest completed
+// call: its entire input -- fresh, cache-creation and cache-read alike, since
+// cached tokens occupy the window exactly as uncached ones do -- plus the
+// output that was appended to the transcript.
+//
+// Summing every call instead, as the session's prompt/completion totals do,
+// counts the same resident conversation once per turn: seven turns over a 21K
+// conversation sum to 148K while never exceeding 21K resident. That is correct
+// for spend and wrong for occupancy, and the difference grows with the session.
+//
+// A session with no completed call yet returns 0.
+func (s *service) SessionContextTokens(ctx context.Context, sessionID string) (int64, error) {
+	row := s.db.QueryRowContext(ctx, `
+SELECT COALESCE(input_tokens,0) + COALESCE(cache_creation_tokens,0)
+     + COALESCE(cache_read_tokens,0) + COALESCE(output_tokens,0)
+FROM model_calls
+WHERE session_id = ? AND status != 'started'
+ORDER BY started_at DESC, model_call_id DESC
+LIMIT 1`, sessionID)
+	var tokens int64
+	switch err := row.Scan(&tokens); {
+	case errors.Is(err, sql.ErrNoRows):
+		return 0, nil
+	case err != nil:
+		return 0, fmt.Errorf("failed to read session context tokens: %w", err)
+	}
+	return tokens, nil
 }
 
 // TaskTotals aggregates a task's own calls plus every descendant task's calls

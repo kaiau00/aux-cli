@@ -349,7 +349,7 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else if payload.Done && payload.Type == agent.AgentEventTypeResponse && a.selectedSession.ID != "" {
 			model := a.app.CoderAgent.Model()
 			contextWindow := model.ContextWindow
-			tokens := a.selectedSession.CompletionTokens + a.selectedSession.PromptTokens
+			tokens := a.selectedSession.ContextTokens
 			if (tokens >= int64(float64(contextWindow)*0.95)) && config.Get().AutoCompact {
 				return a, util.CmdHandler(startCompactSessionMsg{})
 			}
@@ -711,7 +711,10 @@ func (a appModel) headerVM() viewmodel.TaskHeaderVM {
 		ContextLimit: ctxLimit,
 	}
 	if a.selectedSession.ID != "" {
-		vm.ContextUsed = a.selectedSession.PromptTokens + a.selectedSession.CompletionTokens
+		// Occupancy, not lifetime spend: PromptTokens/CompletionTokens sum
+		// every call, so a session that resends the same conversation each turn
+		// reads several times over what the window actually holds.
+		vm.ContextUsed = a.selectedSession.ContextTokens
 		vm.Cost = a.selectedSession.Cost
 	}
 	return vm
