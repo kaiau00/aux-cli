@@ -3,8 +3,6 @@ package diff
 import (
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -574,49 +572,6 @@ func PatchToCommit(patch Patch, orig map[string]string) (Commit, error) {
 	return commit, nil
 }
 
-func AssembleChanges(orig map[string]string, updatedFiles map[string]string) Commit {
-	commit := Commit{Changes: make(map[string]FileChange, len(updatedFiles))}
-	for p, newContent := range updatedFiles {
-		oldContent, exists := orig[p]
-		if exists && oldContent == newContent {
-			continue
-		}
-
-		if exists && newContent != "" {
-			commit.Changes[p] = FileChange{
-				Type:       ActionUpdate,
-				OldContent: &oldContent,
-				NewContent: &newContent,
-			}
-		} else if newContent != "" {
-			commit.Changes[p] = FileChange{
-				Type:       ActionAdd,
-				NewContent: &newContent,
-			}
-		} else if exists {
-			commit.Changes[p] = FileChange{
-				Type:       ActionDelete,
-				OldContent: &oldContent,
-			}
-		} else {
-			return commit // Changed from panic to simply return current commit
-		}
-	}
-	return commit
-}
-
-func LoadFiles(paths []string, openFn func(string) (string, error)) (map[string]string, error) {
-	orig := make(map[string]string, len(paths))
-	for _, p := range paths {
-		content, err := openFn(p)
-		if err != nil {
-			return nil, fileError("Open", "File not found", p)
-		}
-		orig[p] = content
-	}
-	return orig, nil
-}
-
 func ApplyCommit(commit Commit, writeFn func(string, string) error, removeFn func(string) error) error {
 	for p, change := range commit.Changes {
 		switch change.Type {
@@ -650,91 +605,4 @@ func ApplyCommit(commit Commit, writeFn func(string, string) error, removeFn fun
 		}
 	}
 	return nil
-}
-
-func ProcessPatch(text string, openFn func(string) (string, error), writeFn func(string, string) error, removeFn func(string) error) (string, error) {
-	if !strings.HasPrefix(text, "*** Begin Patch") {
-		return "", NewDiffError("Patch must start with *** Begin Patch")
-	}
-	paths := IdentifyFilesNeeded(text)
-	orig, err := LoadFiles(paths, openFn)
-	if err != nil {
-		return "", err
-	}
-
-	patch, fuzz, err := TextToPatch(text, orig)
-	if err != nil {
-		return "", err
-	}
-
-	if fuzz > 0 {
-		return "", NewDiffError(fmt.Sprintf("Patch contains fuzzy matches (fuzz level: %d)", fuzz))
-	}
-
-	commit, err := PatchToCommit(patch, orig)
-	if err != nil {
-		return "", err
-	}
-
-	if err := ApplyCommit(commit, writeFn, removeFn); err != nil {
-		return "", err
-	}
-
-	return "Patch applied successfully", nil
-}
-
-func OpenFile(p string) (string, error) {
-	data, err := os.ReadFile(p)
-	if err != nil {
-		return "", err
-	}
-	return string(data), nil
-}
-
-func WriteFile(p string, content string) error {
-	if filepath.IsAbs(p) {
-		return NewDiffError("We do not support absolute paths.")
-	}
-
-	dir := filepath.Dir(p)
-	if dir != "." {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			return err
-		}
-	}
-
-	return os.WriteFile(p, []byte(content), 0o644)
-}
-
-func RemoveFile(p string) error {
-	return os.Remove(p)
-}
-
-func ValidatePatch(patchText string, files map[string]string) (bool, string, error) {
-	if !strings.HasPrefix(patchText, "*** Begin Patch") {
-		return false, "Patch must start with *** Begin Patch", nil
-	}
-
-	neededFiles := IdentifyFilesNeeded(patchText)
-	for _, filePath := range neededFiles {
-		if _, exists := files[filePath]; !exists {
-			return false, fmt.Sprintf("File not found: %s", filePath), nil
-		}
-	}
-
-	patch, fuzz, err := TextToPatch(patchText, files)
-	if err != nil {
-		return false, err.Error(), nil
-	}
-
-	if fuzz > 0 {
-		return false, fmt.Sprintf("Patch contains fuzzy matches (fuzz level: %d)", fuzz), nil
-	}
-
-	_, err = PatchToCommit(patch, files)
-	if err != nil {
-		return false, err.Error(), nil
-	}
-
-	return true, "Patch is valid", nil
 }

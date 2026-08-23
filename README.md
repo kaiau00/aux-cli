@@ -61,22 +61,19 @@ fail at the first command it ran.
 
 ### Install
 
+Build from source. Requires Go 1.24 or newer.
+
 ```bash
-# Install script (latest)
-curl -fsSL https://raw.githubusercontent.com/aux-ai/aux/refs/heads/main/install | bash
-
-# Install script (specific version)
-curl -fsSL https://raw.githubusercontent.com/aux-ai/aux/refs/heads/main/install | VERSION=0.1.0 bash
-
-# Homebrew (macOS and Linux)
-brew install aux-ai/tap/aux
-
-# AUR (Arch Linux)
-yay -S aux-ai-bin   # or: paru -S aux-ai-bin
-
-# Go
-go install github.com/aux-ai/aux-cli@latest
+git clone https://github.com/kaiau00/Aux
+cd Aux
+go build -o aux .
 ```
+
+There are no published releases yet, so there is nothing to download and no
+package to install. The install script, the Homebrew tap and the AUR package
+described in `.goreleaser.yml` are prepared but not yet published, and
+`go install` does not work because the module path is not the repository path.
+Build from source until a release is tagged.
 
 ### Run
 

@@ -50,3 +50,6 @@ aux.md
 # clock). The suite and its specs are committed; results are not.
 bench/*.json
 !bench/suite.example.json
+
+# Index artifact from an external tool; not part of this project.
+.codebase-memory/

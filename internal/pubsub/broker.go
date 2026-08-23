@@ -90,24 +90,32 @@ func (b *Broker[T]) GetSubscriberCount() int {
 	return b.subCount
 }
 
+// Publish delivers an event to every current subscriber, dropping it for any
+// subscriber whose buffer is full.
+//
+// The read lock is held across the sends, not merely across a copy of the
+// subscriber set. Closing a subscriber channel -- from Shutdown, or from the
+// goroutine watching that subscriber's context -- takes the write lock, so
+// holding the read lock here is precisely what makes it impossible to send on a
+// channel that has already been closed. Releasing the lock after copying left
+// that window open, and it was not theoretical: it panicked in the wild on
+// 2026-07-04, inside a log write, taking the sessions subscription down with it.
+//
+// Holding a read lock across a send is only safe because these sends cannot
+// block -- the default branch drops the event when a buffer is full. Do not add
+// a blocking send here.
 func (b *Broker[T]) Publish(t EventType, payload T) {
 	b.mu.RLock()
+	defer b.mu.RUnlock()
+
 	select {
 	case <-b.done:
-		b.mu.RUnlock()
 		return
 	default:
 	}
 
-	subscribers := make([]chan Event[T], 0, len(b.subs))
-	for sub := range b.subs {
-		subscribers = append(subscribers, sub)
-	}
-	b.mu.RUnlock()
-
 	event := Event[T]{Type: t, Payload: payload}
-
-	for _, sub := range subscribers {
+	for sub := range b.subs {
 		select {
 		case sub <- event:
 		default:
