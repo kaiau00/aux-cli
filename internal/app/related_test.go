@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/db/dbtest"
-	"github.com/aux-ai/aux-cli/internal/project"
-	"github.com/aux-ai/aux-cli/internal/relatedproject"
+	"github.com/kaiau00/aux-cli/internal/db/dbtest"
+	"github.com/kaiau00/aux-cli/internal/project"
+	"github.com/kaiau00/aux-cli/internal/relatedproject"
 )
 
 func writeGoMod(t *testing.T, dir, modulePath string, requires ...string) {

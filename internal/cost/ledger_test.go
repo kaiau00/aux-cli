@@ -3,8 +3,8 @@ package cost
 import (
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/llm/models"
-	"github.com/aux-ai/aux-cli/internal/llm/provider"
+	"github.com/kaiau00/aux-cli/internal/llm/models"
+	"github.com/kaiau00/aux-cli/internal/llm/provider"
 )
 
 func TestComputeCost(t *testing.T) {

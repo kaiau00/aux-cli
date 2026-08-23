@@ -5,18 +5,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aux-ai/aux-cli/internal/config"
-	"github.com/aux-ai/aux-cli/internal/llm/models"
-	"github.com/aux-ai/aux-cli/internal/lsp"
-	"github.com/aux-ai/aux-cli/internal/lsp/protocol"
-	"github.com/aux-ai/aux-cli/internal/pubsub"
-	"github.com/aux-ai/aux-cli/internal/session"
-	"github.com/aux-ai/aux-cli/internal/tui/components/chat"
-	"github.com/aux-ai/aux-cli/internal/tui/styles"
-	"github.com/aux-ai/aux-cli/internal/tui/theme"
-	"github.com/aux-ai/aux-cli/internal/tui/util"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/kaiau00/aux-cli/internal/config"
+	"github.com/kaiau00/aux-cli/internal/llm/models"
+	"github.com/kaiau00/aux-cli/internal/lsp"
+	"github.com/kaiau00/aux-cli/internal/lsp/protocol"
+	"github.com/kaiau00/aux-cli/internal/pubsub"
+	"github.com/kaiau00/aux-cli/internal/session"
+	"github.com/kaiau00/aux-cli/internal/tui/components/chat"
+	"github.com/kaiau00/aux-cli/internal/tui/styles"
+	"github.com/kaiau00/aux-cli/internal/tui/theme"
+	"github.com/kaiau00/aux-cli/internal/tui/util"
 )
 
 type StatusCmp interface {

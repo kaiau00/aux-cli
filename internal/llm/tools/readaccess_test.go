@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/permission"
+	"github.com/kaiau00/aux-cli/internal/permission"
 )
 
 // recordingPermissions answers every request with a fixed verdict and records

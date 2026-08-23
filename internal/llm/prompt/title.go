@@ -1,6 +1,6 @@
 package prompt
 
-import "github.com/aux-ai/aux-cli/internal/llm/models"
+import "github.com/kaiau00/aux-cli/internal/llm/models"
 
 func TitlePrompt(_ models.ModelProvider) string {
 	return `you will generate a short title based on the first message a user begins a conversation with

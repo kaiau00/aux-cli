@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/skill"
+	"github.com/kaiau00/aux-cli/internal/skill"
 )
 
 func TestExtractBuildsAValidationSkillFromPassingCommands(t *testing.T) {

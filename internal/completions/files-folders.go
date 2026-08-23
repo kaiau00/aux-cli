@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/aux-ai/aux-cli/internal/fileutil"
-	"github.com/aux-ai/aux-cli/internal/logging"
-	"github.com/aux-ai/aux-cli/internal/tui/components/dialog"
+	"github.com/kaiau00/aux-cli/internal/fileutil"
+	"github.com/kaiau00/aux-cli/internal/logging"
+	"github.com/kaiau00/aux-cli/internal/tui/components/dialog"
 	"github.com/lithammer/fuzzysearch/fuzzy"
 )
 

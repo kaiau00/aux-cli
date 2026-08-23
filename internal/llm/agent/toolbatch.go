@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/aux-ai/aux-cli/internal/llm/tools"
-	"github.com/aux-ai/aux-cli/internal/message"
-	"github.com/aux-ai/aux-cli/internal/permission"
+	"github.com/kaiau00/aux-cli/internal/llm/tools"
+	"github.com/kaiau00/aux-cli/internal/message"
+	"github.com/kaiau00/aux-cli/internal/permission"
 )
 
 // maxParallelTools caps how many read-only tool calls run at once.

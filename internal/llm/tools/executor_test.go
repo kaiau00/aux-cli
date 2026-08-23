@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/hooks"
-	"github.com/aux-ai/aux-cli/internal/llm/tools"
+	"github.com/kaiau00/aux-cli/internal/hooks"
+	"github.com/kaiau00/aux-cli/internal/llm/tools"
 )
 
 type fakeTool struct {

@@ -3,12 +3,12 @@ package viewmodel
 import (
 	"context"
 
-	"github.com/aux-ai/aux-cli/internal/checkpoint"
-	"github.com/aux-ai/aux-cli/internal/contextstore"
-	"github.com/aux-ai/aux-cli/internal/cost"
-	"github.com/aux-ai/aux-cli/internal/eventstore"
-	"github.com/aux-ai/aux-cli/internal/task"
-	"github.com/aux-ai/aux-cli/internal/validation"
+	"github.com/kaiau00/aux-cli/internal/checkpoint"
+	"github.com/kaiau00/aux-cli/internal/contextstore"
+	"github.com/kaiau00/aux-cli/internal/cost"
+	"github.com/kaiau00/aux-cli/internal/eventstore"
+	"github.com/kaiau00/aux-cli/internal/task"
+	"github.com/kaiau00/aux-cli/internal/validation"
 )
 
 // TaskView is the assembled, read-only view of a task for the dashboard/TUI

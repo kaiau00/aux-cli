@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/aux-ai/aux-cli/cmd"
-	"github.com/aux-ai/aux-cli/internal/logging"
+	"github.com/kaiau00/aux-cli/cmd"
+	"github.com/kaiau00/aux-cli/internal/logging"
 )
 
 func main() {

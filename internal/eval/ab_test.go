@@ -4,12 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/artifact"
-	"github.com/aux-ai/aux-cli/internal/checkpoint"
-	"github.com/aux-ai/aux-cli/internal/cost"
-	"github.com/aux-ai/aux-cli/internal/db/dbtest"
-	"github.com/aux-ai/aux-cli/internal/task"
-	"github.com/aux-ai/aux-cli/internal/validation"
+	"github.com/kaiau00/aux-cli/internal/artifact"
+	"github.com/kaiau00/aux-cli/internal/checkpoint"
+	"github.com/kaiau00/aux-cli/internal/cost"
+	"github.com/kaiau00/aux-cli/internal/db/dbtest"
+	"github.com/kaiau00/aux-cli/internal/task"
+	"github.com/kaiau00/aux-cli/internal/validation"
 )
 
 func TestCompareImprovement(t *testing.T) {

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/eval"
+	"github.com/kaiau00/aux-cli/internal/eval"
 )
 
 func resultFor(results []eval.CompilerResult, name string) (eval.CompilerResult, bool) {

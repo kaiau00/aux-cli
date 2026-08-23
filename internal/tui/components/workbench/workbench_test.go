@@ -6,7 +6,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/aux-ai/aux-cli/internal/viewmodel"
+	"github.com/kaiau00/aux-cli/internal/viewmodel"
 )
 
 func TestChangesHeaderNoChanges(t *testing.T) {

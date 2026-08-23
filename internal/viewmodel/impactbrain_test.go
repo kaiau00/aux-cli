@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/db/dbtest"
-	"github.com/aux-ai/aux-cli/internal/impact"
-	"github.com/aux-ai/aux-cli/internal/viewmodel"
+	"github.com/kaiau00/aux-cli/internal/db/dbtest"
+	"github.com/kaiau00/aux-cli/internal/impact"
+	"github.com/kaiau00/aux-cli/internal/viewmodel"
 )
 
 func writeSmallModule(t *testing.T) string {

@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/db/dbtest"
-	"github.com/aux-ai/aux-cli/internal/eventstore"
-	"github.com/aux-ai/aux-cli/internal/memory"
+	"github.com/kaiau00/aux-cli/internal/db/dbtest"
+	"github.com/kaiau00/aux-cli/internal/eventstore"
+	"github.com/kaiau00/aux-cli/internal/memory"
 )
 
 func newService(t *testing.T) (*memory.Service, *memory.Store, eventstore.Service) {

@@ -13,8 +13,8 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/aux-ai/aux-cli/internal/tui/theme"
-	"github.com/aux-ai/aux-cli/internal/viewmodel"
+	"github.com/kaiau00/aux-cli/internal/tui/theme"
+	"github.com/kaiau00/aux-cli/internal/viewmodel"
 )
 
 // highPressure is the fraction of the limit above which context pressure is

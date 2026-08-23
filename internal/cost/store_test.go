@@ -5,10 +5,10 @@ import (
 	"database/sql"
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/cost"
-	"github.com/aux-ai/aux-cli/internal/db/dbtest"
-	"github.com/aux-ai/aux-cli/internal/ids"
-	"github.com/aux-ai/aux-cli/internal/task"
+	"github.com/kaiau00/aux-cli/internal/cost"
+	"github.com/kaiau00/aux-cli/internal/db/dbtest"
+	"github.com/kaiau00/aux-cli/internal/ids"
+	"github.com/kaiau00/aux-cli/internal/task"
 )
 
 func TestStartAndFinishCallRoundTrip(t *testing.T) {

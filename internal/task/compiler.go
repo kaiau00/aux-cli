@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aux-ai/aux-cli/internal/ids"
-	"github.com/aux-ai/aux-cli/internal/profile"
+	"github.com/kaiau00/aux-cli/internal/ids"
+	"github.com/kaiau00/aux-cli/internal/profile"
 )
 
 // RenderText produces a compact, model-facing summary of a spec for use as an

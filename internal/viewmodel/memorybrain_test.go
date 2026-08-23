@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/db/dbtest"
-	"github.com/aux-ai/aux-cli/internal/eventstore"
-	"github.com/aux-ai/aux-cli/internal/memory"
-	"github.com/aux-ai/aux-cli/internal/skill"
-	"github.com/aux-ai/aux-cli/internal/viewmodel"
+	"github.com/kaiau00/aux-cli/internal/db/dbtest"
+	"github.com/kaiau00/aux-cli/internal/eventstore"
+	"github.com/kaiau00/aux-cli/internal/memory"
+	"github.com/kaiau00/aux-cli/internal/skill"
+	"github.com/kaiau00/aux-cli/internal/viewmodel"
 )
 
 func TestMemoryBrainViewGroupsByState(t *testing.T) {

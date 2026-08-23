@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/aux-ai/aux-cli/internal/lsp/protocol"
+	"github.com/kaiau00/aux-cli/internal/lsp/protocol"
 )
 
 func DetectLanguageID(uri string) protocol.LanguageKind {

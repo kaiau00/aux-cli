@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/artifact"
-	"github.com/aux-ai/aux-cli/internal/checkpoint"
-	"github.com/aux-ai/aux-cli/internal/db/dbtest"
-	"github.com/aux-ai/aux-cli/internal/eventstore"
+	"github.com/kaiau00/aux-cli/internal/artifact"
+	"github.com/kaiau00/aux-cli/internal/checkpoint"
+	"github.com/kaiau00/aux-cli/internal/db/dbtest"
+	"github.com/kaiau00/aux-cli/internal/eventstore"
 )
 
 func newService(t *testing.T) (*checkpoint.Service, *checkpoint.Store) {

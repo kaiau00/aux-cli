@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/aux-ai/aux-cli/internal/db"
+	"github.com/kaiau00/aux-cli/internal/db"
 )
 
 // Service persists and reads the per-call model ledger.

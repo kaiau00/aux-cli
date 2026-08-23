@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/aux-ai/aux-cli/internal/message"
+	"github.com/kaiau00/aux-cli/internal/message"
 )
 
 // Adapter is a named runtime that executes agent turns behind the provider-

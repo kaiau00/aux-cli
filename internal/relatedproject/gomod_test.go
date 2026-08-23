@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/relatedproject"
+	"github.com/kaiau00/aux-cli/internal/relatedproject"
 )
 
 func TestParseGoModDepsBlockForm(t *testing.T) {

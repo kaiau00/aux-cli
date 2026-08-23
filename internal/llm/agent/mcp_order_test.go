@@ -3,7 +3,7 @@ package agent
 import (
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/config"
+	"github.com/kaiau00/aux-cli/internal/config"
 )
 
 // Tool order is load-bearing: providers cache on an exact prefix match of the

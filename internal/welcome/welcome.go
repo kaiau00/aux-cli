@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/aux-ai/aux-cli/internal/config"
-	"github.com/aux-ai/aux-cli/internal/dashboard"
-	"github.com/aux-ai/aux-cli/internal/message"
-	"github.com/aux-ai/aux-cli/internal/session"
+	"github.com/kaiau00/aux-cli/internal/config"
+	"github.com/kaiau00/aux-cli/internal/dashboard"
+	"github.com/kaiau00/aux-cli/internal/message"
+	"github.com/kaiau00/aux-cli/internal/session"
 )
 
 const (

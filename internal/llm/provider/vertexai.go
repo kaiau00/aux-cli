@@ -4,7 +4,7 @@ import (
 	"context"
 	"os"
 
-	"github.com/aux-ai/aux-cli/internal/logging"
+	"github.com/kaiau00/aux-cli/internal/logging"
 	"google.golang.org/genai"
 )
 

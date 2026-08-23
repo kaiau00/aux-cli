@@ -1,8 +1,8 @@
 package eval
 
 import (
-	"github.com/aux-ai/aux-cli/internal/message"
-	"github.com/aux-ai/aux-cli/internal/promptcompiler"
+	"github.com/kaiau00/aux-cli/internal/message"
+	"github.com/kaiau00/aux-cli/internal/promptcompiler"
 )
 
 // CompilerResult is the measured comparison of two compilers on one fixture.

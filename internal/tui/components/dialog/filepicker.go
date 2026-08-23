@@ -9,19 +9,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aux-ai/aux-cli/internal/app"
-	"github.com/aux-ai/aux-cli/internal/config"
-	"github.com/aux-ai/aux-cli/internal/logging"
-	"github.com/aux-ai/aux-cli/internal/message"
-	"github.com/aux-ai/aux-cli/internal/tui/image"
-	"github.com/aux-ai/aux-cli/internal/tui/styles"
-	"github.com/aux-ai/aux-cli/internal/tui/theme"
-	"github.com/aux-ai/aux-cli/internal/tui/util"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/kaiau00/aux-cli/internal/app"
+	"github.com/kaiau00/aux-cli/internal/config"
+	"github.com/kaiau00/aux-cli/internal/logging"
+	"github.com/kaiau00/aux-cli/internal/message"
+	"github.com/kaiau00/aux-cli/internal/tui/image"
+	"github.com/kaiau00/aux-cli/internal/tui/styles"
+	"github.com/kaiau00/aux-cli/internal/tui/theme"
+	"github.com/kaiau00/aux-cli/internal/tui/util"
 )
 
 const (

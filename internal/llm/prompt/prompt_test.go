@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/config"
+	"github.com/kaiau00/aux-cli/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

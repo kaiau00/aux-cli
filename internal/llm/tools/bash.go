@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aux-ai/aux-cli/internal/llm/tools/shell"
-	"github.com/aux-ai/aux-cli/internal/permission"
+	"github.com/kaiau00/aux-cli/internal/llm/tools/shell"
+	"github.com/kaiau00/aux-cli/internal/permission"
 )
 
 type BashParams struct {

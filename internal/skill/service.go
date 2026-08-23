@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/aux-ai/aux-cli/internal/eventstore"
+	"github.com/kaiau00/aux-cli/internal/eventstore"
 )
 
 // ErrNoEvaluationEvidence is returned when promotion is attempted without a

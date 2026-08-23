@@ -11,8 +11,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/aux-ai/aux-cli/internal/llm/models"
-	"github.com/aux-ai/aux-cli/internal/logging"
+	"github.com/kaiau00/aux-cli/internal/llm/models"
+	"github.com/kaiau00/aux-cli/internal/logging"
 	"github.com/spf13/viper"
 )
 

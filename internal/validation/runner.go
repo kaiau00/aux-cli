@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/aux-ai/aux-cli/internal/permission"
+	"github.com/kaiau00/aux-cli/internal/permission"
 )
 
 // defaultCommandTimeout bounds a single validation command. A hung test suite

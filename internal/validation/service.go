@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aux-ai/aux-cli/internal/eventstore"
-	"github.com/aux-ai/aux-cli/internal/ids"
+	"github.com/kaiau00/aux-cli/internal/eventstore"
+	"github.com/kaiau00/aux-cli/internal/ids"
 )
 
 // CommandResult is the outcome of executing a validation command. Execution

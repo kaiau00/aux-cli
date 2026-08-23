@@ -1,11 +1,11 @@
 package viewmodel
 
 import (
-	"github.com/aux-ai/aux-cli/internal/checkpoint"
-	"github.com/aux-ai/aux-cli/internal/contextstore"
-	"github.com/aux-ai/aux-cli/internal/eventstore"
-	"github.com/aux-ai/aux-cli/internal/task"
-	"github.com/aux-ai/aux-cli/internal/validation"
+	"github.com/kaiau00/aux-cli/internal/checkpoint"
+	"github.com/kaiau00/aux-cli/internal/contextstore"
+	"github.com/kaiau00/aux-cli/internal/eventstore"
+	"github.com/kaiau00/aux-cli/internal/task"
+	"github.com/kaiau00/aux-cli/internal/validation"
 )
 
 // StateForTaskStatus maps a task status to a display state (roadmapplan.md §13.4).

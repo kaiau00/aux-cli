@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/profile"
-	"github.com/aux-ai/aux-cli/internal/task"
+	"github.com/kaiau00/aux-cli/internal/profile"
+	"github.com/kaiau00/aux-cli/internal/task"
 )
 
 func sampleEffective() profile.Effective {

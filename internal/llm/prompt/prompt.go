@@ -7,9 +7,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/aux-ai/aux-cli/internal/config"
-	"github.com/aux-ai/aux-cli/internal/llm/models"
-	"github.com/aux-ai/aux-cli/internal/logging"
+	"github.com/kaiau00/aux-cli/internal/config"
+	"github.com/kaiau00/aux-cli/internal/llm/models"
+	"github.com/kaiau00/aux-cli/internal/logging"
 )
 
 func GetAgentPrompt(agentName config.AgentName, provider models.ModelProvider) string {

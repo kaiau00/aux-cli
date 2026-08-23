@@ -5,9 +5,9 @@ import (
 	"sort"
 	"time"
 
-	"github.com/aux-ai/aux-cli/internal/artifact"
-	"github.com/aux-ai/aux-cli/internal/eventstore"
-	"github.com/aux-ai/aux-cli/internal/ids"
+	"github.com/kaiau00/aux-cli/internal/artifact"
+	"github.com/kaiau00/aux-cli/internal/eventstore"
+	"github.com/kaiau00/aux-cli/internal/ids"
 )
 
 // EventSink appends domain events.

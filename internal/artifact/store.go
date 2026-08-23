@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aux-ai/aux-cli/internal/db"
+	"github.com/kaiau00/aux-cli/internal/db"
 )
 
 // Artifact is the metadata record for a stored blob.

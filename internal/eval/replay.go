@@ -1,6 +1,6 @@
 package eval
 
-import "github.com/aux-ai/aux-cli/internal/eventstore"
+import "github.com/kaiau00/aux-cli/internal/eventstore"
 
 // Replay modes (roadmapplan.md §12.2). This file implements deterministic event
 // replay: reconstructing a task's runtime state purely from its durable event

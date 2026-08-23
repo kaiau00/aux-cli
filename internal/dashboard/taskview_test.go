@@ -7,12 +7,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/cost"
-	"github.com/aux-ai/aux-cli/internal/db/dbtest"
-	"github.com/aux-ai/aux-cli/internal/eventstore"
-	"github.com/aux-ai/aux-cli/internal/task"
-	"github.com/aux-ai/aux-cli/internal/validation"
-	"github.com/aux-ai/aux-cli/internal/viewmodel"
+	"github.com/kaiau00/aux-cli/internal/cost"
+	"github.com/kaiau00/aux-cli/internal/db/dbtest"
+	"github.com/kaiau00/aux-cli/internal/eventstore"
+	"github.com/kaiau00/aux-cli/internal/task"
+	"github.com/kaiau00/aux-cli/internal/validation"
+	"github.com/kaiau00/aux-cli/internal/viewmodel"
 )
 
 func TestTaskViewEndpoint(t *testing.T) {

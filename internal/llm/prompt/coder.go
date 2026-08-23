@@ -8,9 +8,9 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/aux-ai/aux-cli/internal/config"
-	"github.com/aux-ai/aux-cli/internal/llm/models"
-	"github.com/aux-ai/aux-cli/internal/llm/tools"
+	"github.com/kaiau00/aux-cli/internal/config"
+	"github.com/kaiau00/aux-cli/internal/llm/models"
+	"github.com/kaiau00/aux-cli/internal/llm/tools"
 )
 
 func CoderPrompt(provider models.ModelProvider) string {

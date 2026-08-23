@@ -4,13 +4,13 @@ import (
 	"context"
 	"time"
 
-	"github.com/aux-ai/aux-cli/internal/history"
-	"github.com/aux-ai/aux-cli/internal/llm/agent"
-	"github.com/aux-ai/aux-cli/internal/logging"
-	"github.com/aux-ai/aux-cli/internal/message"
-	"github.com/aux-ai/aux-cli/internal/pubsub"
-	"github.com/aux-ai/aux-cli/internal/session"
-	"github.com/aux-ai/aux-cli/internal/viewmodel"
+	"github.com/kaiau00/aux-cli/internal/history"
+	"github.com/kaiau00/aux-cli/internal/llm/agent"
+	"github.com/kaiau00/aux-cli/internal/logging"
+	"github.com/kaiau00/aux-cli/internal/message"
+	"github.com/kaiau00/aux-cli/internal/pubsub"
+	"github.com/kaiau00/aux-cli/internal/session"
+	"github.com/kaiau00/aux-cli/internal/viewmodel"
 )
 
 // TaskReader assembles task read-only view models from durable runtime state

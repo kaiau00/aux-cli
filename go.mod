@@ -1,4 +1,4 @@
-module github.com/aux-ai/aux-cli
+module github.com/kaiau00/aux-cli
 
 go 1.24.0
 

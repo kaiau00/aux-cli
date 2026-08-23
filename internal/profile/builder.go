@@ -9,7 +9,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/aux-ai/aux-cli/internal/ids"
+	"github.com/kaiau00/aux-cli/internal/ids"
 )
 
 // Builder compiles a profile version for a single profile from a set of scanners.

@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aux-ai/aux-cli/internal/db"
+	"github.com/kaiau00/aux-cli/internal/db"
 )
 
 // Store persists tasks, specs, and budgets.

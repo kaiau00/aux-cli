@@ -17,8 +17,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aux-ai/aux-cli/internal/logging"
-	"github.com/aux-ai/aux-cli/internal/viewmodel"
+	"github.com/kaiau00/aux-cli/internal/logging"
+	"github.com/kaiau00/aux-cli/internal/viewmodel"
 )
 
 //go:embed all:assets

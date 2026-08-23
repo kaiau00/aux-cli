@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aux-ai/aux-cli/internal/history"
-	"github.com/aux-ai/aux-cli/internal/message"
+	"github.com/kaiau00/aux-cli/internal/history"
+	"github.com/kaiau00/aux-cli/internal/message"
 )
 
 const snippetLimit = 220

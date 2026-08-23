@@ -14,7 +14,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/aux-ai/aux-cli/internal/config"
+	"github.com/kaiau00/aux-cli/internal/config"
 )
 
 type PersistentShell struct {

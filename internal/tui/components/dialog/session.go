@@ -1,14 +1,14 @@
 package dialog
 
 import (
-	"github.com/aux-ai/aux-cli/internal/session"
-	"github.com/aux-ai/aux-cli/internal/tui/layout"
-	"github.com/aux-ai/aux-cli/internal/tui/styles"
-	"github.com/aux-ai/aux-cli/internal/tui/theme"
-	"github.com/aux-ai/aux-cli/internal/tui/util"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/kaiau00/aux-cli/internal/session"
+	"github.com/kaiau00/aux-cli/internal/tui/layout"
+	"github.com/kaiau00/aux-cli/internal/tui/styles"
+	"github.com/kaiau00/aux-cli/internal/tui/theme"
+	"github.com/kaiau00/aux-cli/internal/tui/util"
 )
 
 // SessionSelectedMsg is sent when a session is selected

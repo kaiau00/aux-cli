@@ -12,7 +12,7 @@ import (
 	_ "github.com/ncruces/go-sqlite3/embed"
 	"github.com/pressly/goose/v3"
 
-	"github.com/aux-ai/aux-cli/internal/db"
+	"github.com/kaiau00/aux-cli/internal/db"
 )
 
 // New opens a fresh temp-file SQLite database, applies all migrations, and

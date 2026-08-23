@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/worktree"
+	"github.com/kaiau00/aux-cli/internal/worktree"
 )
 
 func newTestRepo(t *testing.T) string {

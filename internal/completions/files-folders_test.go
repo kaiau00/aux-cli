@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aux-ai/aux-cli/internal/tui/components/dialog"
+	"github.com/kaiau00/aux-cli/internal/tui/components/dialog"
 )
 
 // TestFileCompletionSurvivesSymlinkLoop reproduces the shape of directory tree

@@ -7,7 +7,7 @@ package eval
 import (
 	"strings"
 
-	"github.com/aux-ai/aux-cli/internal/message"
+	"github.com/kaiau00/aux-cli/internal/message"
 )
 
 // Kind classifies a fixture scenario.

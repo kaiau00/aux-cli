@@ -3,7 +3,7 @@ package dashboard
 import (
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/message"
+	"github.com/kaiau00/aux-cli/internal/message"
 )
 
 func TestRedactedMessageHidesSensitiveToolContent(t *testing.T) {

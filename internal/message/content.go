@@ -5,7 +5,7 @@ import (
 	"slices"
 	"time"
 
-	"github.com/aux-ai/aux-cli/internal/llm/models"
+	"github.com/kaiau00/aux-cli/internal/llm/models"
 )
 
 type MessageRole string

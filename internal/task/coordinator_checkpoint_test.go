@@ -4,15 +4,15 @@ import (
 	"context"
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/artifact"
-	"github.com/aux-ai/aux-cli/internal/checkpoint"
-	"github.com/aux-ai/aux-cli/internal/db"
-	"github.com/aux-ai/aux-cli/internal/db/dbtest"
-	"github.com/aux-ai/aux-cli/internal/eventstore"
-	"github.com/aux-ai/aux-cli/internal/history"
-	"github.com/aux-ai/aux-cli/internal/llm/tools"
-	"github.com/aux-ai/aux-cli/internal/session"
-	"github.com/aux-ai/aux-cli/internal/task"
+	"github.com/kaiau00/aux-cli/internal/artifact"
+	"github.com/kaiau00/aux-cli/internal/checkpoint"
+	"github.com/kaiau00/aux-cli/internal/db"
+	"github.com/kaiau00/aux-cli/internal/db/dbtest"
+	"github.com/kaiau00/aux-cli/internal/eventstore"
+	"github.com/kaiau00/aux-cli/internal/history"
+	"github.com/kaiau00/aux-cli/internal/llm/tools"
+	"github.com/kaiau00/aux-cli/internal/session"
+	"github.com/kaiau00/aux-cli/internal/task"
 )
 
 // buildCheckpointCoordinator wires a coordinator with history + checkpoint

@@ -3,7 +3,7 @@ package prompt
 import (
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/config"
+	"github.com/kaiau00/aux-cli/internal/config"
 )
 
 // PonytailProtocol and project-context files should only be appended to the

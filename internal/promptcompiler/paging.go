@@ -3,7 +3,7 @@ package promptcompiler
 import (
 	"fmt"
 
-	"github.com/aux-ai/aux-cli/internal/message"
+	"github.com/kaiau00/aux-cli/internal/message"
 )
 
 // minDedupBytes is the smallest tool-result content worth deduplicating. Below

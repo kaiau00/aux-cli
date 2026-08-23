@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/llm/models"
+	"github.com/kaiau00/aux-cli/internal/llm/models"
 )
 
 func TestNewProviderMock(t *testing.T) {

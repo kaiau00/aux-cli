@@ -14,8 +14,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aux-ai/aux-cli/internal/govpolicy"
-	"github.com/aux-ai/aux-cli/internal/skill"
+	"github.com/kaiau00/aux-cli/internal/govpolicy"
+	"github.com/kaiau00/aux-cli/internal/skill"
 )
 
 // FormatVersion is the bundle wire-format version.

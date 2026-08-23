@@ -8,8 +8,8 @@ import (
 	"io"
 	"strings"
 
-	"github.com/aux-ai/aux-cli/internal/config"
-	"github.com/aux-ai/aux-cli/internal/logging"
+	"github.com/kaiau00/aux-cli/internal/config"
+	"github.com/kaiau00/aux-cli/internal/logging"
 )
 
 // Write writes an LSP message to the given writer

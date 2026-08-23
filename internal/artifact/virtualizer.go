@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aux-ai/aux-cli/internal/llm/tools"
+	"github.com/kaiau00/aux-cli/internal/llm/tools"
 )
 
 // Mode controls tool-output virtualization (roadmapplan.md §15.2).

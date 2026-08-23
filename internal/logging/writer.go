@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aux-ai/aux-cli/internal/pubsub"
 	"github.com/go-logfmt/logfmt"
+	"github.com/kaiau00/aux-cli/internal/pubsub"
 )
 
 const (

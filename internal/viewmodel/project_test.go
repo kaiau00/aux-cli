@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/profile"
-	"github.com/aux-ai/aux-cli/internal/project"
-	"github.com/aux-ai/aux-cli/internal/relatedproject"
-	"github.com/aux-ai/aux-cli/internal/viewmodel"
+	"github.com/kaiau00/aux-cli/internal/profile"
+	"github.com/kaiau00/aux-cli/internal/project"
+	"github.com/kaiau00/aux-cli/internal/relatedproject"
+	"github.com/kaiau00/aux-cli/internal/viewmodel"
 )
 
 type fakeProjectReader struct{ res project.Resolution }

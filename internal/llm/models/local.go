@@ -10,7 +10,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/aux-ai/aux-cli/internal/logging"
+	"github.com/kaiau00/aux-cli/internal/logging"
 	"github.com/spf13/viper"
 )
 

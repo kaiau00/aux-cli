@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/message"
+	"github.com/kaiau00/aux-cli/internal/message"
 )
 
 // failingUpdates rejects every durable write, standing in for a database that

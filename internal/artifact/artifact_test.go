@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aux-ai/aux-cli/internal/artifact"
-	"github.com/aux-ai/aux-cli/internal/db/dbtest"
-	"github.com/aux-ai/aux-cli/internal/llm/tools"
+	"github.com/kaiau00/aux-cli/internal/artifact"
+	"github.com/kaiau00/aux-cli/internal/db/dbtest"
+	"github.com/kaiau00/aux-cli/internal/llm/tools"
 )
 
 func newService(t *testing.T) *artifact.Service {

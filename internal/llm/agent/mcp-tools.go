@@ -7,11 +7,11 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/aux-ai/aux-cli/internal/config"
-	"github.com/aux-ai/aux-cli/internal/llm/tools"
-	"github.com/aux-ai/aux-cli/internal/logging"
-	"github.com/aux-ai/aux-cli/internal/permission"
-	"github.com/aux-ai/aux-cli/internal/version"
+	"github.com/kaiau00/aux-cli/internal/config"
+	"github.com/kaiau00/aux-cli/internal/llm/tools"
+	"github.com/kaiau00/aux-cli/internal/logging"
+	"github.com/kaiau00/aux-cli/internal/permission"
+	"github.com/kaiau00/aux-cli/internal/version"
 
 	"github.com/mark3labs/mcp-go/client"
 	"github.com/mark3labs/mcp-go/mcp"

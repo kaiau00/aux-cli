@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aux-ai/aux-cli/internal/db"
-	"github.com/aux-ai/aux-cli/internal/pubsub"
 	"github.com/google/uuid"
+	"github.com/kaiau00/aux-cli/internal/db"
+	"github.com/kaiau00/aux-cli/internal/pubsub"
 )
 
 const (

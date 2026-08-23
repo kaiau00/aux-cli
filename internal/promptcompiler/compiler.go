@@ -16,8 +16,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aux-ai/aux-cli/internal/llm/tools"
-	"github.com/aux-ai/aux-cli/internal/message"
+	"github.com/kaiau00/aux-cli/internal/llm/tools"
+	"github.com/kaiau00/aux-cli/internal/message"
 )
 
 // Section describes one compiled region for the manifest.

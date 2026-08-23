@@ -6,10 +6,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/aux-ai/aux-cli/internal/config"
-	"github.com/aux-ai/aux-cli/internal/cost"
-	"github.com/aux-ai/aux-cli/internal/db"
-	"github.com/aux-ai/aux-cli/internal/evalsuite"
+	"github.com/kaiau00/aux-cli/internal/config"
+	"github.com/kaiau00/aux-cli/internal/cost"
+	"github.com/kaiau00/aux-cli/internal/db"
+	"github.com/kaiau00/aux-cli/internal/evalsuite"
 	"github.com/spf13/cobra"
 )
 

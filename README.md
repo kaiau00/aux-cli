@@ -64,8 +64,8 @@ fail at the first command it ran.
 Build from source. Requires Go 1.24 or newer.
 
 ```bash
-git clone https://github.com/kaiau00/Aux
-cd Aux
+git clone https://github.com/kaiau00/aux-cli
+cd aux-cli
 go build -o aux .
 ```
 
@@ -491,7 +491,7 @@ heard of. Upgrade again, or move the file aside.
 ### Building from source
 
 ```bash
-git clone https://github.com/aux-ai/aux-cli.git
+git clone https://github.com/kaiau00/aux-cli.git
 cd aux-cli
 go build -o aux
 ./aux

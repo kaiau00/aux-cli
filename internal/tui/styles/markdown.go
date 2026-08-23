@@ -1,10 +1,10 @@
 package styles
 
 import (
-	"github.com/aux-ai/aux-cli/internal/tui/theme"
 	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/glamour/ansi"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/kaiau00/aux-cli/internal/tui/theme"
 )
 
 const defaultMargin = 1

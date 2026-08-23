@@ -10,10 +10,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	llmcontext "github.com/aux-ai/aux-cli/internal/llm/context"
-	"github.com/aux-ai/aux-cli/internal/logging"
-	"github.com/aux-ai/aux-cli/internal/lsp"
-	"github.com/aux-ai/aux-cli/internal/permission"
+	llmcontext "github.com/kaiau00/aux-cli/internal/llm/context"
+	"github.com/kaiau00/aux-cli/internal/logging"
+	"github.com/kaiau00/aux-cli/internal/lsp"
+	"github.com/kaiau00/aux-cli/internal/permission"
 )
 
 type ViewParams struct {
