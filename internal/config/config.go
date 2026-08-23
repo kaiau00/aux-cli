@@ -3,6 +3,7 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -755,10 +756,69 @@ func validateAgent(cfg *Config, name AgentName, agent Agent) error {
 	return nil
 }
 
+// ErrNoProvider reports that no AI provider is usable. It is separate from the
+// other validation errors because it is overwhelmingly the first thing a new
+// user hits, and the only one whose remedy is a single environment variable.
+var ErrNoProvider = errors.New("no AI provider is configured")
+
+// providerEnvVars names the environment variable that supplies each provider's
+// key, so the error can tell the user what to set instead of only what failed.
+var providerEnvVars = []struct {
+	provider models.ModelProvider
+	env      string
+}{
+	{models.ProviderAnthropic, "ANTHROPIC_API_KEY"},
+	{models.ProviderOpenAI, "OPENAI_API_KEY"},
+	{models.ProviderGemini, "GEMINI_API_KEY"},
+	{models.ProviderGROQ, "GROQ_API_KEY"},
+	{models.ProviderAzure, "AZURE_OPENAI_API_KEY"},
+	{models.ProviderOpenRouter, "OPENROUTER_API_KEY"},
+}
+
+// checkProviderAvailable fails when nothing can serve a model.
+//
+// Without this the failure surfaced as "agent coder not found": the agent
+// defaults are only filled in once a provider exists, so the absence of a key
+// was reported as the absence of an agent, several layers from the cause and
+// with no hint of the remedy. That was the literal first thing a new user saw.
+func checkProviderAvailable() error {
+	for _, p := range cfg.Providers {
+		if p.APIKey != "" && !p.Disabled {
+			return nil
+		}
+	}
+	for _, pe := range providerEnvVars {
+		if os.Getenv(pe.env) != "" {
+			return nil
+		}
+	}
+	// Bedrock and Vertex authenticate through ambient cloud credentials rather
+	// than a key, so they are checked the way they actually work.
+	if hasAWSCredentials() || hasVertexAICredentials() {
+		return nil
+	}
+
+	var b strings.Builder
+	b.WriteString("Aux needs an API key for at least one provider. Set one of:\n\n")
+	for _, pe := range providerEnvVars {
+		fmt.Fprintf(&b, "  export %s=...\n", pe.env)
+	}
+	b.WriteString("\nor add a key under \"providers\" in ")
+	b.WriteString(filepath.Join("$HOME", fmt.Sprintf(".%s.json", appName)))
+	b.WriteString(".\nAWS or Google Cloud credentials also work, for Bedrock and Vertex AI.")
+	return fmt.Errorf("%w\n\n%s", ErrNoProvider, b.String())
+}
+
 // Validate checks if the configuration is valid and applies defaults where needed.
 func Validate() error {
 	if cfg == nil {
 		return fmt.Errorf("config not loaded")
+	}
+
+	// Checked before the agents, because every agent failure downstream of a
+	// missing key describes a symptom rather than the cause.
+	if err := checkProviderAvailable(); err != nil {
+		return err
 	}
 
 	// Validate agent models
@@ -771,7 +831,8 @@ func Validate() error {
 	// Validate providers
 	for provider, providerCfg := range cfg.Providers {
 		if providerCfg.APIKey == "" && !providerCfg.Disabled {
-			fmt.Printf("provider has no API key, marking as disabled %s", provider)
+			// Logged, not printed: this runs before the TUI takes the screen, and
+			// a bare Printf here landed mid-startup as an unterminated line.
 			logging.Warn("provider has no API key, marking as disabled", "provider", provider)
 			providerCfg.Disabled = true
 			cfg.Providers[provider] = providerCfg

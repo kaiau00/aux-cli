@@ -48,6 +48,11 @@ to assist developers in writing, debugging, and understanding code directly from
   aux -p "Explain the use of context in Go" -f json
   `,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// Past flag parsing, so anything that fails from here is a runtime
+		// problem, not a misuse of the command line. Dumping the usage text
+		// after, say, a missing API key buries the one line that matters.
+		cmd.SilenceUsage = true
+
 		// If the help flag is set, show the help message
 		if cmd.Flag("help").Changed {
 			cmd.Help()
