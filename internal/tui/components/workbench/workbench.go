@@ -124,7 +124,7 @@ func validationGlyph(state viewmodel.ComponentState) string {
 	case viewmodel.StateValidated:
 		return styles.CheckIcon
 	case viewmodel.StateBlocked:
-		return "⊘"
+		return "■"
 	case viewmodel.StateFailed:
 		return "✗"
 	case viewmodel.StateCompleted:
