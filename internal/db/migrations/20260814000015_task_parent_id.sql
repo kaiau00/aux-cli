@@ -1,8 +1,8 @@
 -- +goose Up
 -- +goose StatementBegin
--- Parent/child task linkage: multi-repo compilation (roadmapplan.md §11.4)
--- creates one child task per target repository under a parent task, and
--- efficient subagents (§11.3) give each subagent its own real task row linked
+-- Parent/child task linkage: multi-repo compilation creates one child task
+-- per target repository under a parent task, and efficient subagents give
+-- each subagent its own real task row linked
 -- to the task that spawned it. Nullable and additive: existing single-task
 -- rows are unaffected.
 ALTER TABLE tasks ADD COLUMN parent_task_id TEXT;

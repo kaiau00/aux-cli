@@ -11,7 +11,7 @@ import (
 	"github.com/kaiau00/aux-cli/internal/ids"
 )
 
-// Experiment defines a control-vs-variant comparison (roadmapplan.md §12.1).
+// Experiment defines a control-vs-variant comparison.
 type Experiment struct {
 	ID         string
 	ProjectID  string
@@ -102,7 +102,7 @@ func (s *ExperimentStore) ListRuns(ctx context.Context, experimentID string) ([]
 }
 
 // ListExperiments returns a project's experiments, most recent first, for
-// history/optimization surfaces such as the dashboard (roadmapplan.md §13.14).
+// history/optimization surfaces such as the dashboard.
 // Ties in created_at (same millisecond) break on experiment_id, which is
 // itself time-ordered (UUIDv7, see internal/ids), so ordering stays
 // deterministic and creation-order-consistent even for rapid successive
@@ -143,8 +143,7 @@ func (s *ExperimentStore) GetExperiment(ctx context.Context, id string) (Experim
 
 // RunCompilerExperiment runs the compatibility-vs-paging comparison over the
 // baseline fixtures and persists the experiment and one eval run per fixture. It
-// is deterministic and makes no provider calls (roadmapplan.md §12.2
-// counterfactual replay).
+// is deterministic and makes no provider calls.
 func RunCompilerExperiment(ctx context.Context, store *ExperimentStore, projectID string) (Experiment, []CompilerResult, error) {
 	results := RunBaseline()
 	exp, err := store.CreateExperiment(ctx, Experiment{

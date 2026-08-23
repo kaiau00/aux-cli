@@ -2,7 +2,6 @@
 
 - Status: accepted
 - Date: 2026-08-14
-- Plan reference: roadmapplan.md §5.3, §21.12
 
 ## Decision
 

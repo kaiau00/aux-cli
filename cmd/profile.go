@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// profileCmd is a read-only surface over profile layers (roadmapplan.md §6.7).
+// profileCmd is a read-only surface over profile layers.
 var profileCmd = &cobra.Command{
 	Use:   "profile",
 	Short: "Inspect project profile layers",

@@ -76,7 +76,7 @@ func TestSessionTotalsAreCumulative(t *testing.T) {
 	ctx := context.Background()
 
 	// Two completed calls in the same session. The bug this guards against
-	// (roadmapplan.md §5.2) is overwriting totals with the latest call.
+	// is overwriting totals with the latest call.
 	finish(t, svc, "sess", cost.ModelCall{
 		InputTokens: 100, OutputTokens: 40,
 		CacheCreationTokens: 10, CacheReadTokens: 5, EstimatedCost: 1.0,
@@ -123,7 +123,7 @@ func TestStartedCallsExcludedFailedIncluded(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("StartCall: %v", err)
 	}
-	// A failed call that still reported usage must be retained (§5.2).
+	// A failed call that still reported usage must be retained.
 	failedID := ids.New()
 	mustStart(t, svc, failedID, "s")
 	if err := svc.FinishCall(ctx, cost.ModelCall{

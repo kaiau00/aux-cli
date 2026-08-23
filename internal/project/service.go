@@ -91,7 +91,7 @@ func (s *Service) Resolve(ctx context.Context, dir string) (Resolution, error) {
 func (s *Service) matchProject(ctx context.Context, remoteHash, rootHash string) (Project, bool, error) {
 	// A remote is authoritative identity: match strictly by remote when present.
 	// Falling back to path here would wrongly merge two repositories that happen
-	// to be checked out at the same path (roadmapplan.md §6.1).
+	// to be checked out at the same path.
 	if remoteHash != "" {
 		return s.store.GetProjectByRemoteHash(ctx, remoteHash)
 	}

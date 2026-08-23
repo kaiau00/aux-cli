@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// impactCmd is a read-only surface over the change-impact graph (§8.6/§8.7).
+// impactCmd is a read-only surface over the change-impact graph.
 var impactCmd = &cobra.Command{
 	Use:   "impact <changed-path>...",
 	Short: "Show the change impact (dependents, affected packages, tests) for paths",

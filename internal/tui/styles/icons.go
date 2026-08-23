@@ -6,8 +6,7 @@ import (
 )
 
 // SupportsUnicode reports whether the terminal is expected to render
-// non-ASCII glyphs reliably (roadmapplan.md §13.3/§13.18 terminal
-// fallbacks). Most terminals handle Unicode fine even with no locale
+// non-ASCII glyphs reliably. Most terminals handle Unicode fine even with no locale
 // configured, so the only cases treated as ASCII-only are an explicit
 // override or the classic POSIX "C"/"POSIX" locale — the traditional signal
 // for "ASCII only" — rather than defaulting to degraded glyphs whenever

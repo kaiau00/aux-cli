@@ -15,7 +15,7 @@ const (
 	flexokiBase300 = "#B7B5AC" // tx-3 (light)
 	flexokiBase500 = "#878580" // tx-2 (light)
 	flexokiBase600 = "#6F6E69" // tx (light)
-	flexokiBase700 = "#64635f" // tx-3 (dark); lightened from #575653 for WCAG contrast against the dark background (§13.18)
+	flexokiBase700 = "#64635f" // tx-3 (dark); lightened from #575653 for WCAG contrast against the dark background
 	flexokiBase800 = "#403E3C" // ui-3 (dark)
 	flexokiBase850 = "#343331" // ui-2 (dark)
 	flexokiBase900 = "#282726" // ui (dark)

@@ -1,4 +1,4 @@
-// Optimization view (roadmapplan.md §13.14 item 7): evaluated experiments and
+// Optimization view: evaluated experiments and
 // governed-cost policies. This is where "governed vs baseline" and "skill vs
 // baseline" results computed by `aux eval ab` become visible once a user has
 // run them.

@@ -97,7 +97,7 @@ func NewGruvboxTheme() *GruvboxTheme {
 		// The non-bright light-mode yellow/green (already defined above for use
 		// elsewhere in this theme) meet WCAG contrast against the light
 		// background where the bright variants used for Markdown/Syntax accents
-		// do not (§13.18); the bright ones stay as-is for the decorative uses.
+		// do not; the bright ones stay as-is for the decorative uses.
 		Light: gruvboxLightYellow,
 	}
 	theme.SuccessColor = lipgloss.AdaptiveColor{

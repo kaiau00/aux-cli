@@ -33,7 +33,7 @@ func NewTokyoNightTheme() *TokyoNightTheme {
 	lightCurrentLine := "#d5d6db"
 	lightSelection := "#c8c9ce"
 	lightForeground := "#3760bf"
-	lightComment := "#717aaa" // darkened from #848cb5 for WCAG contrast against the light background (§13.18)
+	lightComment := "#717aaa" // darkened from #848cb5 for WCAG contrast against the light background
 	lightRed := "#f52a65"
 	lightOrange := "#b15c00"
 	lightYellow := "#8c6c3e"

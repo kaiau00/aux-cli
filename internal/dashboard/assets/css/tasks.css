@@ -1,5 +1,5 @@
-/* Active-task workspace, page-specific layout only (roadmapplan.md
-   §13.12/§13.14). Shared chrome lives in base.css, reusable primitives
+/* Active-task workspace, page-specific layout only.
+   Shared chrome lives in base.css, reusable primitives
    (card/badge/state/kv/row/bar) in components.css. */
 .workspace {
   display: grid;

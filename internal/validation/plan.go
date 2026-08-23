@@ -14,7 +14,7 @@ type CommandSpec struct {
 }
 
 // PlanIntents turns the project's known validation commands into intents that
-// provide evidence for a task's acceptance criteria (roadmapplan.md §14.1).
+// provide evidence for a task's acceptance criteria.
 //
 // Every command is attributed to every criterion on purpose: the project's
 // commands are not criterion-specific, so a passing test run is evidence for

@@ -8,7 +8,7 @@ import (
 )
 
 // ErrNoEvaluationEvidence is returned when promotion is attempted without a
-// passing evaluation — the core safety gate (roadmapplan.md §9.7, §23).
+// passing evaluation — the core safety gate.
 var ErrNoEvaluationEvidence = errors.New("policy promotion requires a passing evaluation against a baseline")
 
 // EventSink appends domain events.

@@ -1,7 +1,7 @@
 package memory
 
-// ExtractInput is the deterministic evidence available after a task finalizes
-// (roadmapplan.md §8.2). Candidate extraction prefers deterministic signals
+// ExtractInput is the deterministic evidence available after a task finalizes.
+// Candidate extraction prefers deterministic signals
 // before any model-proposed candidates.
 type ExtractInput struct {
 	ProjectID          string
@@ -57,7 +57,7 @@ func Extract(in ExtractInput) []Candidate {
 				"purpose": "validated successfully during a task",
 			},
 			// A command that passed validation is one successful validated use,
-			// which the promotion policy (§8.3) treats as sufficient for a
+			// which the promotion policy treats as sufficient for a
 			// procedure — so it meets the auto-promote threshold.
 			Confidence:                 0.85,
 			SupportingRevision:         in.SupportingRevision,

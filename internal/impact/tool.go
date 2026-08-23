@@ -9,7 +9,7 @@ import (
 )
 
 // AnalyzeToolName is the tool an impact-analyst subagent uses to query the
-// deterministic impact graph (roadmapplan.md §11.3, §8.6).
+// deterministic impact graph.
 const AnalyzeToolName = "impact_analyze"
 
 type analyzeTool struct {

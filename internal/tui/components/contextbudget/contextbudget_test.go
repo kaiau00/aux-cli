@@ -141,7 +141,7 @@ func TestRenderFitsWidth(t *testing.T) {
 
 func TestRenderReconcilesTotal(t *testing.T) {
 	// The header total must equal the projected total (the display reconciles
-	// with the prompt manifest, §13.11).
+	// with the prompt manifest).
 	vm := sampleBudget()
 	out := Render(vm, 60)
 	if !strings.Contains(out, FormatTokens(vm.TotalTokens)) {

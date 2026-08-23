@@ -2,7 +2,6 @@
 
 - Status: accepted
 - Date: 2026-08-14
-- Plan reference: roadmapplan.md §2 (critical constraint), §7.2, §21.4
 
 ## Decision
 

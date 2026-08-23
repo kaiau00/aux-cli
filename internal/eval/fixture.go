@@ -1,6 +1,6 @@
 // Package eval provides the deterministic, network-free evaluation harness for
-// comparing control and optimized variants against the same recorded scenario
-// (roadmapplan.md §5.1, §12.2 counterfactual replay, §19 PR 12). It never makes
+// comparing control and optimized variants against the same recorded scenario.
+// It never makes
 // live provider calls in the default path.
 package eval
 
@@ -44,7 +44,7 @@ func toolResult(id, content string) message.Message {
 	return message.Message{Role: message.Tool, Parts: []message.ContentPart{message.ToolResult{ToolCallID: id, Content: content}}}
 }
 
-// BaselineFixtures returns representative scenarios from roadmapplan.md §5.1:
+// BaselineFixtures returns representative scenarios:
 // a localized single-file task, a cross-file task with distinct reads, and a
 // repeated-read task where the model re-reads the same large file.
 func BaselineFixtures() []Fixture {

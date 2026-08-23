@@ -442,7 +442,7 @@ internal/session/, message/, history/   Sessions, messages, tracked file version
 internal/lsp/, logging/, permission/, pubsub/   Supporting infrastructure
 ```
 
-Architectural decisions are recorded as ADRs in [`docs/adr/`](docs/adr/); ongoing status of what's built vs. what still needs credentials/a browser to verify is tracked in [`docs/live-gates-and-remainders.md`](docs/live-gates-and-remainders.md).
+Architectural decisions are recorded as ADRs in [`docs/adr/`](docs/adr/); everything still outstanding, and what may honestly be claimed today, is tracked in [`TODO.md`](TODO.md).
 
 ## Using GitHub Copilot
 
@@ -506,7 +506,7 @@ go test ./...          # full suite, deterministic and offline — no provider c
 go test ./... -race
 ```
 
-Live evaluation gates that need real provider credentials and budget (governed-vs-baseline, skill-vs-baseline) are opt-in and documented in [`docs/live-gates-and-remainders.md`](docs/live-gates-and-remainders.md); they are never required for normal development.
+Live evaluation gates that need real provider credentials and budget (governed-vs-baseline, skill-vs-baseline) are opt-in via `aux eval ab`; they are never required for normal development.
 
 ## Acknowledgments
 

@@ -13,7 +13,7 @@ func TestSplitWidthsBothPanels(t *testing.T) {
 }
 
 func TestSplitWidthsCollapsesWhenNarrow(t *testing.T) {
-	// Below the threshold the right panel collapses to a single column (§13.10).
+	// Below the threshold the right panel collapses to a single column.
 	left, right := splitWidths(60, 0.7, true, true, 80)
 	if left != 60 || right != 0 {
 		t.Fatalf("narrow layout should be single column 60/0, got %d/%d", left, right)

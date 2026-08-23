@@ -19,7 +19,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// taskCmd is a read-only surface over first-class tasks (roadmapplan.md §6.7).
+// taskCmd is a read-only surface over first-class tasks.
 var taskCmd = &cobra.Command{
 	Use:   "task",
 	Short: "Inspect first-class tasks and their specs",
@@ -88,7 +88,7 @@ var taskShowCmd = &cobra.Command{
 
 var taskBeginCmd = &cobra.Command{
 	Use:   "begin <objective>",
-	Short: "Begin a task; pass --repo more than once to compile a multi-repository task (roadmapplan.md §11.4)",
+	Short: "Begin a task; pass --repo more than once to compile a multi-repository task",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		objective := args[0]
@@ -168,7 +168,7 @@ var taskBeginCmd = &cobra.Command{
 			}
 			for _, r := range rels {
 				// Every relation type is a candidate target: today's only automated
-				// derivation (module dependencies, roadmapplan.md §11.2) produces
+				// derivation (module dependencies) produces
 				// library_consumer edges, and a lib+consumer cross-repo change is
 				// exactly the kind of task --auto-related exists for.
 				roots, err := projects.Store().ListRoots(ctx, r.ToProject)

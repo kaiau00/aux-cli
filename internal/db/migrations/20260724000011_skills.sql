@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
--- Skills, policies, experiments, and evaluation (roadmapplan.md Migration G, §10,
--- §12). Skills and policies are promoted only with evaluation/replay evidence.
+-- Skills, policies, experiments, and evaluation. Skills and policies are
+-- promoted only with evaluation/replay evidence.
 -- Skill content is stored inline as JSON here (content_artifact_id remains for
 -- large bodies) so the skill lifecycle is testable without the artifact store.
 

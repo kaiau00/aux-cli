@@ -1,10 +1,10 @@
 // Package contextstore stores typed context pages, their content-addressed
 // versions, and the bindings that record what a specific model call held
-// resident, available, or evicted (roadmapplan.md §7.1, Migration D). It makes
+// resident, available, or evicted. It makes
 // every compiled prompt explainable page by page.
 package contextstore
 
-// Page kinds (roadmapplan.md §7.1). Declared as constants so new kinds are additive.
+// Page kinds. Declared as constants so new kinds are additive.
 const (
 	KindProjectManifest    = "project_manifest"
 	KindTaskSpec           = "task_spec"
@@ -25,7 +25,7 @@ const (
 	KindRecentConversation = "recent_conversation"
 )
 
-// Binding states (roadmapplan.md §3.4, §13.4).
+// Binding states.
 const (
 	StateResident  = "resident"
 	StateAvailable = "available"

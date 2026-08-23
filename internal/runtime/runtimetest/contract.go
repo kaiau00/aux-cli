@@ -1,5 +1,5 @@
 // Package runtimetest provides the reusable conformance contract every runtime
-// adapter must satisfy (roadmapplan.md §12.4, §24 platform quality). A new
+// adapter must satisfy. A new
 // adapter (local, remote, replay) proves it honors the Runner seam by calling
 // RunnerContract from its own test — so adapters are contract tested rather than
 // trusted.

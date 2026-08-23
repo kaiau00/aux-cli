@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 -- Persistent, scoped memory with provenance and revision-aware invalidation.
--- See roadmapplan.md Migration E and §8. Memory is compiled, bounded knowledge —
+-- Memory is compiled, bounded knowledge —
 -- never a raw transcript (that is the event store's job).
 
 CREATE TABLE IF NOT EXISTS memories (

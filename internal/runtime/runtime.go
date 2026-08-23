@@ -3,7 +3,7 @@
 // A turn is one model call plus the tool results it produces. In Phase 1.0 the
 // implementation (internal/llm/agent) compiles the raw stored message history as
 // the model prompt exactly as before — this is the compatibility shell, a seam
-// rather than an optimization (roadmapplan.md §5.5). Later phases (§7.2 Prompt
+// rather than an optimization. Later phases (Prompt
 // Compiler) replace history compilation behind this same Runner interface without
 // changing its callers.
 package runtime

@@ -2,7 +2,7 @@ package cost
 
 import "github.com/kaiau00/aux-cli/internal/eventstore"
 
-// Trajectory records (roadmapplan.md §9.6). A task is compiled into an ordered
+// Trajectory records. A task is compiled into an ordered
 // sequence of state/action/outcome steps derived from durable events plus the
 // call ledger, so successful and failed paths can be compared by task class.
 

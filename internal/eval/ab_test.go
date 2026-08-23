@@ -33,7 +33,7 @@ func TestCompareNoImprovement(t *testing.T) {
 }
 
 func TestCompareUnknownCostNeverImproves(t *testing.T) {
-	// An unmeasurable ratio must never look favorable (§9.6).
+	// An unmeasurable ratio must never look favorable.
 	baseline := RunMetrics{ChangesPerDollar: 1.0}
 	variant := RunMetrics{ChangesPerDollar: 5.0, CostUnknown: true}
 	if Compare(baseline, variant).Improved {

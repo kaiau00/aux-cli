@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 -- Typed context pages: the addressable units the prompt compiler assembles.
--- See roadmapplan.md Migration D and §7.1. A page has a stable identity; each
+-- A page has a stable identity; each
 -- version is content-addressed; bindings record what a specific model call held.
 
 CREATE TABLE IF NOT EXISTS context_pages (

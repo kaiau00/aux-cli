@@ -42,7 +42,7 @@ func NewTronTheme() *TronTheme {
 	lightPurple := "#9932cc"
 	lightRed := "#cc2929"
 	lightYellow := "#cc9900"
-	lightGreen := "#009e58" // darkened from #00cc72 for WCAG contrast against the light background (§13.18)
+	lightGreen := "#009e58" // darkened from #00cc72 for WCAG contrast against the light background
 	lightBorder := "#d0e8ff"
 
 	theme := &TronTheme{}

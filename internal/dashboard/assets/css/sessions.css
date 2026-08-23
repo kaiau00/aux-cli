@@ -1,4 +1,4 @@
-/* Session/log inspector, page-specific layout only (roadmapplan.md §13.13).
+/* Session/log inspector, page-specific layout only.
    This is the secondary, debugging-oriented view — the default route is the
    task-first workspace (tasks.html); shared chrome lives in base.css. */
 main.dashboard {
@@ -57,7 +57,7 @@ main.dashboard {
 .event-text { margin-top: .35rem; overflow-wrap: anywhere; }
 
 /* Live Activity: real connection/event state, not a decorative graphic
-   (roadmapplan.md §13.12 — remove or repurpose Live Core with real state). */
+   (remove or repurpose Live Core with real state). */
 .activity-row { display: flex; justify-content: space-between; gap: var(--space-2); padding: .3rem 0; border-bottom: 1px solid var(--line); }
 .activity-row:last-child { border-bottom: none; }
 .activity-row .k { color: var(--muted); font-size: var(--text-sm); }

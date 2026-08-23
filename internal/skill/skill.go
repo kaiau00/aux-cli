@@ -1,6 +1,6 @@
 // Package skill imports, versions, retrieves, evaluates, promotes, and rolls
 // back skills — reusable, evaluated procedures compiled from repeated successful
-// work (roadmapplan.md §10). Promotion is evaluation-gated: a skill version can
+// work. Promotion is evaluation-gated: a skill version can
 // become active only with a passing evaluation on record, and the prior version
 // is always retained as a rollback target.
 package skill
@@ -32,7 +32,7 @@ type Step struct {
 	Decision string `json:"decision,omitempty"`
 }
 
-// Content is the body of a skill version (roadmapplan.md §10.1).
+// Content is the body of a skill version.
 type Content struct {
 	Name                   string   `json:"name"`
 	Purpose                string   `json:"purpose"`

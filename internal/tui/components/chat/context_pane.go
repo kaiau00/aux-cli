@@ -64,11 +64,11 @@ type ContextPaneCmp struct {
 	offset    int
 
 	// activity holds the grouped runtime activity for the current session,
-	// projected from durable tool events (roadmapplan.md §13.7). Refreshed on
+	// projected from durable tool events. Refreshed on
 	// message updates and session changes; empty when there is nothing to show.
 	activity []viewmodel.ActivityGroupVM
 
-	// validation and changes are the task workbench (roadmapplan.md §13.8/§13.9)
+	// validation and changes are the task workbench
 	// for the session's task. hasTask is false when the session has no task, so
 	// the sections are hidden rather than faked. Changes render "no changes yet"
 	// as an informative state once a task exists.
@@ -77,17 +77,17 @@ type ContextPaneCmp struct {
 	hasTask    bool
 	// taskID is the current session's latest task id, used so the x/u/c
 	// cross-off controls persist a real exclusion for the task's next prompt
-	// compile (roadmapplan.md §13.11) instead of only repainting a checkbox.
+	// compile instead of only repainting a checkbox.
 	taskID string
 
-	// budget is the context signature composition (roadmapplan.md §13.11),
+	// budget is the context signature composition,
 	// projected from the latest model call's page bindings — the same manifest
 	// the model received. Empty (and hidden) until demand paging records
 	// bindings, leaving the file list below as the compatibility adapter.
 	budget viewmodel.ContextBudgetVM
 
 	// pageList is the same call's bindings grouped by state, backing the
-	// expanded context view (roadmapplan.md §13.11) toggled by the Expand key.
+	// expanded context view toggled by the Expand key.
 	pageList        viewmodel.ContextPageListVM
 	expandedContext bool
 
@@ -291,8 +291,7 @@ func (m *ContextPaneCmp) moveSelection(delta int) {
 }
 
 // toggleCross marks the selected entry crossed off (or not) and persists a
-// real exclusion override for the task's next prompt compile (roadmapplan.md
-// §13.11), so x/u change what is actually sent to the model rather than only
+// real exclusion override for the task's next prompt compile, so x/u change what is actually sent to the model rather than only
 // repainting a checkbox.
 func (m *ContextPaneCmp) toggleCross(crossed bool) {
 	m.mu.Lock()
@@ -346,7 +345,7 @@ func (m *ContextPaneCmp) clearCrossed() {
 }
 
 // togglePin marks the selected entry pinned (or not) and persists a real pin
-// override for the task's next prompt compile (roadmapplan.md §13.11): a
+// override for the task's next prompt compile: a
 // pinned page's full content is guaranteed in the compiled prompt, exempt
 // from both exclusion and dedup stubbing, so p is a stronger guarantee than
 // just not crossing something off.
@@ -637,7 +636,7 @@ func (m *ContextPaneCmp) View() string {
 const maxActivityRows = 6
 
 // refreshActivity rebuilds the grouped activity for the current session from
-// durable tool events (roadmapplan.md §13.7). Failures are ignored so
+// durable tool events. Failures are ignored so
 // observability never disturbs the pane; empty results simply hide the section.
 func (m *ContextPaneCmp) refreshActivity() {
 	sessionID := m.currentSessionID()
@@ -672,8 +671,8 @@ func (m *ContextPaneCmp) activityView() string {
 	return activity.Render(groups, m.width)
 }
 
-// refreshWorkbench rebuilds the task workbench — changes (§13.8) and
-// acceptance/proof-of-done (§13.9) — for the session's task. Criteria without
+// refreshWorkbench rebuilds the task workbench — changes and
+// acceptance/proof-of-done — for the session's task. Criteria without
 // evidence stay unverified: the surface never implies success because the agent
 // stopped. Changes come from the task's latest checkpoint, so they read "no
 // changes yet" until a checkpoint exists.
@@ -708,7 +707,7 @@ func (m *ContextPaneCmp) refreshWorkbench() {
 }
 
 // buildBudget projects the latest model call's page bindings into a context
-// budget (roadmapplan.md §13.11). It reconciles with the prompt manifest because
+// budget. It reconciles with the prompt manifest because
 // it reads the very bindings recorded for that call. Empty until demand paging
 // records bindings.
 func (m *ContextPaneCmp) buildBudget(ctx context.Context, taskID string) viewmodel.ContextBudgetVM {
@@ -728,7 +727,7 @@ func (m *ContextPaneCmp) buildBudget(ctx context.Context, taskID string) viewmod
 }
 
 // buildPageList projects the same call's bindings buildBudget reads into the
-// expanded, per-page view grouped by binding state (roadmapplan.md §13.11).
+// expanded, per-page view grouped by binding state.
 func (m *ContextPaneCmp) buildPageList(ctx context.Context, taskID string) viewmodel.ContextPageListVM {
 	if m.app.Pages == nil || m.app.Cost == nil {
 		return viewmodel.ContextPageListVM{}
@@ -756,7 +755,7 @@ func contextLimitTokens() int64 {
 }
 
 // savedTokens reads the latest context.compiled event's saved-token count for
-// the session, so the budget can show real delta/artifact reuse (§13.11).
+// the session, so the budget can show real delta/artifact reuse.
 func (m *ContextPaneCmp) savedTokens(ctx context.Context) int64 {
 	if m.app.Events == nil {
 		return 0
@@ -780,7 +779,7 @@ func (m *ContextPaneCmp) savedTokens(ctx context.Context) int64 {
 // budgetView renders the context budget, or "" when there are no page bindings
 // yet (paging off), so the file list below remains the compatibility adapter.
 // The Expand key toggles between the compact summary and the per-page,
-// grouped-by-state expanded view (roadmapplan.md §13.11).
+// grouped-by-state expanded view.
 func (m *ContextPaneCmp) budgetView() string {
 	m.mu.Lock()
 	vm := m.budget
@@ -860,7 +859,7 @@ func (m *ContextPaneCmp) workbenchView() string {
 }
 
 // dashboardView renders the dashboard status. Collapsed to one line by
-// default (roadmapplan.md §13.6): the full tokened URL is a copy-paste value,
+// default: the full tokened URL is a copy-paste value,
 // not something worth a standing 2-3 line block on every redraw of every
 // session. The "d" key reveals/hides it on demand.
 func (m *ContextPaneCmp) dashboardView() string {

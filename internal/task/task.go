@@ -1,6 +1,6 @@
 // Package task turns a user request into a first-class, versioned task
 // specification with scope, constraints, acceptance criteria, validation
-// intents, and a budget (roadmapplan.md §6.4/§6.5). Storage/UI history stays
+// intents, and a budget. Storage/UI history stays
 // separate from this compiled task state.
 package task
 
@@ -30,7 +30,7 @@ const (
 	StatusCancelled Status = "cancelled"
 )
 
-// CriterionState follows the proof-of-done model (roadmapplan.md §14.2).
+// CriterionState follows the proof-of-done model.
 type CriterionState string
 
 const (
@@ -60,7 +60,7 @@ type Task struct {
 	StartedAt         int64
 	FinishedAt        int64
 	// ParentTaskID links a child task to the task that spawned it: a multi-repo
-	// child spec (roadmapplan.md §11.4) or a subagent's own task (§11.3). Empty
+	// child spec or a subagent's own task. Empty
 	// for an ordinary top-level task.
 	ParentTaskID string
 }

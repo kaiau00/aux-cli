@@ -2,7 +2,6 @@
 
 - Status: accepted
 - Date: 2026-08-14
-- Plan reference: roadmapplan.md §6.2, §6.3, §21.8
 
 ## Decision
 
@@ -37,8 +36,8 @@ for "this exact combination of layer versions."
   Rejected: the CLI (`aux project show`, `aux profile show --effective`) and
   the dashboard's Project Brain view (`viewmodel.ProfileSummaryVM.Conflicts`)
   both need to explain *why* a value won, not just report the final value —
-  provenance is what "explainable" actually depends on here (roadmapplan.md's
-  general explainability requirement, applied to profiles).
+  provenance is what "explainable" actually depends on here (the general
+  explainability requirement, applied to profiles).
 - **Union/merge list-valued knowledge (e.g. multiple validation commands)
   instead of last-writer-wins per key.** Not rejected outright — this is
   already how it works in practice, since list-like knowledge is modeled as

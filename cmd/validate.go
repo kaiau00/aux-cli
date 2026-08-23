@@ -31,7 +31,7 @@ func (a cliApprover) Request(opts permission.CreatePermissionRequest) bool {
 
 var validateCmd = &cobra.Command{
 	Use:   "validate <task-id>",
-	Short: "Run the project's validation commands and record proof-of-done evidence (§14)",
+	Short: "Run the project's validation commands and record proof-of-done evidence",
 	Long: "Runs the effective profile's test and build commands for a task's acceptance criteria, " +
 		"records each run as executable evidence, and prints the resulting proof-of-done state.\n\n" +
 		"Commands come from the project profile, which is derived by scanning repo content, so each " +

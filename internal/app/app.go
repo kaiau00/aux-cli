@@ -119,12 +119,12 @@ func New(ctx context.Context, conn *sql.DB) (*App, error) {
 	checkpointStore := checkpoint.NewStore(conn)
 	checkpoints := checkpoint.NewService(checkpointStore, artifacts, events)
 	// A completed task automatically checkpoints what it changed, using the file
-	// versions the edit/write tools already recorded (roadmapplan.md §11.1).
+	// versions the edit/write tools already recorded.
 	taskCoord.WithCheckpoints(files, checkpoints)
 
 	// The tool recorder persists tool_executions and emits tool.* events; the
 	// executor (built inside the agent) routes every tool call through it. Its
-	// observer captures a first-mutation baseline checkpoint (§11.1).
+	// observer captures a first-mutation baseline checkpoint.
 	mutationCheckpointer := mutationcp.New(files, mutationcp.StoreAdapter{Store: checkpointStore, Service: checkpoints})
 	toolRecorder := toolexec.NewRecorder(toolexec.NewStore(conn), events,
 		toolexec.WithObserver(func(ctx context.Context, rec tools.ExecutionRecord) {
@@ -283,8 +283,7 @@ func (app *App) resolveProject(ctx context.Context) {
 		logging.Debug("built impact graph", "nodes", n)
 	}
 
-	// Derive related-project edges from module dependencies (roadmapplan.md
-	// §11.2). Best-effort and Go-only for now; a dependency only becomes an edge
+	// Derive related-project edges from module dependencies. Best-effort and Go-only for now; a dependency only becomes an edge
 	// when it resolves to another project Aux already knows about locally.
 	app.deriveRelatedProjects(ctx, res)
 }

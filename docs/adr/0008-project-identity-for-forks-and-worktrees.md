@@ -2,7 +2,6 @@
 
 - Status: accepted
 - Date: 2026-08-14
-- Plan reference: roadmapplan.md §6.1, §11.3, §21.7
 
 ## Decision
 
@@ -55,7 +54,7 @@ its own `project.Root` row (a new canonical path), not a new project.
 - A subagent worktree's checkpoints, memory candidates, and impact-graph
   contributions all attribute to the parent project's identity, not a
   fragment — this is required for the parent to actually benefit from
-  subagent work (roadmapplan.md §11.3's premise).
+  subagent work.
 - A truly independent fork (different remote) correctly gets its own
   identity even if it started as a clone of the same upstream, since the
   normalized remote differs.

@@ -140,7 +140,7 @@ type Config struct {
 	CostGovernor      CostGovernorConfig                `json:"costGovernor,omitempty"`
 }
 
-// ContextConfig controls Context OS behaviour (roadmapplan.md §15.1/§15.2). The
+// ContextConfig controls Context OS behaviour. The
 // tool-output virtualization flag supports off/observe/on and defaults to off so
 // behaviour is unchanged until it is proven against a same-model baseline.
 type ContextConfig struct {
@@ -154,7 +154,7 @@ type ContextConfig struct {
 	Paging string `json:"paging,omitempty"`
 }
 
-// CostGovernorConfig controls the One-Key Cost Governor (roadmapplan.md §9, §15.2).
+// CostGovernorConfig controls the One-Key Cost Governor.
 type CostGovernorConfig struct {
 	// Mode is "off", "observe" (compute/warn only, no behavior change), or "on".
 	Mode string `json:"mode,omitempty"`

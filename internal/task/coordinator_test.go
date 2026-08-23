@@ -59,7 +59,7 @@ func TestFinishLearnsProceduralMemoryFromValidatedCommands(t *testing.T) {
 
 	coord.Finish(newCtx, taskID, "completed")
 
-	// The validated command becomes an active procedural memory (§8.2/§8.3).
+	// The validated command becomes an active procedural memory.
 	active, err := memSvc.Retrieve(ctx, "proj-1", []memory.Type{memory.Procedural}, 10)
 	if err != nil {
 		t.Fatalf("Retrieve: %v", err)
@@ -356,7 +356,7 @@ func TestBeginLinksToParentTaskFromContext(t *testing.T) {
 	}
 
 	// A subagent's own Begin call carries tools.ParentTaskIDContextKey, set by
-	// the agent tool before spawning (roadmapplan.md §11.3).
+	// the agent tool before spawning.
 	subCtx := context.WithValue(ctx, tools.ParentTaskIDContextKey, parentTaskID)
 	_, subTaskID, err := coord.Begin(subCtx, "sub-sess-1", "subagent objective")
 	if err != nil {

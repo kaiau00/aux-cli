@@ -34,7 +34,7 @@ func TestSessionsPageRequiresToken(t *testing.T) {
 }
 
 func TestIndexServesTaskFirstWorkspaceNotLegacySessionView(t *testing.T) {
-	// roadmapplan.md §13.12: the default route must prioritize the active task,
+	// The default route must prioritize the active task,
 	// not lifetime session telemetry. The old index.html (session tree +
 	// aggregate stat cards as the primary object) is gone; / now serves the
 	// same task-first content as /tasks.

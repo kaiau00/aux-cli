@@ -123,7 +123,7 @@ func versionSetHash(layers []LayerInput) string {
 
 // renderManifest produces a compact, model-facing summary. It deliberately does
 // not paste full instruction bodies (only references), keeping the manifest much
-// smaller than the raw imported sources (roadmapplan.md §6.2).
+// smaller than the raw imported sources.
 func renderManifest(entries []EffectiveEntry) string {
 	var langs, commands, workspace, instructions, other []string
 	for _, e := range entries {
@@ -241,7 +241,7 @@ type ValidationCommand struct {
 
 // ValidationCommands returns the effective profile's test and build commands.
 // These are the concrete, project-specific ways to check whether work is
-// actually done (roadmapplan.md §14.1), extracted here so validation does not
+// actually done, extracted here so validation does not
 // need to know how profile entries are encoded.
 func (e Effective) ValidationCommands() []ValidationCommand {
 	var out []ValidationCommand

@@ -1,6 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
--- Related-project graph (roadmapplan.md §11.2). Edges between distinct projects
+-- Related-project graph. Edges between distinct projects
 -- with a typed relationship (service/client, library/consumer, schema/generator,
 -- application/infrastructure, code/documentation). Every edge keeps both project
 -- identities so cross-project retrieval never merges symbols from different

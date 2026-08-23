@@ -151,8 +151,8 @@ func (s *Store) ListRecent(ctx context.Context, limit int) ([]Task, error) {
 	return out, rows.Err()
 }
 
-// ListByParent returns a task's child tasks (multi-repo children per §11.4, or
-// subagent tasks per §11.3), oldest first.
+// ListByParent returns a task's child tasks (multi-repo children, or
+// subagent tasks), oldest first.
 func (s *Store) ListByParent(ctx context.Context, parentTaskID string) ([]Task, error) {
 	rows, err := s.db.QueryContext(ctx,
 		`SELECT `+taskCols+` FROM tasks WHERE parent_task_id = ? ORDER BY created_at ASC`, parentTaskID)

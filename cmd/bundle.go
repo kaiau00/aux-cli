@@ -14,7 +14,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// bundleCmd exports/imports shareable optimization bundles (roadmapplan.md §12.5).
+// bundleCmd exports/imports shareable optimization bundles.
 var bundleCmd = &cobra.Command{
 	Use:   "bundle",
 	Short: "Export or import shareable optimization bundles (active skills + policies)",

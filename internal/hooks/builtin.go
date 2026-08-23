@@ -7,7 +7,7 @@ import (
 )
 
 // RegisterObservability attaches the built-in handlers for every lifecycle
-// point (roadmapplan.md §12.3).
+// point.
 //
 // Without this, the registry is constructed and threaded everywhere but has no
 // handlers registered anywhere in production, so all six dispatch points fire

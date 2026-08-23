@@ -1,4 +1,4 @@
-// Package hooks is the local lifecycle-hook mechanism (roadmapplan.md §12.3). It
+// Package hooks is the local lifecycle-hook mechanism. It
 // lets in-process observers and local extensions react at defined runtime points
 // — task begin/end, tool pre/post, validation complete — without coupling to the
 // core services. It stays dependency-light and deterministic; a nil registry is
@@ -19,8 +19,8 @@ const (
 	ToolPre            Point = "tool.pre"
 	ToolPost           Point = "tool.post"
 	ValidationComplete Point = "validation.complete"
-	// SubtaskBegin/SubtaskEnd bracket one subagent's run within a parent task
-	// (roadmapplan.md §11.3). They are distinct from TaskBegin/TaskEnd — which
+	// SubtaskBegin/SubtaskEnd bracket one subagent's run within a parent task.
+	// They are distinct from TaskBegin/TaskEnd — which
 	// still fire once for the subagent's own task record — so a handler can
 	// react specifically to subagent lifecycle (e.g. per-subtask checkpointing)
 	// without matching on ParentTaskID being non-empty in every TaskBegin/TaskEnd.

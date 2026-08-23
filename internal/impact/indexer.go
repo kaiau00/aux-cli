@@ -14,8 +14,8 @@ import (
 	"github.com/kaiau00/aux-cli/internal/logging"
 )
 
-// Indexer builds the impact graph from deterministic Go source analysis
-// (roadmapplan.md §8.5). Non-Go files are still tracked as file nodes so the
+// Indexer builds the impact graph from deterministic Go source analysis.
+// Non-Go files are still tracked as file nodes so the
 // analyzer can flag uncovered changes and broaden validation.
 // indexStore is the slice of the graph store the indexer needs. It exists so a
 // failing store can be substituted in tests: the writes below are the ones that
@@ -91,8 +91,7 @@ func (ix *Indexer) IndexProject(ctx context.Context, projectID, root, revision s
 	return count, err
 }
 
-// Reindex updates only the partitions for changed paths (roadmapplan.md §8.5:
-// "update affected partitions based on changed paths").
+// Reindex updates only the partitions for changed paths ("update affected partitions based on changed paths").
 func (ix *Indexer) Reindex(ctx context.Context, projectID, root, revision string, changedPaths []string) error {
 	modulePath := readModulePath(root)
 	for _, rel := range changedPaths {

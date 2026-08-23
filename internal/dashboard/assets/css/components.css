@@ -1,5 +1,5 @@
-/* Reusable UI primitives shared across dashboard pages (roadmapplan.md
-   §13.13): cards, key/value rows, badges, and semantic state colors. Kept
+/* Reusable UI primitives shared across dashboard pages: cards, key/value
+   rows, badges, and semantic state colors. Kept
    separate from base.css (layout chrome) and each page's own stylesheet
    (page-specific layout). */
 .empty { color: var(--muted); font-style: italic; }

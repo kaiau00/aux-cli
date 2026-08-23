@@ -1,5 +1,5 @@
-/* Page-agnostic layout chrome shared by every dashboard page (roadmapplan.md
-   §13.13): reset, body, and the top navigation shell. Page-specific layout
+/* Page-agnostic layout chrome shared by every dashboard page: reset, body,
+   and the top navigation shell. Page-specific layout
    (grids, panels) lives in that page's own stylesheet; reusable UI pieces
    (cards, badges, state colors) live in components.css. */
 * { box-sizing: border-box; }

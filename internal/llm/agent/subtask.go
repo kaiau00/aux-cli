@@ -11,7 +11,7 @@ import (
 )
 
 // Role specializes a subagent's tool set, prompt, and expected output for a
-// specific kind of bounded work (roadmapplan.md §11.3). The zero value is the
+// specific kind of bounded work. The zero value is the
 // generic, unspecialized subagent this package already had.
 type Role string
 
@@ -59,7 +59,7 @@ type ValidationSummary struct {
 	Notes    string   `json:"notes,omitempty"`
 }
 
-// Result is a subagent's structured report (roadmapplan.md §11.3): the
+// Result is a subagent's structured report: the
 // contract between a subagent and its parent, replacing an unstructured final
 // message.
 type Result struct {

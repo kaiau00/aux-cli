@@ -1,6 +1,6 @@
 package cost
 
-// Budget model for the One-Key Cost Governor (roadmapplan.md §9.1). The governor
+// Budget model for the One-Key Cost Governor. The governor
 // allocates a task's cost/token/time across categories and drives planned
 // degradation when a budget is exhausted — it never swaps API keys or changes
 // the user's chosen model.
@@ -16,7 +16,7 @@ const (
 	ModeLocal     Mode = "local"
 )
 
-// Budget categories the governor allocates across (roadmapplan.md §9.1).
+// Budget categories the governor allocates across.
 const (
 	CatProfileContext = "profile_context"
 	CatDiscovery      = "discovery"

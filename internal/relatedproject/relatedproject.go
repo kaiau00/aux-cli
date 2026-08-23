@@ -1,4 +1,4 @@
-// Package relatedproject builds the related-project graph (roadmapplan.md §11.2):
+// Package relatedproject builds the related-project graph:
 // typed edges between distinct projects derived from dependencies, schemas,
 // deployment config, shared remotes, or user declaration. Every edge preserves
 // both project identities, so cross-project retrieval never merges similarly

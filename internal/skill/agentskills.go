@@ -3,7 +3,7 @@ package skill
 import "strings"
 
 // AgentSkillManifest is the canonical Agent Skills interchange shape used at
-// import/export boundaries (roadmapplan.md §10.1). Aux-specific metadata
+// import/export boundaries. Aux-specific metadata
 // (evaluation state, source trajectories) is kept separately in the store.
 type AgentSkillManifest struct {
 	Name        string   `json:"name" yaml:"name"`

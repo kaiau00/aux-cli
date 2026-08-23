@@ -17,7 +17,7 @@ func NewMonokaiProTheme() *MonokaiProTheme {
 	darkCurrentLine := "#403e41"
 	darkSelection := "#5b595c"
 	darkForeground := "#fcfcfa"
-	darkComment := "#7a787a" // lightened from #727072 for WCAG contrast against the dark background (§13.18)
+	darkComment := "#7a787a" // lightened from #727072 for WCAG contrast against the dark background
 	darkRed := "#ff6188"
 	darkOrange := "#fc9867"
 	darkYellow := "#ffd866"
@@ -32,11 +32,11 @@ func NewMonokaiProTheme() *MonokaiProTheme {
 	lightCurrentLine := "#f0f0f0"
 	lightSelection := "#e5e5e6"
 	lightForeground := "#2d2a2e"
-	lightComment := "#8e8d8e" // darkened from #939293 for WCAG contrast against the light background (§13.18)
+	lightComment := "#8e8d8e" // darkened from #939293 for WCAG contrast against the light background
 	lightRed := "#f92672"
-	lightOrange := "#d37302" // darkened from #fd971f for WCAG contrast against the light background (§13.18)
+	lightOrange := "#d37302" // darkened from #fd971f for WCAG contrast against the light background
 	lightYellow := "#e6db74"
-	lightGreen := "#6b9935" // darkened from #9bca65 for WCAG contrast against the light background (§13.18)
+	lightGreen := "#6b9935" // darkened from #9bca65 for WCAG contrast against the light background
 	lightCyan := "#66d9ef"
 	lightBlue := "#7e75db"
 	lightPurple := "#ae81ff"

@@ -58,7 +58,7 @@ type EventSink interface {
 
 // Coordinator turns each new user objective into a compiled, versioned task
 // bound to the current project revision and effective profile, before any tool
-// runs (roadmapplan.md §3.5, §6.5). It caches project resolution per session.
+// runs. It caches project resolution per session.
 type Coordinator struct {
 	resolver    ProjectResolver
 	profiles    ProfileCompiler
@@ -106,7 +106,7 @@ func (c *Coordinator) WithValidation(v *validation.Service) *Coordinator {
 }
 
 // WithCheckpoints wires history + checkpoint capture so a completed task
-// automatically records what it changed (roadmapplan.md §11.1). Both are
+// automatically records what it changed. Both are
 // required for capture; either nil disables it. Optional.
 func (c *Coordinator) WithCheckpoints(files FileLister, checkpoints CheckpointCreator) *Coordinator {
 	c.history = files
@@ -115,14 +115,14 @@ func (c *Coordinator) WithCheckpoints(files FileLister, checkpoints CheckpointCr
 }
 
 // WithHooks wires a lifecycle-hook registry so local extensions can observe task
-// begin/end (roadmapplan.md §12.3). Optional; nil dispatch is a no-op.
+// begin/end. Optional; nil dispatch is a no-op.
 func (c *Coordinator) WithHooks(r *hooks.Registry) *Coordinator {
 	c.hooks = r
 	return c
 }
 
 // WithRelatedProjects attaches the related-project graph so a task's manifest
-// includes the projects it depends on or is consumed by (roadmapplan.md §11.2).
+// includes the projects it depends on or is consumed by.
 // Optional.
 func (c *Coordinator) WithRelatedProjects(r RelatedProjectReader) *Coordinator {
 	c.related = r
@@ -147,7 +147,7 @@ func (c *Coordinator) resolution(ctx context.Context) (project.Resolution, error
 // persists the task/spec/budget, emits task lifecycle events, and returns a
 // context carrying the task and project ids for downstream correlation. When
 // ctx carries a tools.ParentTaskIDContextKey (set by the agent tool before
-// spawning a subagent, roadmapplan.md §11.3), the new task is linked as that
+// spawning a subagent), the new task is linked as that
 // task's child rather than starting a fresh top-level task tree.
 func (c *Coordinator) Begin(ctx context.Context, sessionID, objective string) (context.Context, string, error) {
 	res, err := c.resolution(ctx)
@@ -210,7 +210,7 @@ func (c *Coordinator) beginWithParent(ctx context.Context, sessionID, objective 
 	_ = c.hooks.Dispatch(ctx, hooks.Event{Point: hooks.TaskBegin, TaskID: taskID, SessionID: sessionID})
 	// Offer the compiled project manifest (plus any relevant prior memory and
 	// related-project context) and the task spec to the prompt compiler as
-	// available context pages (§7.1, §8.4, §11.2).
+	// available context pages.
 	manifest := eff.Manifest + c.memorySection(ctx, res.Project.ID) + c.relatedSection(ctx, res.Project.ID)
 	ctx = promptcompiler.WithProjectContext(ctx, manifest, spec.RenderText())
 	return ctx, taskID, nil
@@ -219,7 +219,7 @@ func (c *Coordinator) beginWithParent(ctx context.Context, sessionID, objective 
 // BeginMultiRepo compiles a product objective into a parent task (in the
 // coordinator's own project) plus one child task per repository target, each
 // bound to its own project so it resolves that project's own profile and
-// working set (roadmapplan.md §11.4). Children are linked to the parent via
+// working set. Children are linked to the parent via
 // ParentTaskID. A target with no resolvable root, or a child that fails to
 // begin, is recorded as an error but does not stop the remaining children —
 // the caller sees exactly which repositories are ready to work and which are
@@ -270,7 +270,7 @@ func (c *Coordinator) BeginMultiRepo(ctx context.Context, sessionID, objective s
 }
 
 // memorySection renders a bounded set of active memories for the manifest, so
-// prior project knowledge is available without re-discovery (roadmapplan.md §8.4).
+// prior project knowledge is available without re-discovery.
 func (c *Coordinator) memorySection(ctx context.Context, projectID string) string {
 	if c.memories == nil {
 		return ""
@@ -289,7 +289,7 @@ func (c *Coordinator) memorySection(ctx context.Context, projectID string) strin
 
 // relatedSection renders the projects this project depends on (or is consumed
 // by), so cross-project work can be recognized without rediscovering the graph
-// each time (roadmapplan.md §11.2). Each edge preserves the related project's
+// each time. Each edge preserves the related project's
 // own identity; nothing here merges symbols across projects.
 func (c *Coordinator) relatedSection(ctx context.Context, projectID string) string {
 	if c.related == nil {
@@ -329,7 +329,7 @@ func (c *Coordinator) Finish(ctx context.Context, taskID, outcome string) {
 }
 
 // captureCheckpoint records what a completed task changed by snapshotting the
-// session's recorded file versions into a checkpoint (roadmapplan.md §11.1). The
+// session's recorded file versions into a checkpoint. The
 // before/after content comes from the history the edit/write tools already wrote,
 // so the change set is truthful — never inferred. Best-effort: any failure is
 // swallowed so it never affects task completion.
@@ -379,8 +379,8 @@ func toFileVersions(files []history.File) []checkpoint.FileVersion {
 	return out
 }
 
-// learnFromTask extracts deterministic memory candidates from a completed task
-// (roadmapplan.md §8.2). This is safe to run after PR 12; earlier slices
+// learnFromTask extracts deterministic memory candidates from a completed task.
+// This is safe to run after PR 12; earlier slices
 // generated the evidence memory needs.
 func (c *Coordinator) learnFromTask(ctx context.Context, taskID, outcome string) {
 	if c.memories == nil && c.skills == nil {

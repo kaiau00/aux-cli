@@ -8,7 +8,7 @@ import (
 )
 
 // ErrNoEvaluationEvidence is returned when promotion is attempted without a
-// passing evaluation — the core safety gate (roadmapplan.md §10.3, §23).
+// passing evaluation — the core safety gate.
 var ErrNoEvaluationEvidence = errors.New("skill promotion requires a passing evaluation on the candidate version")
 
 // EventSink appends domain events.

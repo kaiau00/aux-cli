@@ -1,4 +1,4 @@
-// Project Brain view (roadmapplan.md §13.14 item 4): project identity,
+// Project Brain view: project identity,
 // compiled effective profile, and related-project graph.
 (function () {
   "use strict";

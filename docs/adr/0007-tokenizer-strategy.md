@@ -2,7 +2,6 @@
 
 - Status: accepted
 - Date: 2026-08-14
-- Plan reference: roadmapplan.md §21.6
 
 ## Decision
 
@@ -39,7 +38,7 @@ billing or reported cost.
   (`internal/cost/ledger.go`), and `Totals` aggregates only real ledger rows.
   The estimate is confined to `promptcompiler` and TUI/dashboard display
   (`viewmodel.ContextBudgetVM`).
-- The roadmap's own exit-gate language ("token and cost totals reconcile
+- The exit-gate language ("token and cost totals reconcile
   from call to task to session," Phase 1.0) is about the *real* ledger, which
   this design already satisfies independent of estimate accuracy.
 

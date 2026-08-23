@@ -15,7 +15,7 @@ import (
 )
 
 // projectCmd is a read-only surface over resolved project identity and the
-// compiled effective profile (roadmapplan.md §6.7 / §19 PR 5).
+// compiled effective profile.
 var projectCmd = &cobra.Command{
 	Use:   "project",
 	Short: "Inspect the resolved project identity and profile",

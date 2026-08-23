@@ -19,7 +19,7 @@ var modeSignals = []struct {
 
 // InferMode deterministically classifies a request. It scores each mode by the
 // number of matched trigger terms and returns the best; implementation is the
-// default when nothing matches (roadmapplan.md §6.4). The primary model may
+// default when nothing matches. The primary model may
 // still refine ambiguity within its normal call.
 func InferMode(objective string) Mode {
 	lower := strings.ToLower(objective)

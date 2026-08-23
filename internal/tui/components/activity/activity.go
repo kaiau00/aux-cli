@@ -1,4 +1,4 @@
-// Package activity renders grouped runtime activity (roadmapplan.md §13.7) from
+// Package activity renders grouped runtime activity from
 // truthful, event-backed view models. It turns mechanical tool/runtime events
 // into user-understandable collapsed rows — label, status, summary, item count,
 // duration, and error state — so tool-heavy work is legible without raw
@@ -36,13 +36,13 @@ func KindLabel(k viewmodel.ActivityKind) string {
 	}
 }
 
-// RowText returns the plain-text collapsed row for a group (§13.7): status
+// RowText returns the plain-text collapsed row for a group: status
 // glyph, label, optional summary, item count, duration, and — always, when
 // present — the error state. Pure and deterministic for testing.
 func RowText(g viewmodel.ActivityGroupVM) string {
 	parts := []string{stateGlyph(g.State) + " " + KindLabel(g.Kind)}
 	// The error state comes first after the label so it survives width
-	// truncation — an error is never collapsed away (§13.7).
+	// truncation — an error is never collapsed away.
 	if g.Errors > 0 {
 		parts = append(parts, fmt.Sprintf("%s %d failed", styles.WarningIcon, g.Errors))
 	}
@@ -60,7 +60,7 @@ func RowText(g viewmodel.ActivityGroupVM) string {
 
 // Render returns the collapsed activity section: a title plus one row per group,
 // each fit to width. Completed mechanical rows are muted so failures and the
-// final response stay visually louder (§13.7). Returns "" when there is nothing
+// final response stay visually louder. Returns "" when there is nothing
 // to show, so callers render no empty panel.
 func Render(groups []viewmodel.ActivityGroupVM, width int) string {
 	if len(groups) == 0 || width <= 0 {

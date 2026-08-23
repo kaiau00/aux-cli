@@ -42,7 +42,7 @@ func TestRowTextShowsLabelCountDuration(t *testing.T) {
 }
 
 func TestRowTextNeverHidesErrors(t *testing.T) {
-	// §13.7: errors must never be collapsed away.
+	// Errors must never be collapsed away.
 	g := viewmodel.ActivityGroupVM{
 		Kind:   viewmodel.ActivityTesting,
 		State:  viewmodel.StateFailed,

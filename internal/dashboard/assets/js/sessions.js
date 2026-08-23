@@ -29,7 +29,7 @@
     setText("cost", money.format(stats.cost));
   }
 
-  // Live Activity: real connection/event state (roadmapplan.md §13.12 — the
+  // Live Activity: real connection/event state (the
   // old "Live Core" panel toggled a decorative label between two fixed
   // strings with no other real data bound to it; this replaces it with
   // actual signals).

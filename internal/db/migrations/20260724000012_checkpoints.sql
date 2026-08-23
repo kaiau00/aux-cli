@@ -1,6 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
--- Task checkpoints and their entries (roadmapplan.md Migration F, §11.1). A
+-- Task checkpoints and their entries. A
 -- checkpoint references content-addressed before/after blobs (artifacts), so
 -- branches share immutable content and store only deltas. parent_checkpoint_id
 -- forms an acyclic DAG.

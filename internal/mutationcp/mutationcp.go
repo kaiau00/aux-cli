@@ -1,5 +1,5 @@
 // Package mutationcp creates an automatic baseline checkpoint the first time a
-// task mutates the working tree (roadmapplan.md §11.1), so mid-run state is
+// task mutates the working tree, so mid-run state is
 // rollback-able rather than only captured at task completion. It reads the
 // before/after content the edit/write tools already recorded in history, so the
 // snapshot is truthful, and it is idempotent — at most one first-mutation

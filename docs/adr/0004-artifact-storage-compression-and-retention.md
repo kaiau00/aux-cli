@@ -2,7 +2,6 @@
 
 - Status: accepted
 - Date: 2026-08-14
-- Plan reference: roadmapplan.md §4.3, §7.5, §21.3
 
 ## Decision
 
@@ -56,4 +55,4 @@ state (ship correctness and dedup first) rather than a gap discovered later.
 
 Add compression and/or retention once real artifact-directory size data from
 actual usage shows it matters, or before this is packaged for multi-user /
-long-lived server deployment (roadmapplan.md §22 database/artifact growth risk).
+long-lived server deployment (the database/artifact growth risk).

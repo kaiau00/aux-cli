@@ -11,8 +11,7 @@ import (
 // Service persists and reads the per-call model ledger.
 //
 // Reads for session/task totals are computed with SQL aggregation so they always
-// reconcile with the underlying rows (roadmapplan.md Phase 1.0 exit gate:
-// "Token and cost totals reconcile from call to task to session").
+// reconcile with the underlying rows ("Token and cost totals reconcile from call to task to session").
 type Service interface {
 	// StartCall inserts a call in the `started` state and returns it.
 	StartCall(ctx context.Context, call ModelCall) (ModelCall, error)
@@ -163,7 +162,7 @@ func (s *service) SessionTotals(ctx context.Context, sessionID string) (Totals, 
 }
 
 // TaskTotals aggregates a task's own calls plus every descendant task's calls
-// (subagent tasks per roadmapplan.md §11.3, multi-repo children per §11.4),
+// (subagent tasks, and multi-repo children),
 // walking tasks.parent_task_id recursively. Unlike SessionTotals' shallow sum
 // of a precomputed session.cost column, this aggregates directly from
 // model_calls at every level, so it stays correct however deep the subagent
@@ -199,8 +198,7 @@ WHERE task_id IN (SELECT task_id FROM descendant_tasks) AND status != 'started'`
 }
 
 // totals aggregates all non-started calls (completed, failed, cancelled) so that
-// usage reported by the provider for cancelled/failed calls is still counted
-// (roadmapplan.md §5.2).
+// usage reported by the provider for cancelled/failed calls is still counted.
 func (s *service) totals(ctx context.Context, column, value string) (Totals, error) {
 	q := fmt.Sprintf(`
 SELECT

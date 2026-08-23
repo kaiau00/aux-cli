@@ -1,5 +1,5 @@
-// Shared top navigation, injected into every dashboard page (roadmapplan.md
-// §13.12 "shared nav/shell"). No page owns its own copy of this markup, so
+// Shared top navigation, injected into every dashboard page. No page owns
+// its own copy of this markup, so
 // adding a view means adding one entry here.
 //
 // This builds the header with DOM APIs rather than innerHTML on purpose. The

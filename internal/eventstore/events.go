@@ -1,6 +1,6 @@
 // Package eventstore is the durable, ordered domain-event log for Aux. It is the
 // authoritative record of what happened at runtime; dashboard read models and
-// task replay are derived from it. See roadmapplan.md §5.3 and ADR 0002.
+// task replay are derived from it. See ADR 0002.
 //
 // The in-process pubsub broker (embedded in Service) is only a low-latency
 // notification path: notifications are published after the row commits, and
@@ -12,7 +12,7 @@ import "encoding/json"
 // SchemaVersion is the current envelope schema version stamped on new events.
 const SchemaVersion = 1
 
-// Type is a domain-event type. The taxonomy below matches roadmapplan.md §5.3;
+// Type is a domain-event type. The taxonomy below is closed;
 // types are declared even before their producing subsystem exists so the
 // vocabulary is stable across PRs.
 type Type string

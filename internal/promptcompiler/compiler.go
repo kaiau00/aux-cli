@@ -1,6 +1,6 @@
 // Package promptcompiler produces provider-neutral model input from durable
-// task/history state, separately from how that history is stored or displayed
-// (roadmapplan.md §2 critical constraint, §7.2). Provider adapters translate the
+// task/history state, separately from how that history is stored or displayed.
+// Provider adapters translate the
 // compiled messages into provider-specific formats but never choose context.
 //
 // PR 8 ships the compatibility compiler: it renders the stored transcript
@@ -78,12 +78,12 @@ type Input struct {
 	ProjectManifest string
 	TaskSpecText    string
 	// ExcludedToolCallIDs are tool-result parts to stub out of the compiled
-	// prompt (roadmapplan.md §13.11): the TUI's cross-off control changes what
+	// prompt: the TUI's cross-off control changes what
 	// is actually sent to the model, not just how it's displayed. Keyed by
 	// message.ToolResult.ToolCallID. Nil/empty is a no-op.
 	ExcludedToolCallIDs map[string]bool
 	// PinnedToolCallIDs are tool-result parts whose full content is guaranteed
-	// in the compiled prompt (roadmapplan.md §13.11, StatePinned): pinning
+	// in the compiled prompt: pinning
 	// overrides both ExcludedToolCallIDs (a pinned-and-excluded call is still
 	// sent in full) and PagingCompiler's content dedup (a pinned call is never
 	// replaced by a dedup reference stub, even as an earlier duplicate
@@ -212,7 +212,7 @@ func estimateText(s string) int64 { return int64(len(s)+3) / 4 }
 // compact stub, leaving message/part structure (and tool_call/tool_result
 // pairing) intact — the same shape dedupRepeatedContent uses for repeated
 // content. This is what makes the TUI's cross-off control a real content
-// change rather than a display-only checkbox (roadmapplan.md §13.11). A
+// change rather than a display-only checkbox. A
 // pinned call is never stubbed even if also excluded: pin always wins.
 func applyExclusions(msgs []message.Message, excluded, pinned map[string]bool) []message.Message {
 	if len(excluded) == 0 {

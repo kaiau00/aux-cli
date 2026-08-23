@@ -1,6 +1,6 @@
 package viewmodel
 
-// TaskHeaderVM is the compact task header (roadmapplan.md §13.6): project, task,
+// TaskHeaderVM is the compact task header: project, task,
 // stage, model, context, cost.
 type TaskHeaderVM struct {
 	Project      string         `json:"project"`
@@ -18,7 +18,7 @@ type TaskHeaderVM struct {
 }
 
 // TaskSummaryVM is a lightweight task list item for the dashboard's active-work
-// navigation (roadmapplan.md §13.12). It projects durable task state.
+// navigation. It projects durable task state.
 type TaskSummaryVM struct {
 	TaskID    string         `json:"taskId"`
 	Objective string         `json:"objective"`
@@ -29,7 +29,7 @@ type TaskSummaryVM struct {
 	CreatedAt int64          `json:"createdAt"`
 }
 
-// ActivityGroupVM is a collapsed activity stage (roadmapplan.md §13.7).
+// ActivityGroupVM is a collapsed activity stage.
 type ActivityGroupVM struct {
 	Kind       ActivityKind   `json:"kind"`
 	State      ComponentState `json:"state"`
@@ -39,7 +39,7 @@ type ActivityGroupVM struct {
 	DurationMS int64          `json:"durationMs,omitempty"`
 }
 
-// ChangeSummaryVM is the persistent changed-files surface (roadmapplan.md §13.8).
+// ChangeSummaryVM is the persistent changed-files surface.
 type ChangeSummaryVM struct {
 	Files    []ChangedFileVM `json:"files"`
 	Added    int             `json:"added"`
@@ -53,7 +53,7 @@ type ChangedFileVM struct {
 	Operation string `json:"operation"`
 }
 
-// ValidationSummaryVM is the acceptance/validation surface (roadmapplan.md §13.9).
+// ValidationSummaryVM is the acceptance/validation surface.
 // It distinguishes validated from merely-claimed and never implies success
 // without evidence.
 type ValidationSummaryVM struct {
@@ -70,7 +70,7 @@ type CriterionVM struct {
 	State       ComponentState `json:"state"`
 }
 
-// ContextBudgetVM is the signature context composition (roadmapplan.md §13.11).
+// ContextBudgetVM is the signature context composition.
 type ContextBudgetVM struct {
 	TotalTokens    int64               `json:"totalTokens"`
 	LimitTokens    int64               `json:"limitTokens"`

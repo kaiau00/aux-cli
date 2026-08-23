@@ -44,7 +44,7 @@ func NewCatppuccinTheme() *CatppuccinTheme {
 		// this theme's custom light background (#EEEEEE, not Latte's own base),
 		// so these two are darkened overrides rather than the literal palette
 		// value, following this file's existing precedent of custom "light
-		// equivalent" values elsewhere (§13.18).
+		// equivalent" values elsewhere.
 		Light: "#e45401",
 	}
 	theme.SuccessColor = lipgloss.AdaptiveColor{
