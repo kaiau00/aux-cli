@@ -1,8 +1,8 @@
 -- +goose Up
 -- +goose StatementBegin
 -- Content-addressed artifact store: SQLite holds identity/metadata/refs; the
--- bytes live outside SQLite in a content-addressed filesystem backend by default
--- (roadmapplan.md §4.2 Migration D, §4.3).
+-- bytes live outside SQLite in a content-addressed filesystem backend by
+-- default.
 
 CREATE TABLE IF NOT EXISTS artifacts (
     artifact_id TEXT PRIMARY KEY,

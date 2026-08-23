@@ -1,4 +1,4 @@
-// Active-task workspace (roadmapplan.md §13.12/§13.14). Dependency-light vanilla
+// Active-task workspace. Dependency-light vanilla
 // JS that renders truthful task state from the read-only /api/v1 projections.
 // It never implies validation success without evidence — it displays the state
 // the server computed.

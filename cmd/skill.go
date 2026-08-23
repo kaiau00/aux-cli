@@ -28,7 +28,7 @@ func skillService() (*skill.Service, func() error, error) {
 	return svc, conn.Close, nil
 }
 
-// learnCmd records a workflow as a skill candidate (roadmapplan.md §10.4). It
+// learnCmd records a workflow as a skill candidate. It
 // never activates the skill — promotion requires a passing evaluation.
 var learnCmd = &cobra.Command{
 	Use:   "learn",

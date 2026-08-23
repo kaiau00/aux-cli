@@ -27,8 +27,7 @@ type splitPaneLayout struct {
 	verticalRatio float64
 
 	// collapseRightBelow collapses the right panel into a single-column layout
-	// when the total width is below this threshold (roadmapplan.md §13.10 narrow
-	// TUI). Zero disables collapsing.
+	// when the total width is below this threshold. Zero disables collapsing.
 	collapseRightBelow int
 	rightCollapsed     bool
 
@@ -300,7 +299,7 @@ func WithVerticalRatio(ratio float64) SplitPaneOption {
 }
 
 // WithCollapseRightBelow collapses the right panel into a single-column layout
-// when the terminal width falls below threshold (roadmapplan.md §13.10).
+// when the terminal width falls below threshold.
 func WithCollapseRightBelow(threshold int) SplitPaneOption {
 	return func(s *splitPaneLayout) {
 		s.collapseRightBelow = threshold

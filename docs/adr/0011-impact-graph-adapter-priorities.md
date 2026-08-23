@@ -2,7 +2,6 @@
 
 - Status: accepted
 - Date: 2026-08-14
-- Plan reference: roadmapplan.md §8.5, §21.10
 
 ## Decision
 
@@ -27,7 +26,7 @@ this same guarantee).
 
 - **Wait for a multi-language/LSP-backed graph before shipping impact
   analysis at all.** Rejected: `BroadenValidation`'s fallback already makes
-  a narrow graph *safe* to ship incrementally — every roadmap phase after
+  a narrow graph *safe* to ship incrementally — every phase after
   Phase 1.0 explicitly builds on "impact analysis broadens validation
   automatically when the graph is absent," so partial coverage was the
   designed-for case from the start, not a stopgap.

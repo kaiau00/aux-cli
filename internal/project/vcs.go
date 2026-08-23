@@ -25,8 +25,7 @@ type VCS interface {
 }
 
 // GitVCS inspects git repositories by invoking the git binary. Preferring git
-// metadata over reimplementation keeps analysis deterministic (roadmapplan.md
-// quality bar: deterministic analysis over LLM/heuristics).
+// metadata over reimplementation keeps analysis deterministic (deterministic analysis over LLM/heuristics).
 type GitVCS struct{}
 
 func (GitVCS) Inspect(ctx context.Context, dir string) (VCSInfo, error) {

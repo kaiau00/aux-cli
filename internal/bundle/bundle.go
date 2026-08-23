@@ -1,6 +1,6 @@
 // Package bundle exports and imports shareable optimization bundles — active
-// skills and governor policies — for sharing across projects or an organization
-// (roadmapplan.md §12.5). Bundles are content-addressed for integrity, and the
+// skills and governor policies — for sharing across projects or an organization.
+// Bundles are content-addressed for integrity, and the
 // import path is deliberately safe: everything comes in as a candidate, never
 // active, so imported optimizations must earn local evaluation evidence before
 // they can become defaults (the evaluation gate is never bypassed by import).
@@ -103,7 +103,7 @@ type ImportResult struct {
 
 // Import verifies the bundle's integrity and creates every skill and policy as a
 // CANDIDATE — never active. Imported optimizations must be evaluated locally
-// before promotion (roadmapplan.md §12.5, §23).
+// before promotion.
 func Import(ctx context.Context, b Bundle, skills SkillWriter, policies PolicyWriter) (ImportResult, error) {
 	if err := b.Verify(); err != nil {
 		return ImportResult{}, err

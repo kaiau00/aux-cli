@@ -21,8 +21,7 @@ import (
 var ChatPage PageID = "chat"
 
 // narrowWidthThreshold is the terminal width below which the split layout
-// drops the context panel to a single conversation column (roadmapplan.md
-// §13.10/§13.15). Below this width the panel is only reachable via the
+// drops the context panel to a single conversation column. Below this width the panel is only reachable via the
 // context drawer, never fully lost.
 const narrowWidthThreshold = 80
 
@@ -224,8 +223,8 @@ func (p *chatPage) View() string {
 	}
 
 	// Below narrowWidthThreshold the split layout drops the context panel
-	// entirely (roadmapplan.md §13.10); the drawer is what makes it reachable
-	// again instead of simply being lost (§13.15).
+	// entirely; the drawer is what makes it reachable
+	// again instead of simply being lost.
 	if p.showContextDrawer && p.contextPaneContainer != nil && p.width > 0 {
 		const preferredDrawerWidth = 60
 		const minUsableDrawerWidth = 20
@@ -293,7 +292,7 @@ func NewChatPage(app *app.App) tea.Model {
 			layout.WithRightPanel(contextPaneContainer),
 			layout.WithBottomPanel(editorContainer),
 			// Narrow terminals drop to a single conversation column so core task
-			// operation stays usable at every breakpoint (§13.10); the context
+			// operation stays usable at every breakpoint; the context
 			// drawer (ctrl+g) is what makes the dropped panel reachable again.
 			layout.WithCollapseRightBelow(narrowWidthThreshold),
 		),

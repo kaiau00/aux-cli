@@ -1,4 +1,4 @@
-/* Design tokens for the Aux dashboard (roadmapplan.md §13.13).
+/* Design tokens for the Aux dashboard.
    Split out of index.html as the first step of the asset structure so the
    warm technical-workbench palette lives in one place. Loaded before the
    per-page component styles, which reference these custom properties. */
@@ -39,7 +39,7 @@
 
 /* Respect the user's motion preference: every page's decorative animation
    (pulses, rotations) must be gated behind this, not just present by default
-   (roadmapplan.md §13.16). */
+   */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: .001ms !important;

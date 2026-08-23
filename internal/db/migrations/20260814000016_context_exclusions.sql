@@ -1,6 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
--- Per-task context exclusions (roadmapplan.md §13.11): the TUI's x/u/c
+-- Per-task context exclusions: the TUI's x/u/c
 -- cross-off controls record a real override here, consulted by the prompt
 -- compiler on the task's next compile, rather than only repainting a local
 -- checkbox.

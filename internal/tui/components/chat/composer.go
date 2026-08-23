@@ -2,7 +2,7 @@ package chat
 
 import "strings"
 
-// Composer affordances (roadmapplan.md §13.10): a placeholder appropriate to a
+// Composer affordances: a placeholder appropriate to a
 // new task versus a follow-up, and a compact shortcut hint line that changes
 // with focus and send state. These are pure so they can be tested without a
 // terminal; editor.go renders them.

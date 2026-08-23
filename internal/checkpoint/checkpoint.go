@@ -1,5 +1,5 @@
-// Package checkpoint creates task checkpoints and branch/delta relationships
-// (roadmapplan.md §11.1). Checkpoints reference content-addressed before/after
+// Package checkpoint creates task checkpoints and branch/delta relationships.
+// Checkpoints reference content-addressed before/after
 // blobs so branches share immutable content and store only deltas, and they form
 // an acyclic DAG via parent links. Write conflicts are detected before merge.
 package checkpoint

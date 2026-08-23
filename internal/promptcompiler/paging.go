@@ -10,8 +10,7 @@ import (
 // this, the reference stub would not save meaningful tokens.
 const minDedupBytes = 200
 
-// PagingCompiler is the first demand-paging compiler (roadmapplan.md §7.2/§7.6 /
-// §19 PR 11). It is safe and lossless: when the same large tool-result/file
+// PagingCompiler is the first demand-paging compiler. It is safe and lossless: when the same large tool-result/file
 // content appears more than once in the transcript (the model re-read a file),
 // only the last occurrence is sent in full; earlier identical copies are
 // replaced with a compact reference, cutting repeated uncached input without

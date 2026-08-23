@@ -1,5 +1,5 @@
 // Package memory manages factual, procedural, and episodic project memory with
-// provenance and revision-aware invalidation (roadmapplan.md §8). Memory is
+// provenance and revision-aware invalidation. Memory is
 // compiled, bounded knowledge with a reversible version chain; candidates are
 // promoted only with evidence, and source changes mark memories stale rather
 // than deleting them.
@@ -17,7 +17,7 @@ const (
 	Episodic Type = "episodic"
 )
 
-// State is a memory's lifecycle state (roadmapplan.md §8.3).
+// State is a memory's lifecycle state.
 type State string
 
 const (
@@ -73,6 +73,6 @@ type Candidate struct {
 	SupportingRevision string
 	Sources            []Source
 	// InvalidateOnRevisionChange marks the memory stale when its supporting
-	// revision no longer matches (roadmapplan.md §8.3).
+	// revision no longer matches.
 	InvalidateOnRevisionChange bool
 }

@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 -- First-class tasks: a session can contain many tasks; a task belongs to one
--- project revision at execution time. See roadmapplan.md Migration C and §6.5.
+-- project revision at execution time.
 
 CREATE TABLE IF NOT EXISTS tasks (
     task_id TEXT PRIMARY KEY,

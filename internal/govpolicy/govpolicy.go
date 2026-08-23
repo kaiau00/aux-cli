@@ -1,5 +1,5 @@
 // Package govpolicy manages learned cost-governor policies with the same
-// evaluation-gated promotion discipline as skills (roadmapplan.md §9.7, §23). A
+// evaluation-gated promotion discipline as skills. A
 // policy is a candidate until a passing evaluation against a baseline promotes it
 // to active; there is no autonomous promotion, and every active policy has an
 // evidence trail and a rollback path.

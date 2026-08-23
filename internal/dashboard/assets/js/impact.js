@@ -1,5 +1,5 @@
-// Impact graph view (roadmapplan.md §13.14 item 6): the project's
-// deterministic AST-derived change-impact graph, never an LLM guess (§8.5).
+// Impact graph view: the project's
+// deterministic AST-derived change-impact graph, never an LLM guess.
 (function () {
   "use strict";
   var api = window.AuxCommon.api, esc = window.AuxCommon.esc, card = window.AuxCommon.card, kv = window.AuxCommon.kv;

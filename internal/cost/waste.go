@@ -6,7 +6,7 @@ import (
 	"github.com/kaiau00/aux-cli/internal/llm/tools"
 )
 
-// Waste detectors (roadmapplan.md §9.4). All deterministic. They start as
+// Waste detectors. All deterministic. They start as
 // observable warnings; interventions are enabled only after replay evidence.
 
 // Warning is a detected inefficiency with enough context to explain it.

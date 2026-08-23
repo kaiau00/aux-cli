@@ -11,7 +11,7 @@ type FileVersion struct {
 // content) and the latest content per path. Net-unchanged paths are skipped, and
 // the operation is derived from presence: empty-before is an add, empty-after a
 // delete, otherwise a modify. Pure and deterministic — the single source of the
-// "recorded history -> checkpoint changes" projection (roadmapplan.md §11.1).
+// "recorded history -> checkpoint changes" projection.
 func ChangesFrom(before map[string]string, latest []FileVersion) []FileChange {
 	var changes []FileChange
 	for _, f := range latest {

@@ -7,7 +7,7 @@ import (
 
 // RenderReport produces a human-readable comparison report of control vs variant
 // prompt compilation across fixtures. This is the recorded evidence the plan
-// requires before tuning any default (roadmapplan.md §19 PR 12).
+// requires before tuning any default.
 func RenderReport(results []CompilerResult) string {
 	var b strings.Builder
 	b.WriteString("Prompt compiler comparison: compatibility (control) vs paging (variant)\n")

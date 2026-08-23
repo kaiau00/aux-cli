@@ -9,8 +9,7 @@ import (
 )
 
 // ProjectBrainVM is the project identity, compiled effective profile, and
-// related-project graph — the dashboard's "Project Brain" view (roadmapplan.md
-// §13.14 item 4). Every field is read from durable state; nothing here is
+// related-project graph — the dashboard's "Project Brain" view. Every field is read from durable state; nothing here is
 // inferred.
 type ProjectBrainVM struct {
 	ProjectID    string             `json:"projectId"`
@@ -34,7 +33,7 @@ type ProfileSummaryVM struct {
 }
 
 // RelatedProjectVM is one edge of the related-project graph, from the current
-// project's perspective (roadmapplan.md §11.2).
+// project's perspective.
 type RelatedProjectVM struct {
 	ProjectID    string `json:"projectId"`
 	RelationType string `json:"relationType"`

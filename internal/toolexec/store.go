@@ -1,5 +1,5 @@
 // Package toolexec persists tool-execution observability records and adapts them
-// to the tools.Recorder interface used by tools.Executor. See roadmapplan.md §5.4
+// to the tools.Recorder interface used by tools.Executor.
 // and Migration A (tool_executions).
 package toolexec
 

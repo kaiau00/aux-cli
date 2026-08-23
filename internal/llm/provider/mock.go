@@ -10,7 +10,7 @@ import (
 )
 
 // MockProvider is a scripted provider for deterministic, network-free tests of
-// the runtime/agent orchestration (roadmapplan.md §5.1, §19 PR 4). Each call to
+// the runtime/agent orchestration. Each call to
 // StreamResponse replays the next scripted turn's events in order; SendMessages
 // returns that turn's terminal EventComplete response.
 type MockProvider struct {

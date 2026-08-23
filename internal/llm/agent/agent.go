@@ -76,7 +76,7 @@ type TaskCoordinator interface {
 }
 
 // Deps groups the runtime services an agent needs, so wiring stays readable as
-// more services are added (roadmapplan.md §3.2).
+// more services are added.
 type Deps struct {
 	Sessions     session.Service
 	Messages     message.Service
@@ -709,8 +709,8 @@ func (a *agent) startCall(ctx context.Context, sessionID, turnID, messageID stri
 }
 
 // bindPages persists the compiled prompt's page descriptors as durable pages,
-// versions, and per-call bindings so the prompt can be explained page by page
-// (roadmapplan.md §7.1, §19 PR 10). Failures are logged, never fatal.
+// versions, and per-call bindings so the prompt can be explained page by page.
+// Failures are logged, never fatal.
 func (a *agent) bindPages(ctx context.Context, taskID, callID string, compiled promptcompiler.CompiledPrompt) (resident, available int) {
 	if a.pages == nil {
 		return 0, 0
@@ -764,7 +764,7 @@ func (a *agent) onFirstToken(ctx context.Context, tracker *callTracker) {
 
 // completeCall finalizes the ledger record with usage/cost and then re-derives
 // the session token and cost totals from the ledger (never overwriting with a
-// single call's usage). See roadmapplan.md §5.2.
+// single call's usage).
 func (a *agent) completeCall(ctx context.Context, tracker *callTracker, sessionID string, usage provider.TokenUsage) error {
 	if tracker != nil && !tracker.finalized && a.ledger != nil {
 		tracker.finalized = true
@@ -892,7 +892,7 @@ func (a *agent) currentAssessment(ctx context.Context, sessionID string) (cost.A
 	return a.governor.Assess(budget, usage, nil), totals
 }
 
-// budgetStop enforces the governor in "on" mode (roadmapplan.md §15.2). When a
+// budgetStop enforces the governor in "on" mode. When a
 // task has exhausted its budget it pauses before spending more and asks the
 // user whether to keep going; declining ends the task with a clear reason
 // rather than silently burning the remaining budget.

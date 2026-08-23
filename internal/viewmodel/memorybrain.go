@@ -7,8 +7,7 @@ import (
 	"github.com/kaiau00/aux-cli/internal/skill"
 )
 
-// MemoryVM is one memory record for the dashboard's Memory view (roadmapplan.md
-// §13.14 item 5).
+// MemoryVM is one memory record for the dashboard's Memory view.
 type MemoryVM struct {
 	Type       string  `json:"type"`
 	Scope      string  `json:"scope,omitempty"`
@@ -26,8 +25,8 @@ type SkillVM struct {
 	UpdatedAt int64  `json:"updatedAt"`
 }
 
-// MemoryBrainVM is the project's active/candidate memory and skills
-// (roadmapplan.md §13.14 item 5): what Aux has learned about this project.
+// MemoryBrainVM is the project's active/candidate memory and skills:
+// what Aux has learned about this project.
 type MemoryBrainVM struct {
 	Active     []MemoryVM `json:"active"`
 	Candidates []MemoryVM `json:"candidates"`

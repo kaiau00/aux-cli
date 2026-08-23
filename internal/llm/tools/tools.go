@@ -39,14 +39,13 @@ const (
 	ModelCallIDContextKey modelCallIDContextKey = "model_call_id"
 	TaskIDContextKey      taskIDContextKey      = "task_id"
 	// ParentTaskIDContextKey carries the task id a subagent's own task should be
-	// linked under (roadmapplan.md §11.3). Set by the agent tool before spawning
+	// linked under. Set by the agent tool before spawning
 	// a subagent; read by task.Coordinator.Begin when present.
 	ParentTaskIDContextKey    parentTaskIDContextKey    = "parent_task_id"
 	ProjectIDContextKey       projectIDContextKey       = "project_id"
 	ToolExecutionIDContextKey toolExecutionIDContextKey = "tool_execution_id"
 	// WorkingDirContextKey overrides the directory filesystem tools operate in
-	// for this call, e.g. a subagent's isolated worktree (roadmapplan.md
-	// §11.3). Set by the agent tool before spawning a subagent; read via
+	// for this call, e.g. a subagent's isolated worktree. Set by the agent tool before spawning a subagent; read via
 	// ResolveWorkingDir. Absent for ordinary top-level tool calls, which keep
 	// using the process-wide configured working directory.
 	WorkingDirContextKey workingDirContextKey = "working_dir"
@@ -134,7 +133,7 @@ func GetContextValues(ctx context.Context) (string, string) {
 
 // Correlation carries the runtime identifiers that link a tool execution back to
 // its session, message, turn, model call, task, and project. It replaces
-// reaching into many individual context keys (roadmapplan.md §5.4).
+// reaching into many individual context keys.
 type Correlation struct {
 	SessionID   string
 	MessageID   string

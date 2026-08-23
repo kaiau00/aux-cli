@@ -1,5 +1,5 @@
 // Package profile builds, versions, and stores compiled project profiles from
-// deterministic scanners (roadmapplan.md §6.2/§6.3). Each scanner reads specific
+// deterministic scanners. Each scanner reads specific
 // project inputs and emits typed entries with a source and confidence; a profile
 // version is content-addressed so unchanged inputs reuse the previous version.
 package profile
@@ -19,7 +19,7 @@ const (
 	EntrySkill             = "skill"
 )
 
-// Profile owners, lowest to highest precedence (roadmapplan.md §6.3).
+// Profile owners, lowest to highest precedence.
 const (
 	OwnerBuiltin   = "builtin"
 	OwnerUser      = "user"

@@ -22,8 +22,8 @@ type ImpactEdgeVM struct {
 }
 
 // ImpactGraphVM is the project's change-impact graph state — the dashboard's
-// Impact view (roadmapplan.md §13.14 item 6). Deterministic AST-derived state,
-// never an LLM guess (§8.5).
+// Impact view. Deterministic AST-derived state,
+// never an LLM guess.
 type ImpactGraphVM struct {
 	Built          bool           `json:"built"`
 	SourceRevision string         `json:"sourceRevision,omitempty"`

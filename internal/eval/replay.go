@@ -2,7 +2,7 @@ package eval
 
 import "github.com/kaiau00/aux-cli/internal/eventstore"
 
-// Replay modes (roadmapplan.md §12.2). This file implements deterministic event
+// Replay modes. This file implements deterministic event
 // replay: reconstructing a task's runtime state purely from its durable event
 // sequence, with no provider calls. It is the basis for testing projections and
 // runtime state transitions and for counterfactual analysis.

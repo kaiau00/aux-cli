@@ -15,7 +15,7 @@ import (
 )
 
 // costCmd reports a task's budget usage, trajectory, and waste warnings from
-// durable runtime data (roadmapplan.md §9.4/§9.6).
+// durable runtime data.
 var costCmd = &cobra.Command{
 	Use:   "cost <task-id>",
 	Short: "Show a task's budget usage, trajectory, and waste warnings",

@@ -16,7 +16,7 @@ import (
 const ComparisonVariant = "ab-comparison"
 
 // The A/B runner measures a capability (governor policy, skill) against a
-// baseline on the same preferred model (roadmapplan.md §9.6, §10.3, §16.7). The
+// baseline on the same preferred model. The
 // headline metric is accepted validated changes per dollar: validated acceptance
 // criteria divided by reconciled cost. Everything here is computed from durable
 // records — ledger, proof-of-done, and checkpoints — so a comparison is
@@ -116,7 +116,7 @@ func (s ABStores) CompareRuns(ctx context.Context, baselineTaskID, variantTaskID
 
 // CompareAndRecord computes a baseline-vs-variant comparison via CompareRuns
 // and persists it as an experiment with one run, so it durably shows up
-// anywhere experiments are read (roadmapplan.md §13.14 item 7, §9.6, §10.3) —
+// anywhere experiments are read —
 // e.g. the dashboard's Optimization view — instead of only being printed to
 // stdout by `aux eval ab`. The whole Comparison is stored as one run's
 // MetricsJSON (self-contained; no baseline/variant pairing needed at read

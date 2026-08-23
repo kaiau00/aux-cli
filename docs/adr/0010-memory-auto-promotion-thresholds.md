@@ -2,7 +2,6 @@
 
 - Status: accepted
 - Date: 2026-08-14
-- Plan reference: roadmapplan.md §8.2, §8.3, §21.9
 
 ## Decision
 
@@ -27,13 +26,13 @@ manually-promoted.
   task sees (`Coordinator.memorySection`); a wrong "fact" promoted too
   readily is a durable, compounding error, not a one-off mistake — the bar
   is deliberately high (0.85) to bias toward the memory system staying
-  trustworthy over being maximally eager (roadmapplan.md §22 "memory becomes
-  noisy or stale" risk).
+  trustworthy over being maximally eager (the "memory becomes noisy or
+  stale" risk).
 - **Never auto-promote; require a human/evaluation gate for every memory.**
   Rejected for episodic memory specifically: episodic summaries are
   low-stakes (they inform, they don't assert durable facts) and require the
   learning loop to actually produce visible value without per-task manual
-  curation, which would defeat the "compounding" goal (roadmap Priority 2).
+  curation, which would defeat the "compounding" goal.
 - **Type-specific thresholds instead of one shared constant.** Not adopted
   yet — `autoPromoteConfidence` is currently a single package constant, not
   per-type. Left as future work rather than speculative complexity now (no

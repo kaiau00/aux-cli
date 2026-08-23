@@ -1,5 +1,5 @@
 // Package contextbudget renders the context as a signature budget composition
-// (roadmapplan.md §13.11) rather than a flat file list. It shows the total
+// rather than a flat file list. It shows the total
 // against the limit, pressure, the largest categories, pinned/resident counts,
 // and tokens saved by delta/artifact reuse — all projected from the same page
 // bindings that make up the prompt manifest, so the display reconciles with
@@ -88,7 +88,7 @@ func Render(vm viewmodel.ContextBudgetVM, width int) string {
 		lipgloss.NewStyle().Width(width).Foreground(headColor).Bold(true).Render(" " + HeaderText(vm)),
 	}
 
-	// Largest categories first (§13.11 compact view).
+	// Largest categories first (compact view).
 	cats := append([]viewmodel.ContextCategoryVM(nil), vm.Categories...)
 	sort.SliceStable(cats, func(i, j int) bool { return cats[i].Tokens > cats[j].Tokens })
 	for _, c := range cats {
@@ -141,7 +141,7 @@ func expandedGroups(vm viewmodel.ContextPageListVM) []struct {
 }
 
 // RenderExpanded draws the per-page context view grouped by binding state —
-// the detail behind the compact Render summary (roadmapplan.md §13.11).
+// the detail behind the compact Render summary.
 // Returns "" when there is nothing to show, so the caller can fall back to
 // the compact view.
 func RenderExpanded(vm viewmodel.ContextPageListVM, width int) string {

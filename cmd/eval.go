@@ -17,8 +17,7 @@ import (
 )
 
 // evalCmd runs the deterministic, network-free evaluation comparing the
-// compatibility and paging prompt compilers over baseline fixtures
-// (roadmapplan.md §19 PR 12).
+// compatibility and paging prompt compilers over baseline fixtures.
 var evalCmd = &cobra.Command{
 	Use:   "eval",
 	Short: "Run the local prompt-compiler evaluation (control vs optimized)",
@@ -93,11 +92,11 @@ var evalReplayCmd = &cobra.Command{
 
 var evalABCmd = &cobra.Command{
 	Use:   "ab <baseline-task-id> <variant-task-id>",
-	Short: "Compare accepted validated changes per dollar for two recorded runs (§9.6/§10.3)",
+	Short: "Compare accepted validated changes per dollar for two recorded runs",
 	Long: "Computes the changes-per-dollar metric for a baseline and a variant task from " +
 		"durable records (ledger, proof-of-done, checkpoints) and reports whether the variant improved. " +
 		"Record the two runs on the same preferred model with the capability off vs on; " +
-		"see docs/live-gates-and-remainders.md.",
+		"then compare them with this command.",
 	Args: cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cwd, err := os.Getwd()

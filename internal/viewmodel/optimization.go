@@ -31,8 +31,7 @@ type PolicyVM struct {
 }
 
 // OptimizationVM is the project's optimization history — evaluated
-// experiments and governed-cost policies (roadmapplan.md §13.14 item 7, §12.1,
-// §9.7). This is where "governed vs baseline" and "skill vs baseline" results
+// experiments and governed-cost policies. This is where "governed vs baseline" and "skill vs baseline" results
 // computed by `aux eval ab` become visible once a user has run them.
 type OptimizationVM struct {
 	Experiments       []ExperimentVM `json:"experiments"`

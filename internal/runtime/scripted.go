@@ -8,7 +8,7 @@ import (
 )
 
 // Adapter is a named runtime that executes agent turns behind the provider-
-// neutral Runner seam (roadmapplan.md §12.4). Adapters are interchangeable and
+// neutral Runner seam. Adapters are interchangeable and
 // contract-tested via runtimetest.RunnerContract, so a local, remote, or replay
 // runtime can be swapped without changing callers.
 type Adapter interface {

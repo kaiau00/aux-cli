@@ -3,7 +3,6 @@
 -- Hybrid change-impact graph. Nodes are files/packages/symbols/tests/commands;
 -- edges are typed relationships with a source and confidence weight. Refresh
 -- updates affected partitions by changed paths; a full rebuild is a repair.
--- See roadmapplan.md Migration E (graph tables) and §8.5.
 
 CREATE TABLE IF NOT EXISTS graph_nodes (
     node_id TEXT PRIMARY KEY,

@@ -1,7 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
 -- Project profiles: layered, versioned, compiled project knowledge.
--- See roadmapplan.md Migration B and §6.2/§6.3.
 
 CREATE TABLE IF NOT EXISTS profiles (
     profile_id TEXT PRIMARY KEY,

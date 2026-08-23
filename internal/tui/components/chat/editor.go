@@ -222,7 +222,7 @@ func (m *editorCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *editorCmp) View() string {
 	t := theme.CurrentTheme()
 
-	// Composer placeholder reflects new-task vs follow-up vs command (§13.10).
+	// Composer placeholder reflects new-task vs follow-up vs command.
 	followUp := m.session.ID != ""
 	slash := isSlashCommand(m.textarea.Value())
 	m.textarea.Placeholder = composerPlaceholder(followUp, slash)
@@ -247,8 +247,8 @@ func (m *editorCmp) View() string {
 	return lipgloss.JoinVertical(lipgloss.Top, body, m.hintLine())
 }
 
-// hintLine renders the compact, state-aware shortcut hint below the composer
-// (§13.10). It never overflows the editor width.
+// hintLine renders the compact, state-aware shortcut hint below the composer.
+// It never overflows the editor width.
 func (m *editorCmp) hintLine() string {
 	t := theme.CurrentTheme()
 	busy := m.session.ID != "" && m.app != nil && m.app.CoderAgent != nil &&
@@ -269,7 +269,7 @@ func (m *editorCmp) SetSize(width, height int) tea.Cmd {
 	m.width = width
 	m.height = height
 	m.textarea.SetWidth(width - 3)         // account for the prompt and padding right
-	m.textarea.SetHeight(max(1, height-1)) // reserve one line for the hint (§13.10)
+	m.textarea.SetHeight(max(1, height-1)) // reserve one line for the hint
 	m.textarea.SetWidth(width)
 	return nil
 }

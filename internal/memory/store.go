@@ -156,8 +156,7 @@ func (s *Store) RecordFeedback(ctx context.Context, versionID, taskID, outcome, 
 }
 
 // Retrieve returns active memories for a project filtered by type and scope,
-// ordered by confidence, capped at limit. Hard scope is applied before ranking
-// (roadmapplan.md §8.4).
+// ordered by confidence, capped at limit. Hard scope is applied before ranking.
 func (s *Store) Retrieve(ctx context.Context, projectID string, types []Type, limit int) ([]Memory, error) {
 	q := `SELECT memory_id, project_id, memory_type, scope, stable_key, state, confidence, created_at, updated_at
           FROM memories WHERE project_id IS ? AND state = 'active'`

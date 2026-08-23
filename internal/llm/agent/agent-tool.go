@@ -33,7 +33,7 @@ type agentTool struct {
 // turnWriteTracker accumulates the file paths each ValidationRunner subagent
 // has changed within a single model turn, so a later sibling in the same
 // turn can be warned about overlapping writes before its result is trusted
-// (roadmapplan.md §11.3: detect overlapping write sets before merge). Entries
+// (detect overlapping write sets before merge). Entries
 // are intentionally never evicted: a turn's write-set is a handful of short
 // relative paths, and a CLI session's total turn count never grows large
 // enough for that to be a real memory concern.
@@ -67,8 +67,7 @@ const (
 
 type AgentParams struct {
 	Prompt string `json:"prompt"`
-	// Role specializes the subagent's tool set and prompt (roadmapplan.md
-	// §11.3). Omit for the generic, unspecialized subagent.
+	// Role specializes the subagent's tool set and prompt. Omit for the generic, unspecialized subagent.
 	Role Role `json:"role,omitempty"`
 }
 
@@ -107,7 +106,7 @@ func (b *agentTool) Run(ctx context.Context, call tools.ToolCall) (tools.ToolRes
 
 	parentTaskID := tools.CorrelationFromContext(ctx).TaskID
 
-	// Subagents run with the same task coordinator as the parent (§11.3): a
+	// Subagents run with the same task coordinator as the parent: a
 	// subagent's own Run(...) call begins and finishes a real task, linked to
 	// the parent task via tools.ParentTaskIDContextKey (read by
 	// task.Coordinator.Begin). This gives each subagent real checkpointing and
@@ -119,7 +118,7 @@ func (b *agentTool) Run(ctx context.Context, call tools.ToolCall) (tools.ToolRes
 		subCtx = context.WithValue(subCtx, tools.ParentTaskIDContextKey, parentTaskID)
 	}
 
-	// Only RoleValidationRunner gets an isolated worktree (§11.3): it is the
+	// Only RoleValidationRunner gets an isolated worktree: it is the
 	// only role with Bash access and therefore the only one that can cause
 	// filesystem side effects a concurrent sibling or the parent could race
 	// on. Every other role is read-only and needs to see the parent's actual
@@ -186,7 +185,7 @@ func (b *agentTool) Run(ctx context.Context, call tools.ToolCall) (tools.ToolRes
 
 	// If this was an isolated validation run, check what its Bash commands
 	// actually changed against every other subtask's write-set already seen
-	// in this same model turn (§11.3: detect overlapping write sets before
+	// in this same model turn (detect overlapping write sets before
 	// merge). The comparison scope is deliberately the model turn, not the
 	// whole session: siblings the model chose to run together are the ones
 	// whose results might get combined, so that's the scope worth flagging.

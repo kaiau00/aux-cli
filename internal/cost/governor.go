@@ -2,7 +2,7 @@ package cost
 
 import "fmt"
 
-// GovernorMode gates the governor (roadmapplan.md §15.2: off / observe / on).
+// GovernorMode gates the governor (off / observe / on).
 type GovernorMode string
 
 const (
@@ -11,7 +11,7 @@ const (
 	GovOn      GovernorMode = "on"
 )
 
-// Decision is a governor recommendation (roadmapplan.md §9.3).
+// Decision is a governor recommendation.
 type Decision struct {
 	Action string `json:"action"`
 	Reason string `json:"reason"`
@@ -70,7 +70,7 @@ func (g *Governor) Assess(budget Budget, usage Usage, waste []Warning) Assessmen
 			Action: "degrade",
 			Reason: "budget exhausted; degrade in a planned way without corrupting protocol state",
 		})
-		// Planned degradation order (roadmapplan.md §9.1).
+		// Planned degradation order.
 		a.DegradationPlan = []string{
 			"compress or evict low-value context pages",
 			"stop redundant exploration",

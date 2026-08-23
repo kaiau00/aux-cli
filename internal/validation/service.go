@@ -17,8 +17,8 @@ type CommandResult struct {
 	OutputArtifactID string
 }
 
-// Runner executes a validation command under existing permission controls
-// (roadmapplan.md §14.3). Tests inject a deterministic fake.
+// Runner executes a validation command under existing permission controls.
+// Tests inject a deterministic fake.
 type Runner interface {
 	Run(ctx context.Context, command string) (CommandResult, error)
 }
@@ -41,7 +41,7 @@ func NewService(store *Store, events EventSink) *Service {
 }
 
 // RunIntent executes one intent's command through the runner, unless a passing
-// result for the same command + input fingerprint is already cached (§14.3). It
+// result for the same command + input fingerprint is already cached. It
 // records the run and attaches executable evidence to the intent's criteria.
 func (s *Service) RunIntent(ctx context.Context, taskID string, intent Intent, inputFingerprint string, runner Runner) (Result, error) {
 	cmdHash := HashCommand(intent.Command)
@@ -123,7 +123,7 @@ func (s *Service) WaiveCriterion(ctx context.Context, taskID, criterionID, reaso
 
 // ProofOfDone computes each criterion's state from recorded evidence. The agent
 // cannot silently mark a criterion validated: only passing executable evidence
-// (or a user waiver) advances it (roadmapplan.md §14.2).
+// (or a user waiver) advances it.
 func (s *Service) ProofOfDone(ctx context.Context, taskID string, criterionIDs []string) (map[string]CriterionState, error) {
 	evidence, err := s.store.EvidenceForTask(ctx, taskID)
 	if err != nil {
@@ -188,7 +188,7 @@ func deriveState(evidence []Evidence, runStatus map[string]Status) CriterionStat
 }
 
 // SuccessfulCommands returns the distinct commands whose latest run passed for a
-// task. This feeds procedural-memory extraction (roadmapplan.md §8.2).
+// task. This feeds procedural-memory extraction.
 func (s *Service) SuccessfulCommands(ctx context.Context, taskID string) ([]string, error) {
 	runs, err := s.store.RunsForTask(ctx, taskID)
 	if err != nil {

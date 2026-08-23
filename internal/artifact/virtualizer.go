@@ -8,7 +8,7 @@ import (
 	"github.com/kaiau00/aux-cli/internal/llm/tools"
 )
 
-// Mode controls tool-output virtualization (roadmapplan.md §15.2).
+// Mode controls tool-output virtualization.
 type Mode string
 
 const (
@@ -22,7 +22,7 @@ const (
 )
 
 // DefaultThresholdBytes is the size above which output is a virtualization
-// candidate. Matches roadmapplan.md §15.1 example.
+// candidate.
 const DefaultThresholdBytes = 12000
 
 // Virtualizer implements tools.Virtualizer using the artifact service.

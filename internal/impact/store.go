@@ -143,7 +143,7 @@ func (s *Store) NodeName(ctx context.Context, nodeID string) (string, string, er
 
 // ListNodes returns up to limit nodes for a project, most recently touched
 // first (rowid order), for graph-browsing surfaces such as the dashboard's
-// impact view (roadmapplan.md §13.14). limit <= 0 falls back to 200.
+// impact view. limit <= 0 falls back to 200.
 func (s *Store) ListNodes(ctx context.Context, projectID string, limit int) ([]Node, error) {
 	if limit <= 0 {
 		limit = 200

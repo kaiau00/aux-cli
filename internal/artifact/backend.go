@@ -1,5 +1,5 @@
 // Package artifact is the content-addressed store for large tool outputs and
-// immutable blobs (roadmapplan.md §4.3, §7.5). Bytes are stored once, keyed by
+// immutable blobs. Bytes are stored once, keyed by
 // SHA-256, outside SQLite; SQLite holds identity, metadata, and references.
 package artifact
 

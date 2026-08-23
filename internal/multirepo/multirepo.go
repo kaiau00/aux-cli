@@ -1,5 +1,5 @@
 // Package multirepo compiles one product task into repository-specific child
-// specs (roadmapplan.md §11.4). Each child is bound to its own project (and thus
+// specs. Each child is bound to its own project (and thus
 // its own effective profile and working set); cross-repository acceptance
 // criteria live on the parent, including interface compatibility at integration
 // boundaries. Compilation is deterministic so a coordinated multi-repo task is

@@ -683,8 +683,8 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return a, tea.Batch(cmds...)
 }
 
-// headerVM projects the current TUI state into a task-header view model
-// (roadmapplan.md §13.6). Every field traces to real runtime state — working
+// headerVM projects the current TUI state into a task-header view model.
+// Every field traces to real runtime state — working
 // directory, configured model, the coder agent's busy state, and the selected
 // session's token/cost totals — never fabricated.
 func (a appModel) headerVM() viewmodel.TaskHeaderVM {
@@ -754,7 +754,7 @@ func (a *appModel) moveToPage(pageID page.PageID) tea.Cmd {
 }
 
 func (a appModel) View() string {
-	// The task header projects truthful runtime state (roadmapplan.md §13.6):
+	// The task header projects truthful runtime state:
 	// project, active stage, model, context, and cost. It renders only once the
 	// terminal width is known.
 	a.header.SetVM(a.headerVM())

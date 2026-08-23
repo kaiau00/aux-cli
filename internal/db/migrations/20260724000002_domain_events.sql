@@ -1,6 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
--- Durable, ordered domain events. See roadmapplan.md §5.3 and ADR 0002.
+-- Durable, ordered domain events. See ADR 0002.
 -- `sequence` is a per-database monotonic ordering key assigned inside the append
 -- transaction; read-model correctness derives from replaying this order rather
 -- than from receiving every in-process pub/sub notification.

@@ -41,7 +41,7 @@ func (s *Store) InsertRun(ctx context.Context, r Run) error {
 }
 
 // CachedPass returns a prior passing run for the same command AND input
-// fingerprint (roadmapplan.md §14.3: never reuse across changed inputs).
+// fingerprint (never reuse across changed inputs).
 func (s *Store) CachedPass(ctx context.Context, commandHash, inputFingerprint string) (Run, bool, error) {
 	if inputFingerprint == "" {
 		return Run{}, false, nil // no fingerprint => cannot safely reuse

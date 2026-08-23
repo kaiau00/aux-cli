@@ -1,5 +1,5 @@
 // Package cost owns the per-call token/cost ledger and (in later phases)
-// budgets, forecasts, and governor decisions. See roadmapplan.md §3 and §5.2.
+// budgets, forecasts, and governor decisions.
 //
 // PR 1 scope: a durable per-model-call ledger so that every provider call has
 // correlation ids, timing, cache-aware token counts, and a cost with an explicit
@@ -28,7 +28,7 @@ const (
 )
 
 // CostState records whether a call's cost is trustworthy. Unknown pricing must
-// surface as CostUnknown rather than a misleading zero (roadmapplan.md §5.2).
+// surface as CostUnknown rather than a misleading zero.
 type CostState string
 
 const (

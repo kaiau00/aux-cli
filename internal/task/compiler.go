@@ -50,8 +50,7 @@ func defaultBudget(mode Mode) Budget {
 
 // Compile deterministically turns an objective into a task spec, drawing
 // constraints and validation commands from the effective profile. The primary
-// model still reasons within its normal call; this is the pre-tool scaffold
-// (roadmapplan.md §6.5).
+// model still reasons within its normal call; this is the pre-tool scaffold.
 func Compile(objective string, mode Mode, eff profile.Effective) Spec {
 	spec := Spec{
 		Objective:        strings.TrimSpace(objective),

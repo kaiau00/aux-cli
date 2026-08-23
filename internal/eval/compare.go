@@ -20,7 +20,7 @@ type CompilerResult struct {
 // the same input and reports the token difference and whether the variant is
 // lossless (every distinct large content in the control prompt still appears in
 // the variant prompt). This is a counterfactual context replay — no mutations,
-// no provider calls (roadmapplan.md §12.2).
+// no provider calls.
 func CompareCompilers(f Fixture, control, variant promptcompiler.Compiler) CompilerResult {
 	in := promptcompiler.Input{TaskID: f.Name, History: f.History}
 	c := control.Compile(in)

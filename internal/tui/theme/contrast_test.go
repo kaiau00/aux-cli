@@ -53,9 +53,9 @@ const wcagUIComponent = 3.0
 
 // TestThemeTextMeetsMinimumContrast checks every registered theme's primary
 // text-on-background contrast, in both light and dark variants, against the
-// WCAG AA-large floor (roadmapplan.md §13.18). This is a deterministic,
+// WCAG AA-large floor. This is a deterministic,
 // offline substitute for the browser-based contrast tooling this environment
-// doesn't have (docs/live-gates-and-remainders.md).
+// doesn't have.
 func TestThemeTextMeetsMinimumContrast(t *testing.T) {
 	for _, name := range AvailableThemes() {
 		th := GetTheme(name)

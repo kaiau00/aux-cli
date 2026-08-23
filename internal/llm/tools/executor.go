@@ -41,7 +41,7 @@ type ExecutionRecord struct {
 }
 
 // Virtualizer may replace a large tool response with a compact digest plus an
-// artifact handle, storing the full output once (roadmapplan.md §7.5). It sets
+// artifact handle, storing the full output once. It sets
 // rec.ArtifactID and rec.BytesSaved and returns the (possibly rewritten)
 // response. In observe mode it stores the artifact but returns the response
 // unchanged.
@@ -60,7 +60,7 @@ type Recorder interface {
 // Executor wraps every BaseTool.Run with canonical input hashing, correlation,
 // timing, size measurement, and lifecycle recording. It returns exactly the
 // tool's response and error so existing behaviour and permission handling are
-// unchanged (roadmapplan.md §5.4).
+// unchanged.
 type Executor struct {
 	recorder    Recorder
 	virtualizer Virtualizer
@@ -73,7 +73,7 @@ func NewExecutor(recorder Recorder, virtualizer Virtualizer) *Executor {
 }
 
 // WithHooks wires a lifecycle-hook registry so ToolPre/ToolPost fire around
-// every tool execution (roadmapplan.md §12.3). Returning an error from a
+// every tool execution. Returning an error from a
 // ToolPre handler vetoes the call: the tool never runs and nothing is
 // recorded, matching Registry.Dispatch's documented veto semantics. A nil
 // registry (the default) is a no-op, identical to today's behaviour.
@@ -138,7 +138,7 @@ func (e *Executor) Execute(ctx context.Context, tool BaseTool, call ToolCall) (T
 		e.recorder.Finish(ctx, rec)
 	}
 
-	// ToolPost is advisory (roadmapplan.md §12.3 Dispatch semantics): its error,
+	// ToolPost is advisory: its error,
 	// if any, is not surfaced here so a post-hook can never turn a successful
 	// tool call into a failure the caller has to handle.
 	_ = e.hooks.Dispatch(ctx, hooks.Event{

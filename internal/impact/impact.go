@@ -1,5 +1,5 @@
 // Package impact maintains a hybrid code graph and proposes affected symbols,
-// packages, and tests for a set of changed paths (roadmapplan.md §8.5–§8.7).
+// packages, and tests for a set of changed paths.
 // It prefers deterministic analysis (AST, build manifests, git) over any model
 // call, and broadens validation automatically when the graph is stale,
 // incomplete, or uncertain.
@@ -90,7 +90,7 @@ type TestRec struct {
 	Reason string `json:"reason"`
 }
 
-// Result is the impact analysis for a set of changed paths (roadmapplan.md §8.6).
+// Result is the impact analysis for a set of changed paths.
 type Result struct {
 	ChangedPaths     []string  `json:"changedPaths"`
 	DirectDependents []string  `json:"directDependents"`
@@ -101,7 +101,7 @@ type Result struct {
 	// touches paths the graph does not cover.
 	Uncertainty float64 `json:"uncertainty"`
 	// BroadenValidation is true when impact selection must not be the only basis:
-	// the caller should run broader validation (roadmapplan.md §8.6, §14).
+	// the caller should run broader validation.
 	BroadenValidation bool     `json:"broadenValidation"`
 	Recommended       []string `json:"recommended"`
 	Reason            string   `json:"reason"`

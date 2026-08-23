@@ -13,7 +13,7 @@ import (
 	"github.com/kaiau00/aux-cli/internal/viewmodel"
 )
 
-// The task header (roadmapplan.md §13.6) shows, in priority order: project and
+// The task header shows, in priority order: project and
 // branch, compact task title, current stage/status, model, context usage, and
 // cost/budget. On constrained widths it progressively collapses in reverse
 // priority order — the active stage always stays visible and the line never
@@ -26,7 +26,7 @@ const headerSep = "  "
 // first variant is the fullest; later variants are collapsed forms. droppable
 // segments may be removed entirely at the narrowest widths.
 type segment struct {
-	priority  int // 1 = most important (§13.6 order); higher collapses first
+	priority  int // 1 = most important (order); higher collapses first
 	variants  []string
 	droppable bool
 }
@@ -86,7 +86,7 @@ func RenderTaskHeader(vm viewmodel.TaskHeaderVM, width int) string {
 }
 
 // planTaskHeader computes the plain-text header line that fits within width,
-// applying §13.6 responsive collapse. Pure and deterministic.
+// applying responsive collapse. Pure and deterministic.
 func planTaskHeader(vm viewmodel.TaskHeaderVM, width int) string {
 	if width <= 0 {
 		return ""
@@ -97,7 +97,7 @@ func planTaskHeader(vm viewmodel.TaskHeaderVM, width int) string {
 
 // headerSegments builds the ordered header segments from a projection, in
 // left-to-right display order. The priority on each segment (lower = retained
-// longer) drives §13.6 reverse-priority collapse. The stage word carries the
+// longer) drives reverse-priority collapse. The stage word carries the
 // mandatory-visibility priority (0) and is the only non-droppable field, so it
 // is always the last survivor; the redundant-with-icon status word is a
 // separate low-priority chip that drops early.
@@ -180,7 +180,7 @@ func projectSegment(vm viewmodel.TaskHeaderVM) segment {
 		small = base
 	}
 	// Project is priority 1 (retained longest of the droppable fields), but the
-	// active stage is the one element §13.6 mandates must always remain visible.
+	// active stage is the one element mandates must always remain visible.
 	// So project is droppable as a last resort — only at pathologically narrow
 	// widths where project and stage cannot both fit, and only after everything
 	// else is gone, does project yield so the stage survives.
@@ -197,8 +197,8 @@ func titleSegment(vm viewmodel.TaskHeaderVM) (segment, bool) {
 	)}, true
 }
 
-// stageSegment is the mandatory, always-visible active stage: icon + stage word
-// (§13.6). It is the only non-droppable field and is retained longest.
+// stageSegment is the mandatory, always-visible active stage: icon + stage word.
+// It is the only non-droppable field and is retained longest.
 func stageSegment(vm viewmodel.TaskHeaderVM) segment {
 	stage := strings.TrimSpace(vm.Stage)
 	if stage == "" {
@@ -220,7 +220,7 @@ func statusSegment(vm viewmodel.TaskHeaderVM) (segment, bool) {
 	return segment{priority: 3, droppable: true, variants: []string{state}}, true
 }
 
-// budgetVariants builds the combined context+cost indicator (§13.6: "Cost and
+// budgetVariants builds the combined context+cost indicator ("Cost and
 // context become one compact budget indicator"), fullest first.
 func budgetVariants(vm viewmodel.TaskHeaderVM) []string {
 	ctx := ""

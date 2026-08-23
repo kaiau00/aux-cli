@@ -8,7 +8,7 @@ import (
 	"github.com/kaiau00/aux-cli/internal/validation"
 )
 
-// StateForTaskStatus maps a task status to a display state (roadmapplan.md §13.4).
+// StateForTaskStatus maps a task status to a display state.
 func StateForTaskStatus(status task.Status) ComponentState {
 	switch status {
 	case task.StatusCreated, task.StatusCompiled:
@@ -66,7 +66,7 @@ func StageFromEvents(events []eventstore.Event) string {
 }
 
 // BuildActivityGroups projects tool events into user-understandable activity
-// groups, preserving error counts (roadmapplan.md §13.7).
+// groups, preserving error counts.
 func BuildActivityGroups(events []eventstore.Event) []ActivityGroupVM {
 	order := []ActivityKind{}
 	groups := map[ActivityKind]*ActivityGroupVM{}
@@ -107,7 +107,7 @@ type CriterionInput struct {
 }
 
 // BuildValidationSummary projects acceptance criteria into a display summary that
-// never implies success without evidence (roadmapplan.md §13.9).
+// never implies success without evidence.
 func BuildValidationSummary(criteria []CriterionInput) ValidationSummaryVM {
 	vm := ValidationSummaryVM{}
 	anyBlocked, anyUnverified := false, false
@@ -151,8 +151,7 @@ func stateForCriterion(s validation.CriterionState) ComponentState {
 	}
 }
 
-// BuildChangeSummary projects checkpoint entries into the changed-files surface
-// (roadmapplan.md §13.8).
+// BuildChangeSummary projects checkpoint entries into the changed-files surface.
 func BuildChangeSummary(entries []checkpoint.Entry) ChangeSummaryVM {
 	vm := ChangeSummaryVM{}
 	for _, e := range entries {
@@ -169,7 +168,7 @@ func BuildChangeSummary(entries []checkpoint.Entry) ChangeSummaryVM {
 	return vm
 }
 
-// pageCategoryLabel maps a page type to a budget category (roadmapplan.md §13.11).
+// pageCategoryLabel maps a page type to a budget category.
 func pageCategoryLabel(pageType string) string {
 	switch pageType {
 	case contextstore.KindTaskSpec, contextstore.KindPlanState:
@@ -199,7 +198,7 @@ type ContextPageEntryVM struct {
 }
 
 // ContextPageListVM groups a call's page bindings by state, for the expanded
-// context view (roadmapplan.md §13.11) that the compact budget summarizes.
+// context view that the compact budget summarizes.
 // Grouped by the states that actually exist in contextstore — resident,
 // available, pinned, evicted, faulted — not aspirational states with no
 // backing model.
@@ -233,8 +232,8 @@ func BuildContextPageList(bindings []contextstore.BoundPage) ContextPageListVM {
 	return vm
 }
 
-// BuildContextBudget projects per-call page bindings into a budget composition
-// (roadmapplan.md §13.11). Only resident pages count toward the used total.
+// BuildContextBudget projects per-call page bindings into a budget composition.
+// Only resident pages count toward the used total.
 func BuildContextBudget(bindings []contextstore.BoundPage, limitTokens, savedTokens int64) ContextBudgetVM {
 	vm := ContextBudgetVM{LimitTokens: limitTokens, SavedTokens: savedTokens}
 	catTokens := map[string]int64{}

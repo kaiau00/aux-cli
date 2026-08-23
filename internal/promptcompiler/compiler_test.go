@@ -251,8 +251,7 @@ func TestCompileDecomposesIntoPages(t *testing.T) {
 		t.Fatalf("tool message should become a tool_digest page")
 	}
 	// Resident page tokens reconcile with the prompt token estimate within
-	// per-page rounding tolerance (roadmapplan.md §7.2 "within tokenizer
-	// tolerance"): each page rounds up independently.
+	// per-page rounding tolerance: each page rounds up independently.
 	delta := residentTokens - out.EstimatedTokens
 	if delta < 0 {
 		delta = -delta

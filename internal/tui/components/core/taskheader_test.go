@@ -36,7 +36,7 @@ func TestPlanTaskHeaderNeverExceedsWidth(t *testing.T) {
 
 func TestPlanTaskHeaderStageAlwaysVisible(t *testing.T) {
 	vm := sampleHeaderVM()
-	// The active stage word must survive every collapse step (§13.6). At w>=12
+	// The active stage word must survive every collapse step. At w>=12
 	// the stage fits as "● editing" (9 cols) even after every other field —
 	// including project — has been dropped.
 	for w := 12; w <= 200; w++ {
@@ -90,7 +90,7 @@ func TestPlanTaskHeaderCollapseOrder(t *testing.T) {
 	gTitle := goneAt("responsive")
 	gBranch := goneAt("feat/phase1")
 
-	// Reverse-priority retention (§13.6): cost/context collapses first, then the
+	// Reverse-priority retention: cost/context collapses first, then the
 	// model moves into details, then the task title shortens, and the project
 	// (priority 1, including its branch) is retained longest.
 	if !(gCost >= gModel && gModel >= gTitle && gTitle >= gBranch) {

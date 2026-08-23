@@ -1,7 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
--- Validation runs and acceptance evidence (roadmapplan.md Migration F validation
--- tables, §14). Checkpoints tables land with Phase 1.6.
+-- Validation runs and acceptance evidence. Checkpoint tables land separately.
 
 CREATE TABLE IF NOT EXISTS validation_runs (
     validation_run_id TEXT PRIMARY KEY,

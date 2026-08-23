@@ -27,7 +27,7 @@ var scpLike = regexp.MustCompile(`^([^@/]+@)?([^:/]+):(.+)$`)
 
 // NormalizeRemote canonicalizes a VCS remote URL without storing embedded
 // credentials, so the same repository accessed over https/ssh with or without a
-// username hashes to the same identity (roadmapplan.md §6.1).
+// username hashes to the same identity.
 func NormalizeRemote(remote string) string {
 	remote = strings.TrimSpace(remote)
 	if remote == "" {

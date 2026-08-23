@@ -1,7 +1,7 @@
 // Package project resolves a working directory to a stable project identity,
 // its roots/worktrees, and its current revision. Identity is keyed by the
 // normalized VCS remote where one exists, else by canonical root path, so
-// reopening the same repository reuses the same project_id (roadmapplan.md §6.1).
+// reopening the same repository reuses the same project_id.
 package project
 
 // Project is a stable, repository-level identity.

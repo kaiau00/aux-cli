@@ -18,7 +18,7 @@ func NewOneDarkTheme() *OneDarkTheme {
 	darkCurrentLine := "#2c313c"
 	darkSelection := "#3e4451"
 	darkForeground := "#abb2bf"
-	darkComment := "#717989" // lightened from #5c6370 for WCAG contrast against the dark background (§13.18)
+	darkComment := "#717989" // lightened from #5c6370 for WCAG contrast against the dark background
 	darkRed := "#e06c75"
 	darkOrange := "#d19a66"
 	darkYellow := "#e5c07b"
@@ -33,9 +33,9 @@ func NewOneDarkTheme() *OneDarkTheme {
 	lightCurrentLine := "#f0f0f0"
 	lightSelection := "#e5e5e6"
 	lightForeground := "#383a42"
-	lightComment := "#8b8c93" // darkened from #a0a1a7 for WCAG contrast against the light background (§13.18)
+	lightComment := "#8b8c93" // darkened from #a0a1a7 for WCAG contrast against the light background
 	lightRed := "#e45649"
-	lightOrange := "#d5742f" // darkened from #da8548 for WCAG contrast against the light background (§13.18)
+	lightOrange := "#d5742f" // darkened from #da8548 for WCAG contrast against the light background
 	lightYellow := "#c18401"
 	lightGreen := "#50a14f"
 	lightCyan := "#0184bc"

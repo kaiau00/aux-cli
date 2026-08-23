@@ -10,7 +10,7 @@ import (
 )
 
 func TestChangesHeaderNoChanges(t *testing.T) {
-	// §13.8: "no changes yet" is an informative state, not an empty panel.
+	// "No changes yet" is an informative state, not an empty panel.
 	if got := ChangesHeaderText(viewmodel.ChangeSummaryVM{}); got != "Changes  no changes yet" {
 		t.Fatalf("empty change set header = %q", got)
 	}

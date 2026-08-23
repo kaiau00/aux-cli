@@ -139,8 +139,7 @@ func (s *Service) entryMap(ctx context.Context, checkpointID string) (map[string
 }
 
 // DetectWriteConflicts returns the paths written by both change sets — the
-// overlap that must be resolved before automatic integration (roadmapplan.md
-// §11.3: detect overlapping write sets before merge).
+// overlap that must be resolved before automatic integration (detect overlapping write sets before merge).
 func DetectWriteConflicts(a, b []string) []string {
 	set := make(map[string]struct{}, len(a))
 	for _, p := range a {

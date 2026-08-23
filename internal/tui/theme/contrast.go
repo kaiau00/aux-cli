@@ -7,8 +7,8 @@ import (
 	"strings"
 )
 
-// ContrastRatio computes the WCAG 2.1 contrast ratio between two hex colors
-// (roadmapplan.md §13.18 accessibility). Values range from 1 (no contrast) to
+// ContrastRatio computes the WCAG 2.1 contrast ratio between two hex colors.
+// Values range from 1 (no contrast) to
 // 21 (black on white).
 func ContrastRatio(hexA, hexB string) (float64, error) {
 	la, err := relativeLuminance(hexA)

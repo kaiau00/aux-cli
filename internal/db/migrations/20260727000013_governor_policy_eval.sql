@@ -1,6 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
--- Governor policy evaluations (roadmapplan.md §9.7, §23). A learned governor
+-- Governor policy evaluations. A learned governor
 -- policy is promoted from candidate to active only with a passing evaluation
 -- against a baseline — never autonomously. This mirrors the skill evaluation
 -- gate so both share the same evidence-before-default discipline.

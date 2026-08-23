@@ -1,4 +1,4 @@
-// Memory & skills view (roadmapplan.md §13.14 item 5): what Aux has learned
+// Memory & skills view: what Aux has learned
 // about the current project.
 (function () {
   "use strict";

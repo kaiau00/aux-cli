@@ -21,7 +21,7 @@ type recorder struct {
 type Option func(*recorder)
 
 // WithObserver registers a best-effort callback invoked after each tool finishes
-// (e.g. first-mutation checkpointing, roadmapplan.md §11.1). It runs on a
+// (e.g. first-mutation checkpointing). It runs on a
 // detached context and its result is ignored so observability never affects tool
 // behaviour.
 func WithObserver(fn func(ctx context.Context, rec tools.ExecutionRecord)) Option {

@@ -1,6 +1,6 @@
 // Package worktree creates and removes isolated git worktrees so a subagent's
 // file changes land on their own branch and directory rather than directly on
-// the parent's working tree (roadmapplan.md §11.3). It is a thin wrapper over
+// the parent's working tree. It is a thin wrapper over
 // the `git worktree` porcelain — deterministic and testable without a fake,
 // the same choice internal/project makes for VCS inspection (see
 // internal/project/vcs.go).

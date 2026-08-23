@@ -30,8 +30,7 @@ func (s *Service) Reindex(ctx context.Context, projectID, root, revision string,
 
 // Analyze returns the impact of a set of changed (repo-relative) paths. It never
 // treats impact selection as the sole validation basis: when the graph is empty,
-// stale, or a changed path is uncovered, it broadens validation (roadmapplan.md
-// §8.6). currentRevision is the revision the caller is analyzing against.
+// stale, or a changed path is uncovered, it broadens validation. currentRevision is the revision the caller is analyzing against.
 func (s *Service) Analyze(ctx context.Context, projectID, currentRevision string, changedPaths []string) (Result, error) {
 	res := Result{ChangedPaths: changedPaths}
 

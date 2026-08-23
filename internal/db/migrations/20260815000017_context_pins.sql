@@ -1,6 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
--- Per-task context pins (roadmapplan.md §13.11/§6 StatePinned): the TUI's
+-- Per-task context pins (StatePinned): the TUI's
 -- pin control records a real override here, consulted by the prompt compiler
 -- on the task's next compile so a pinned page's full content is guaranteed —
 -- exempt from both content-dedup stubbing and exclusion stubbing — rather

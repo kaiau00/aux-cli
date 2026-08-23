@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 -- Project identity: stable project, its roots/worktrees, and revisions.
--- See roadmapplan.md Migration B and §6.1. Identity is keyed by normalized VCS
+-- Identity is keyed by normalized VCS
 -- remote hash where available, else by canonical root path (local-only project).
 
 CREATE TABLE IF NOT EXISTS projects (

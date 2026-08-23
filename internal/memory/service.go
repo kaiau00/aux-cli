@@ -7,8 +7,7 @@ import (
 )
 
 // autoPromoteConfidence is the confidence at or above which a non-episodic
-// candidate is auto-promoted (roadmapplan.md §8.3: direct facts / evidenced
-// procedures). Below it, the memory stays a candidate awaiting more evidence.
+// candidate is auto-promoted (direct facts / evidenced procedures). Below it, the memory stays a candidate awaiting more evidence.
 const autoPromoteConfidence = 0.85
 
 // EventSink appends domain events.
@@ -88,7 +87,7 @@ func (s *Service) InvalidateForRevision(ctx context.Context, projectID, revision
 }
 
 // RecordCorrection lowers confidence and, on strong correction, invalidates a
-// conflicting memory (roadmapplan.md §8.3: user corrections lower/invalidate).
+// conflicting memory (user corrections lower/invalidate).
 func (s *Service) RecordCorrection(ctx context.Context, memoryID string, taskID string) error {
 	if err := s.store.SetState(ctx, memoryID, StateRejected); err != nil {
 		return err

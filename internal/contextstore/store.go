@@ -105,7 +105,7 @@ func (s *Store) RecordAccess(ctx context.Context, taskID, callID, pageVersionID,
 }
 
 // Exclude marks a tool call's result as excluded from a task's future prompt
-// compiles (roadmapplan.md §13.11): the TUI's cross-off control changes what
+// compiles: the TUI's cross-off control changes what
 // is actually sent to the model on the next turn, not just how it's
 // displayed. Idempotent.
 func (s *Store) Exclude(ctx context.Context, taskID, toolCallID string) error {
@@ -158,7 +158,7 @@ func (s *Store) Exclusions(ctx context.Context, taskID string) (map[string]bool,
 	return out, rows.Err()
 }
 
-// Pin marks a tool call's result as pinned (roadmapplan.md §13.11, StatePinned):
+// Pin marks a tool call's result as pinned:
 // the prompt compiler guarantees its full content is sent on the task's next
 // compile — exempt from both dedup stubbing and exclusion stubbing — rather
 // than only repainting a local checkbox. Idempotent.

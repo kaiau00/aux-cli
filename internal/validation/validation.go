@@ -1,5 +1,5 @@
-// Package validation plans and records checks and determines proof-of-done state
-// (roadmapplan.md §14). It never converts a claim into validated state on its
+// Package validation plans and records checks and determines proof-of-done state.
+// It never converts a claim into validated state on its
 // own: a criterion becomes validated only when appropriate evidence exists, and
 // completion policy is task-mode and risk aware.
 package validation
@@ -24,8 +24,7 @@ const (
 	EvidenceWaiver     = "user_waiver"
 )
 
-// CriterionState is the proof-of-done state of one acceptance criterion
-// (roadmapplan.md §14.2).
+// CriterionState is the proof-of-done state of one acceptance criterion.
 type CriterionState string
 
 const (

@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 -- Runtime observability: per-call model ledger and tool-execution records.
--- See roadmapplan.md Migration A and PR 1. project_id/task_id/turn_id are
+-- project_id/task_id/turn_id are
 -- nullable here because project identity (PR 5) and first-class tasks (PR 7)
 -- do not exist yet; they are backfilled onto new records once those land.
 

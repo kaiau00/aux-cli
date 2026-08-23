@@ -1,5 +1,5 @@
-// Package workbench renders the task-level changes (roadmapplan.md §13.8) and
-// validation (§13.9) surfaces from truthful view models. It answers "what
+// Package workbench renders the task-level changes and
+// validation surfaces from truthful view models. It answers "what
 // changed" and "does it work" without transcript search. Diff semantics keep
 // conventional green/red; the validation surface never implies success without
 // validated evidence — a claim is never shown as passed because the agent
@@ -17,7 +17,7 @@ import (
 	"github.com/kaiau00/aux-cli/internal/viewmodel"
 )
 
-// --- Changes (§13.8) ---
+// --- Changes ---
 
 // ChangesHeaderText returns the plain-text summary line for a change set, or the
 // informative "no changes yet" state when nothing has changed (never an empty
@@ -40,7 +40,7 @@ func ChangesHeaderText(vm viewmodel.ChangeSummaryVM) string {
 }
 
 // RenderChanges renders the change summary. Additions are green and deletions
-// red (§13.8: conventional diff semantics, not both remapped to amber). Before
+// red (conventional diff semantics, not both remapped to amber). Before
 // anything has changed, this renders nothing — every fresh task otherwise
 // opened with an identical "no changes yet" block, which is boilerplate the
 // panel doesn't need until there's something to report.
@@ -73,7 +73,7 @@ func changeGlyph(op string, t theme.Theme) (string, lipgloss.AdaptiveColor) {
 	}
 }
 
-// --- Validation (§13.9) ---
+// --- Validation ---
 
 // ValidationStateLabel returns the display label for a component state used on
 // the validation surface.
@@ -97,8 +97,8 @@ func CriterionRowText(c viewmodel.CriterionVM) string {
 	return fmt.Sprintf("%s %s  %s", validationGlyph(c.State), ValidationStateLabel(c.State), c.Description)
 }
 
-// RenderValidation renders acceptance criteria and their proof-of-done state
-// (§13.9). It never renders a success treatment without a validated
+// RenderValidation renders acceptance criteria and their proof-of-done state.
+// It never renders a success treatment without a validated
 // criterion. Before there are any acceptance criteria to report on, this
 // renders nothing — the same boilerplate-avoidance as RenderChanges. Once a
 // criterion exists, an unverified one is always shown as unverified,
@@ -135,7 +135,7 @@ func validationGlyph(state viewmodel.ComponentState) string {
 }
 
 // validationColor keeps a success (green) treatment reserved for validated
-// evidence only; unverified is muted, never green (§13.9).
+// evidence only; unverified is muted, never green.
 func validationColor(state viewmodel.ComponentState, t theme.Theme) lipgloss.AdaptiveColor {
 	switch state {
 	case viewmodel.StateValidated:

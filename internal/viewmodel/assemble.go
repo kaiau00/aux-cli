@@ -11,8 +11,8 @@ import (
 	"github.com/kaiau00/aux-cli/internal/validation"
 )
 
-// TaskView is the assembled, read-only view of a task for the dashboard/TUI
-// (roadmapplan.md §18). Every field traces to durable runtime data.
+// TaskView is the assembled, read-only view of a task for the dashboard/TUI.
+// Every field traces to durable runtime data.
 type TaskView struct {
 	Header     TaskHeaderVM        `json:"header"`
 	Activity   []ActivityGroupVM   `json:"activity"`
@@ -32,7 +32,7 @@ type Stores struct {
 }
 
 // RecentTasks returns lightweight summaries of the most recent tasks for the
-// dashboard's active-work navigation (roadmapplan.md §13.12).
+// dashboard's active-work navigation.
 func (s Stores) RecentTasks(ctx context.Context, limit int) ([]TaskSummaryVM, error) {
 	tasks, err := s.Tasks.ListRecent(ctx, limit)
 	if err != nil {

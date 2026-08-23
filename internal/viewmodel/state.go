@@ -1,11 +1,10 @@
 // Package viewmodel builds truthful, event-backed presentation state for the TUI
-// and dashboard (roadmapplan.md §13.4 state language, §13.5 view-model boundary,
-// §18 read models). View models are pure projections of durable runtime data —
+// and dashboard. View models are pure projections of durable runtime data —
 // events, task/validation state, context bindings, and the cost ledger — never
 // inferred from rendered strings.
 package viewmodel
 
-// Component state vocabulary (roadmapplan.md §13.4). The same wording appears in
+// Component state vocabulary. The same wording appears in
 // events, TUI, dashboard, and docs.
 type ComponentState string
 
@@ -24,8 +23,7 @@ const (
 	StateValidated  ComponentState = "validated"
 )
 
-// ActivityKind groups mechanical operations into user-understandable stages
-// (roadmapplan.md §13.7).
+// ActivityKind groups mechanical operations into user-understandable stages.
 type ActivityKind string
 
 const (

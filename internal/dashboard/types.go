@@ -13,36 +13,33 @@ import (
 	"github.com/kaiau00/aux-cli/internal/viewmodel"
 )
 
-// TaskReader assembles task read-only view models from durable runtime state
-// (roadmapplan.md §18). Optional; when nil the /api/v1 task endpoints are
+// TaskReader assembles task read-only view models from durable runtime state.
+// Optional; when nil the /api/v1 task endpoints are
 // disabled.
 type TaskReader interface {
 	TaskView(ctx context.Context, taskID string) (viewmodel.TaskView, error)
 	RecentTasks(ctx context.Context, limit int) ([]viewmodel.TaskSummaryVM, error)
 }
 
-// ProjectReader assembles the Project Brain view (roadmapplan.md §13.14 item
-// 4): project identity, effective profile, and related-project graph.
+// ProjectReader assembles the Project Brain view: project identity, effective profile, and related-project graph.
 // Optional; when nil the /api/v1/project endpoint is disabled.
 type ProjectReader interface {
 	ProjectBrainView(ctx context.Context, workdir string) (viewmodel.ProjectBrainVM, error)
 	ResolveProjectID(ctx context.Context, workdir string) (string, error)
 }
 
-// MemoryReader assembles the Memory & skills view (roadmapplan.md §13.14 item
-// 5). Optional; when nil the /api/v1/memory endpoint is disabled.
+// MemoryReader assembles the Memory & skills view. Optional; when nil the /api/v1/memory endpoint is disabled.
 type MemoryReader interface {
 	MemoryBrainView(ctx context.Context, projectID string) (viewmodel.MemoryBrainVM, error)
 }
 
-// ImpactReader assembles the Impact graph view (roadmapplan.md §13.14 item 6).
+// ImpactReader assembles the Impact graph view.
 // Optional; when nil the /api/v1/impact endpoint is disabled.
 type ImpactReader interface {
 	ImpactGraphView(ctx context.Context, projectID string) (viewmodel.ImpactGraphVM, error)
 }
 
-// OptimizationReader assembles the Optimization view (roadmapplan.md §13.14
-// item 7). Optional; when nil the /api/v1/optimization endpoint is disabled.
+// OptimizationReader assembles the Optimization view. Optional; when nil the /api/v1/optimization endpoint is disabled.
 type OptimizationReader interface {
 	OptimizationView(ctx context.Context, projectID string) (viewmodel.OptimizationVM, error)
 }

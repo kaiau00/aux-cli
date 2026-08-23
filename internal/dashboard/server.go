@@ -132,8 +132,7 @@ func (s *Server) Shutdown(ctx context.Context) error {
 }
 
 // handleIndex serves the default route. It is the same task-first workspace
-// as /tasks (roadmapplan.md §13.12: the browser prioritizes the active task
-// over lifetime telemetry) rather than the old session/log inspector, which
+// as /tasks (the browser prioritizes the active task over lifetime telemetry) rather than the old session/log inspector, which
 // moved to /sessions.
 func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
@@ -143,7 +142,7 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 	s.serveHTMLAsset(w, r, "tasks.html")
 }
 
-// handleTasksPage serves the active-task workspace (roadmapplan.md §13.12), an
+// handleTasksPage serves the active-task workspace, an
 // active-work-first view backed entirely by the read-only /api/v1 projections.
 // Token-gated like the rest of the dashboard.
 func (s *Server) handleTasksPage(w http.ResponseWriter, r *http.Request) {
@@ -157,22 +156,22 @@ func (s *Server) handleSessionsPage(w http.ResponseWriter, r *http.Request) {
 	s.serveHTMLAsset(w, r, "sessions.html")
 }
 
-// handleProjectPage serves the Project Brain view (roadmapplan.md §13.14 item 4).
+// handleProjectPage serves the Project Brain view.
 func (s *Server) handleProjectPage(w http.ResponseWriter, r *http.Request) {
 	s.serveHTMLAsset(w, r, "project.html")
 }
 
-// handleMemoryPage serves the Memory & skills view (roadmapplan.md §13.14 item 5).
+// handleMemoryPage serves the Memory & skills view.
 func (s *Server) handleMemoryPage(w http.ResponseWriter, r *http.Request) {
 	s.serveHTMLAsset(w, r, "memory.html")
 }
 
-// handleImpactPage serves the Impact graph view (roadmapplan.md §13.14 item 6).
+// handleImpactPage serves the Impact graph view.
 func (s *Server) handleImpactPage(w http.ResponseWriter, r *http.Request) {
 	s.serveHTMLAsset(w, r, "impact.html")
 }
 
-// handleOptimizationPage serves the Optimization view (roadmapplan.md §13.14 item 7).
+// handleOptimizationPage serves the Optimization view.
 func (s *Server) handleOptimizationPage(w http.ResponseWriter, r *http.Request) {
 	s.serveHTMLAsset(w, r, "optimization.html")
 }
@@ -193,8 +192,7 @@ func (s *Server) serveHTMLAsset(w http.ResponseWriter, r *http.Request, name str
 	_, _ = w.Write(data)
 }
 
-// handleStaticAsset serves the split css/js sub-resources (roadmapplan.md
-// §13.13) from the embedded asset tree. These carry no sensitive data — the
+// handleStaticAsset serves the split css/js sub-resources from the embedded asset tree. These carry no sensitive data — the
 // token protects the /api data endpoints — so they are not token-gated, since a
 // browser cannot attach the token to <link>/<script> sub-resource requests.
 func (s *Server) handleStaticAsset(w http.ResponseWriter, r *http.Request) {
@@ -219,7 +217,7 @@ func (s *Server) handleStaticAsset(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleTasksList serves recent task summaries for the dashboard's active-work
-// navigation (roadmapplan.md §13.12, §18). Read-only and token-gated.
+// navigation. Read-only and token-gated.
 func (s *Server) handleTasksList(w http.ResponseWriter, r *http.Request) {
 	if !s.authorized(r) {
 		http.Error(w, "dashboard token required", http.StatusUnauthorized)
@@ -246,8 +244,7 @@ func (s *Server) handleTasksList(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, tasks)
 }
 
-// handleTaskView serves a task's assembled, read-only view model (roadmapplan.md
-// §5.6, §18). It is read-only and token-gated like the rest of the dashboard.
+// handleTaskView serves a task's assembled, read-only view model. It is read-only and token-gated like the rest of the dashboard.
 func (s *Server) handleTaskView(w http.ResponseWriter, r *http.Request) {
 	if !s.authorized(r) {
 		http.Error(w, "dashboard token required", http.StatusUnauthorized)
@@ -267,8 +264,8 @@ func (s *Server) handleTaskView(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(view)
 }
 
-// handleProjectView serves the current project's Project Brain view
-// (roadmapplan.md §13.14 item 4). Read-only and token-gated.
+// handleProjectView serves the current project's Project Brain view.
+// Read-only and token-gated.
 func (s *Server) handleProjectView(w http.ResponseWriter, r *http.Request) {
 	if !s.authorized(r) {
 		http.Error(w, "dashboard token required", http.StatusUnauthorized)
@@ -286,8 +283,8 @@ func (s *Server) handleProjectView(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, view)
 }
 
-// handleMemoryView serves the current project's Memory & skills view
-// (roadmapplan.md §13.14 item 5). Read-only and token-gated.
+// handleMemoryView serves the current project's Memory & skills view.
+// Read-only and token-gated.
 func (s *Server) handleMemoryView(w http.ResponseWriter, r *http.Request) {
 	if !s.authorized(r) {
 		http.Error(w, "dashboard token required", http.StatusUnauthorized)
@@ -310,8 +307,8 @@ func (s *Server) handleMemoryView(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, view)
 }
 
-// handleImpactView serves the current project's Impact graph view
-// (roadmapplan.md §13.14 item 6). Read-only and token-gated.
+// handleImpactView serves the current project's Impact graph view.
+// Read-only and token-gated.
 func (s *Server) handleImpactView(w http.ResponseWriter, r *http.Request) {
 	if !s.authorized(r) {
 		http.Error(w, "dashboard token required", http.StatusUnauthorized)
@@ -334,8 +331,8 @@ func (s *Server) handleImpactView(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, view)
 }
 
-// handleOptimizationView serves the current project's Optimization view
-// (roadmapplan.md §13.14 item 7). Read-only and token-gated.
+// handleOptimizationView serves the current project's Optimization view.
+// Read-only and token-gated.
 func (s *Server) handleOptimizationView(w http.ResponseWriter, r *http.Request) {
 	if !s.authorized(r) {
 		http.Error(w, "dashboard token required", http.StatusUnauthorized)

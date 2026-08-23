@@ -1,11 +1,11 @@
 // Package visual holds deterministic, cross-component golden snapshots for the
-// Phase 2 TUI surfaces (roadmapplan.md §13.19). It renders the view-model
+// Phase 2 TUI surfaces. It renders the view-model
 // fixtures the plan enumerates — empty project, active edit, multiple changed
 // files, validation pass/failure, tool failure, context pressure, cost warning,
 // completed validated/unverified — at wide/medium/narrow widths, strips ANSI so
 // the snapshot captures layout/truncation/state rather than color, and asserts
 // content/state semantics in addition to the golden text. Browser screenshot
-// regression (the §13.19 browser section) is not runnable in this environment.
+// regression (the browser section) is not runnable in this environment.
 package visual
 
 import (
@@ -230,8 +230,8 @@ func TestGoldenSnapshots(t *testing.T) {
 	}
 }
 
-// themeSample is a representative, non-exhaustive subset of registered themes
-// (roadmapplan.md §13.19). The golden files themselves are theme-independent
+// themeSample is a representative, non-exhaustive subset of registered themes.
+// The golden files themselves are theme-independent
 // (plain() strips ANSI/color, and layout does not vary by theme), so this
 // does not re-run the golden diff per theme — that would just duplicate
 // identical files with no diagnostic value. Instead it proves every sampled
@@ -293,7 +293,7 @@ func TestFixturesRenderAcrossThemes(t *testing.T) {
 func TestSemanticInvariants(t *testing.T) {
 	f := fixtures()
 
-	// A stopped/unverified task never renders as validated (§13.9).
+	// A stopped/unverified task never renders as validated.
 	unverified := f["completed-unverified"].render(100)
 	if strings.Contains(unverified, "validated") {
 		t.Fatalf("completed-unverified must not claim validated:\n%s", unverified)
@@ -308,12 +308,12 @@ func TestSemanticInvariants(t *testing.T) {
 		t.Fatalf("validation-failure must show failed and never validated:\n%s", fail)
 	}
 
-	// A tool failure never hides its error (§13.7).
+	// A tool failure never hides its error.
 	if !strings.Contains(f["tool-failure"].render(100), "failed") {
 		t.Fatalf("tool-failure must surface the error state")
 	}
 
-	// Context pressure shows a high percentage (§13.11).
+	// Context pressure shows a high percentage.
 	if !strings.Contains(f["context-pressure"].render(100), "93%") {
 		t.Fatalf("context-pressure header should show ~93%% usage")
 	}
