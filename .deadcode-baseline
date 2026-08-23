@@ -19,32 +19,13 @@
 #
 # - internal/welcome: RESOLVED. Wired into interactive startup; the intro now
 #   also states what Aux sends to a provider and where it stores state.
-# - sidebar.go: an entire chat sidebar component, superseded by the context pane
-#   but never removed.
-# - diff/patch.go: a public patch-application API with no callers; the patch
-#   tool uses a different path.
+# - sidebar.go: RESOLVED. Deleted -- an entire chat sidebar component,
+#   superseded by the context pane and never removed.
+# - diff/patch.go: RESOLVED. The seven unreachable functions were deleted. Note
+#   the rest of that file is live and drives the patch tool; only the unused
+#   public API on top of it was dead.
 # ---------------------------------------------------------------------------
 
-internal/diff/patch.go: AssembleChanges
-internal/diff/patch.go: LoadFiles
-internal/diff/patch.go: OpenFile
-internal/diff/patch.go: ProcessPatch
-internal/diff/patch.go: RemoveFile
-internal/diff/patch.go: ValidatePatch
-internal/diff/patch.go: WriteFile
-internal/tui/components/chat/sidebar.go: NewSidebarCmp
-internal/tui/components/chat/sidebar.go: getDisplayPath
-internal/tui/components/chat/sidebar.go: sidebarCmp.GetSize
-internal/tui/components/chat/sidebar.go: sidebarCmp.Init
-internal/tui/components/chat/sidebar.go: sidebarCmp.SetSize
-internal/tui/components/chat/sidebar.go: sidebarCmp.Update
-internal/tui/components/chat/sidebar.go: sidebarCmp.View
-internal/tui/components/chat/sidebar.go: sidebarCmp.findInitialVersion
-internal/tui/components/chat/sidebar.go: sidebarCmp.loadModifiedFiles
-internal/tui/components/chat/sidebar.go: sidebarCmp.modifiedFile
-internal/tui/components/chat/sidebar.go: sidebarCmp.modifiedFiles
-internal/tui/components/chat/sidebar.go: sidebarCmp.processFileChanges
-internal/tui/components/chat/sidebar.go: sidebarCmp.sessionSection
 
 # ---------------------------------------------------------------------------
 # ACCEPTED — deliberately unreachable, no action needed.
