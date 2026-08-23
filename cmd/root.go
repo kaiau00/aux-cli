@@ -152,6 +152,12 @@ to assist developers in writing, debugging, and understanding code directly from
 		program := tea.NewProgram(
 			tui.New(app),
 			tea.WithAltScreen(),
+			// Without mouse reporting the terminal keeps the wheel and scrolls
+			// its own scrollback, so scrolling up in a conversation showed the
+			// shell history from before Aux started. The cost is that dragging
+			// to select text now needs Shift held down, which is the usual
+			// bargain for a full-screen program that scrolls its own content.
+			tea.WithMouseCellMotion(),
 		)
 
 		// Open the welcome session once the program is running. Sending before
