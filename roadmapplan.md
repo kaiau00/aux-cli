@@ -1195,6 +1195,8 @@ Lifecycle hooks:
 
 Hooks receive identifiers and artifact references, not secret-rich raw payloads by default.
 
+These are in-process hooks with handlers registered in Go. **User-defined shell hooks -- commands named in a config file and run at these points -- are out of scope and not planned.** A repository-level config that registers one would turn cloning a repository into running its code; that needs a threat model this project has not written, and the observability the hooks were wanted for is covered by the built-in handlers.
+
 ### 12.4 Runtime adapters
 
 Define an adapter boundary that can consume Aux task specs/pages and return normalized trajectories. Do not contort core packages around another harness. The native Aux runtime remains first-class; adapters prove that the Project Brain and learning layer are separable.

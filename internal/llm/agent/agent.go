@@ -547,9 +547,18 @@ func (a *agent) streamAndHandleEvents(ctx context.Context, sessionID string, msg
 	return assistantMsg, &msg, err
 }
 
+// finishMessage stamps the finish marker on a message and persists it.
+//
+// The write is not allowed to fail silently. Every call site is already
+// unwinding with a more important error, so this one cannot change control
+// flow -- but a finish marker that never lands leaves the message rendering as
+// though it were still streaming, permanently, across restarts, with nothing
+// anywhere to say why. Losing the error is what makes that undiagnosable.
 func (a *agent) finishMessage(ctx context.Context, msg *message.Message, finishReson message.FinishReason) {
 	msg.AddFinish(finishReson)
-	_ = a.messages.Update(ctx, *msg)
+	if err := a.messages.Update(ctx, *msg); err != nil {
+		logging.ErrorPersist(fmt.Sprintf("failed to record finish marker for message %s: %v", msg.ID, err))
+	}
 }
 
 func (a *agent) processEvent(ctx context.Context, sessionID string, tracker *callTracker, assistantMsg *message.Message, event provider.ProviderEvent) error {

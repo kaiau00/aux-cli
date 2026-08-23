@@ -46,6 +46,9 @@ func (s *Service) Learn(ctx context.Context, candidates []Candidate) error {
 			}
 			s.emit(ctx, eventstore.MemoryPromoted, mem, c.Confidence)
 			// Record the promotion as positive feedback on the version.
+			// Best effort: the promotion above already succeeded and emitted its
+			// event. This is a ranking signal for later scoring, so losing one
+			// weakens a heuristic rather than misreporting anything.
 			_ = s.store.RecordFeedback(ctx, ver.ID, c.Sources[0].ID, "promoted", "auto_policy")
 		}
 	}

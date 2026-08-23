@@ -229,23 +229,52 @@ silently drops a row.
 
   Found next to it: crash logs went to the process's working directory, so a
   panic dropped `aux-panic-*.log` into the user's repository at 0644. Now
-  `.aux/` at 0600, on the same reasoning that made the debug log 0600.
-- **Silent-failure sweep.** The pragma case above is one instance; audit for
-  others where an error is logged and execution proceeds as if nothing happened.
-- **First-run and misconfiguration.** No provider key, unwritable data
-  directory, not a git repository — each should produce a message that says what
-  to do.
+  `.aux/` at 0600, on the same reasoning that made the debug log 0600. Note the
+  correction: `.aux/` is itself inside the repository, so these move out of the
+  repository *root*, not out of the repository. The original wording overstated
+  it.
+- **Silent-failure sweep.** ✅ closed. 137 discarded-error sites triaged; three
+  were changing what Aux *reported*, which is the class that produced this
+  file's worst entries:
 
-### P1.4 — User-defined hooks: build them or drop them
+  | Site | What it did |
+  | --- | --- |
+  | `finishMessage` | dropped the write marking a message finished, so it rendered as streaming forever, across restarts |
+  | `scanVersionOpt` | discarded both unmarshals, then returned the skill as found and valid with empty content |
+  | `Reindex` | discarded the edge reset, then re-added on top — the impact graph accumulated dependencies that no longer exist and went on reporting them |
 
-The `hooks` package dispatches seven lifecycle points and has registered
-observability handlers, but there is **no hook configuration in
-`internal/config`** — users cannot register anything. Running commands from a
-config file is arbitrary code execution and needs its own security review, which
-is why it was deliberately deferred.
+  The rest were checked and annotated with why discarding is correct, so the
+  next dangerous one is visible rather than hidden among identical lines. Each
+  fix was verified to fail against the swallowed version first.
 
-Decide: implement with a real threat model, or remove it from the roadmap so it
-stops reading as a shipped capability.
+- **First-run and misconfiguration.** ✅ closed, and found by *running the
+  binary in an empty environment* rather than reading the code — which is how
+  all three of these turned out to be worse than the item described.
+
+  With no API key the error was `agent coder not found`, followed by a usage
+  dump. Agent defaults are only filled in once a provider exists, so a missing
+  key surfaced as a missing agent: an internal concept, several layers from the
+  cause, no remedy. Now a provider preflight that names the variables to set.
+
+  The two remaining cases in this bullet were **not** broken, contrary to how it
+  was written: a non-git directory already works, and an unwritable `$HOME` is
+  irrelevant because the data directory is working-directory-relative.
+
+  That last fact exposed something nobody had written down: `.aux/` is created
+  **inside the user's repository** and holds the full session transcript —
+  prompts, tool output, everything the agent was shown — with nothing marking it
+  ignorable. `git add -A` committed all of it. It now writes its own
+  `.gitignore`.
+
+### P1.4 — User-defined hooks ✅ dropped
+
+Decided: **not planned**, removed from the roadmap rather than left pending.
+
+Running commands from a config file is arbitrary code execution, and a
+repository-level config that registers one turns *cloning a repository* into
+running its code. That needs a threat model this project has not written. The
+in-process dispatch points and their observability handlers already cover what
+the hooks were wanted for, and they stay.
 
 ---
 
@@ -356,17 +385,28 @@ Real, small, or low-confidence. Nothing here blocks production.
 
 ## Sequencing
 
-P0 is closed. The benchmark exists and has been run; SQLite and reachability are
-done; PR #1 is merged and work continues on `main`.
+P0 is closed. **P1 is now closed except P1.1**, which is the one item this file
+cannot do for itself.
 
-What remains is P1 — the "before it runs on someone else's machine" list — of
-which **P1.1 (external review) is the one this file cannot do for itself**, and
-the only one that corrects for what its authors cannot see. P0.2 demonstrated
-that by being wrong, P0.3 by finding in seconds what hand-auditing missed three
-times, and the cached-token bug by being invisible to every check in the repo.
+The pattern across everything closed since is worth keeping in view, because it
+is the argument for P1.1 rather than a decoration on it. In four of the last six
+items the *description was wrong about its own symptom*: P0.2's SQLite alarm was
+a false alarm, P1.3's panic bullet described a crash that could not happen,
+P1.2's real defect (a newer database accepted silently) was not in the item at
+all, and P1.3's first-run bullet named two things that already worked while
+missing the one that mattered — session transcripts sitting uncommitted in the
+user's repository. Every one was found by measurement or by running the binary,
+never by re-reading the checklist that produced them.
 
-P2 is unblocked but should wait on suite breadth: optimising against five tasks
-in one repository is how a benchmark becomes a target.
+So the remaining work is not on this list, and cannot be. It is
+[P1.1](#p11--external-review): one outside reader on the security surface, one
+real user on a real repository for a week, and then the soak — the list growing
+slower than it is closed. [docs/trying-aux.md](docs/trying-aux.md) exists so
+handing it to someone costs ten minutes.
+
+P2 stays blocked on suite breadth. Optimising against five tasks in one Python
+repository is how a benchmark becomes a target, and the current comparison
+against opencode does not generalise past that repository.
 
 ## Appendix: what was removed
 

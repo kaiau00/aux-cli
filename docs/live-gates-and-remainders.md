@@ -125,9 +125,14 @@ not just present as an isolated, tested package:
   from `tools.Executor`; a ToolPre handler can veto the call). Built-in
   observability handlers are registered in `app.New`
   (`hooks.RegisterObservability`), so the dispatch points have a real
-  consumer rather than firing into an empty registry. User-defined shell
-  hooks are deliberately still out of scope: running commands from a config
-  file is arbitrary code execution and needs its own security review.
+  consumer rather than firing into an empty registry. **User-defined shell
+  hooks are not planned.** Running commands from a config file is arbitrary
+  code execution, and a repository-level config that registers one turns
+  cloning a repository into running its code. Shipping that safely needs a
+  threat model and a review this project has not done, and the internal
+  dispatch points below cover the observability the hooks were wanted for.
+  Removed from the roadmap rather than left pending, so it stops reading as
+  a capability that is nearly here.
 - **§12.4 runtime adapters** — `internal/runtime` Adapter + `runtimetest`
   conformance contract.
 - **§12.5 shareable bundles** — `internal/bundle` (`aux bundle export|import`);

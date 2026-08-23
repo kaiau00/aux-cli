@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -23,6 +24,14 @@ func Connect() (*sql.DB, error) {
 	}
 	if err := os.MkdirAll(dataDir, 0o700); err != nil {
 		return nil, fmt.Errorf("failed to create data directory: %w", err)
+	}
+	// The data directory defaults to .aux relative to the working directory, so
+	// it is created inside the user's own repository. It holds the full session
+	// transcript -- prompts, tool output, whatever the agent was shown -- and
+	// nothing else marks it as ignorable, so without this a routine `git add -A`
+	// commits all of it.
+	if err := ignoreSelf(dataDir); err != nil {
+		logging.Warn("failed to mark the data directory as git-ignored", "dir", dataDir, "error", err)
 	}
 	dbPath := filepath.Join(dataDir, "aux.db")
 	db, err := sql.Open("sqlite3", DSN(dbPath))
@@ -123,4 +132,19 @@ func migrationFailure(db *sql.DB, dbPath string, cause error) error {
 			"failed step was rolled back. Re-running aux retries it. If it keeps failing, report the error "+
 			"above, or move the file aside to start with a new one -- sessions and history would be lost",
 		dbPath, cause, stoppedAt)
+}
+
+// ignoreSelf writes a .gitignore excluding the whole data directory.
+//
+// Written once and never overwritten: a user who edits or empties it has said
+// something, and rewriting it on every start would undo that silently.
+func ignoreSelf(dir string) error {
+	path := filepath.Join(dir, ".gitignore")
+	if _, err := os.Stat(path); err == nil {
+		return nil
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	const body = "# Created by aux. Holds session transcripts and local state.\n*\n"
+	return os.WriteFile(path, []byte(body), 0o600)
 }

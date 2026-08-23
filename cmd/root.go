@@ -48,6 +48,11 @@ to assist developers in writing, debugging, and understanding code directly from
   aux -p "Explain the use of context in Go" -f json
   `,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// Past flag parsing, so anything that fails from here is a runtime
+		// problem, not a misuse of the command line. Dumping the usage text
+		// after, say, a missing API key buries the one line that matters.
+		cmd.SilenceUsage = true
+
 		// If the help flag is set, show the help message
 		if cmd.Flag("help").Changed {
 			cmd.Help()
@@ -85,6 +90,13 @@ to assist developers in writing, debugging, and understanding code directly from
 		}
 		_, err := config.Load(cwd, debug)
 		if err != nil {
+			return err
+		}
+
+		// This is the path that runs a model, so it is the path that needs a
+		// provider. Asked here rather than in config validation so the commands
+		// that need no model keep working without a key.
+		if err := config.CheckProviderAvailable(); err != nil {
 			return err
 		}
 

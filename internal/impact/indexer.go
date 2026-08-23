@@ -2,6 +2,7 @@ package impact
 
 import (
 	"context"
+	"fmt"
 	"go/parser"
 	"go/token"
 	"io/fs"
@@ -9,13 +10,27 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/aux-ai/aux-cli/internal/logging"
 )
 
 // Indexer builds the impact graph from deterministic Go source analysis
 // (roadmapplan.md §8.5). Non-Go files are still tracked as file nodes so the
 // analyzer can flag uncovered changes and broaden validation.
+// indexStore is the slice of the graph store the indexer needs. It exists so a
+// failing store can be substituted in tests: the writes below are the ones that
+// keep the graph honest, and a fake is the only way to prove a failure in them
+// is not swallowed.
+type indexStore interface {
+	SetIndexState(ctx context.Context, st IndexState) error
+	NodeByKey(ctx context.Context, projectID, nodeType, stableKey string) (string, bool, error)
+	DeleteNodeEdges(ctx context.Context, nodeID string) error
+	UpsertNode(ctx context.Context, n Node) (string, error)
+	UpsertEdge(ctx context.Context, e Edge) error
+}
+
 type Indexer struct {
-	store *Store
+	store indexStore
 }
 
 // NewIndexer returns a graph indexer.
@@ -31,7 +46,12 @@ type parsedFile struct {
 // IndexProject performs a full build of the graph for a project root. It is the
 // repair path; normal refresh uses Reindex on changed paths.
 func (ix *Indexer) IndexProject(ctx context.Context, projectID, root, revision string) (int, error) {
-	_ = ix.store.SetIndexState(ctx, IndexState{ProjectID: projectID, SourceRevision: revision, IndexerVersion: IndexerVersion, Status: "indexing", LastIndexedAt: time.Now().UnixMilli()})
+	// Best effort: the in-progress marker only changes what a concurrent reader
+	// sees while the walk runs. The terminal write below is the one that has to
+	// land, so a failure here is reported and not fatal.
+	if err := ix.store.SetIndexState(ctx, IndexState{ProjectID: projectID, SourceRevision: revision, IndexerVersion: IndexerVersion, Status: "indexing", LastIndexedAt: time.Now().UnixMilli()}); err != nil {
+		logging.Warn("failed to record index start", "project", projectID, "error", err)
+	}
 
 	modulePath := readModulePath(root)
 	count := 0
@@ -62,7 +82,12 @@ func (ix *Indexer) IndexProject(ctx context.Context, projectID, root, revision s
 	if err != nil {
 		status = "error"
 	}
-	_ = ix.store.SetIndexState(ctx, IndexState{ProjectID: projectID, SourceRevision: revision, IndexerVersion: IndexerVersion, Status: status, LastIndexedAt: time.Now().UnixMilli()})
+	// Returning success while this write fails would tell the caller the graph
+	// is current at this revision when the recorded state says otherwise. A walk
+	// error is the more important one, so it keeps precedence.
+	if stateErr := ix.store.SetIndexState(ctx, IndexState{ProjectID: projectID, SourceRevision: revision, IndexerVersion: IndexerVersion, Status: status, LastIndexedAt: time.Now().UnixMilli()}); stateErr != nil && err == nil {
+		return count, fmt.Errorf("indexed %d files but failed to record index state: %w", count, stateErr)
+	}
 	return count, err
 }
 
@@ -75,9 +100,18 @@ func (ix *Indexer) Reindex(ctx context.Context, projectID, root, revision string
 			continue
 		}
 		abs := filepath.Join(root, rel)
-		// Reset this file's edges before re-adding.
-		if id, ok, _ := ix.store.NodeByKey(ctx, projectID, fileNodeType(rel), rel); ok {
-			_ = ix.store.DeleteNodeEdges(ctx, id)
+		// Reset this file's edges before re-adding. Neither failure here can be
+		// skipped past: indexFile re-adds this file's edges below, so old edges
+		// left in place accumulate rather than being replaced, and impact
+		// analysis goes on reporting dependencies that no longer exist.
+		id, ok, err := ix.store.NodeByKey(ctx, projectID, fileNodeType(rel), rel)
+		if err != nil {
+			return fmt.Errorf("failed to look up the graph node for %s: %w", rel, err)
+		}
+		if ok {
+			if err := ix.store.DeleteNodeEdges(ctx, id); err != nil {
+				return fmt.Errorf("failed to clear stale edges for %s: %w", rel, err)
+			}
 		}
 		if _, err := os.Stat(abs); err != nil {
 			continue // deleted; leave the (now edgeless) node for history
@@ -90,7 +124,9 @@ func (ix *Indexer) Reindex(ctx context.Context, projectID, root, revision string
 			return err
 		}
 	}
-	_ = ix.store.SetIndexState(ctx, IndexState{ProjectID: projectID, SourceRevision: revision, IndexerVersion: IndexerVersion, Status: "indexed", LastIndexedAt: time.Now().UnixMilli()})
+	if err := ix.store.SetIndexState(ctx, IndexState{ProjectID: projectID, SourceRevision: revision, IndexerVersion: IndexerVersion, Status: "indexed", LastIndexedAt: time.Now().UnixMilli()}); err != nil {
+		return fmt.Errorf("reindexed but failed to record index state: %w", err)
+	}
 	return nil
 }
 
