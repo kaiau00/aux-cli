@@ -775,13 +775,18 @@ var providerEnvVars = []struct {
 	{models.ProviderOpenRouter, "OPENROUTER_API_KEY"},
 }
 
-// checkProviderAvailable fails when nothing can serve a model.
+// CheckProviderAvailable fails when nothing can serve a model.
 //
 // Without this the failure surfaced as "agent coder not found": the agent
 // defaults are only filled in once a provider exists, so the absence of a key
 // was reported as the absence of an agent, several layers from the cause and
 // with no hint of the remedy. That was the literal first thing a new user saw.
-func checkProviderAvailable() error {
+//
+// Deliberately not part of Validate. Plenty of this tool does not need a model
+// -- aux --version, the project and bundle commands, schema generation -- and
+// making config loading itself require a key would break all of them. The
+// callers that actually need a model ask for this check.
+func CheckProviderAvailable() error {
 	for _, p := range cfg.Providers {
 		if p.APIKey != "" && !p.Disabled {
 			return nil
@@ -813,12 +818,6 @@ func checkProviderAvailable() error {
 func Validate() error {
 	if cfg == nil {
 		return fmt.Errorf("config not loaded")
-	}
-
-	// Checked before the agents, because every agent failure downstream of a
-	// missing key describes a symptom rather than the cause.
-	if err := checkProviderAvailable(); err != nil {
-		return err
 	}
 
 	// Validate agent models

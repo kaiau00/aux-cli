@@ -93,6 +93,13 @@ to assist developers in writing, debugging, and understanding code directly from
 			return err
 		}
 
+		// This is the path that runs a model, so it is the path that needs a
+		// provider. Asked here rather than in config validation so the commands
+		// that need no model keep working without a key.
+		if err := config.CheckProviderAvailable(); err != nil {
+			return err
+		}
+
 		// The demand-paging prompt compiler was previously reachable only by
 		// hand-editing config JSON, so in practice compatibility mode always
 		// won. This makes it selectable per run.
