@@ -2,7 +2,10 @@ package chat
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
@@ -130,11 +133,40 @@ func repo(width int) string {
 }
 
 func cwd(width int) string {
-	cwd := fmt.Sprintf("cwd: %s", config.WorkingDirectory())
 	t := theme.CurrentTheme()
+	const label = "cwd: "
+	home, _ := os.UserHomeDir()
+	path := displayPath(config.WorkingDirectory(), home, width-len(label))
 
 	return styles.BaseStyle().
 		Foreground(t.TextMuted()).
 		Width(width).
-		Render(cwd)
+		Render(label + path)
+}
+
+// displayPath shortens a working directory for the splash line. Rendering it
+// raw let lipgloss wrap it, which broke the path across three lines in the
+// middle of a directory name. Here the home prefix collapses to "~" and, if it
+// still does not fit, leading segments are dropped: the trailing segments name
+// the project, and that is the part worth keeping.
+func displayPath(path, home string, width int) string {
+	if width <= 0 {
+		return ""
+	}
+	if home != "" && home != "/" && strings.HasPrefix(path, home) {
+		path = "~" + path[len(home):]
+	}
+	if ansi.StringWidth(path) <= width {
+		return path
+	}
+
+	segments := strings.Split(path, string(filepath.Separator))
+	for i := 1; i < len(segments); i++ {
+		candidate := "…/" + strings.Join(segments[i:], string(filepath.Separator))
+		if ansi.StringWidth(candidate) <= width {
+			return candidate
+		}
+	}
+	// Even the last segment is too wide: keep its start rather than nothing.
+	return ansi.Truncate(segments[len(segments)-1], width, "…")
 }

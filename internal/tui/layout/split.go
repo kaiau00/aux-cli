@@ -21,10 +21,11 @@ type SplitPaneLayout interface {
 }
 
 type splitPaneLayout struct {
-	width         int
-	height        int
-	ratio         float64
-	verticalRatio float64
+	width           int
+	height          int
+	ratio           float64
+	verticalRatio   float64
+	minBottomHeight int
 
 	// collapseRightBelow collapses the right panel into a single-column layout
 	// when the total width is below this threshold. Zero disables collapsing.
@@ -158,6 +159,14 @@ func (s *splitPaneLayout) SetSize(width, height int) tea.Cmd {
 	if s.bottomPanel != nil {
 		topHeight = int(float64(height) * s.verticalRatio)
 		bottomHeight = height - topHeight
+		// A proportional split alone starves the bottom panel on short
+		// terminals -- at 20 rows a 90/10 split leaves 2, one row short of what
+		// the composer needs for its border, input and hint, and the panel then
+		// renders taller than its allocation and pushes the header off screen.
+		if s.minBottomHeight > 0 && bottomHeight < s.minBottomHeight {
+			bottomHeight = min(s.minBottomHeight, height)
+			topHeight = height - bottomHeight
+		}
 	} else {
 		topHeight = height
 		bottomHeight = 0
@@ -295,6 +304,15 @@ func WithBottomPanel(panel Container) SplitPaneOption {
 func WithVerticalRatio(ratio float64) SplitPaneOption {
 	return func(s *splitPaneLayout) {
 		s.verticalRatio = ratio
+	}
+}
+
+// WithMinBottomHeight guarantees the bottom panel at least this many rows,
+// overriding the vertical ratio on terminals too short for the ratio to leave
+// it enough. Zero (the default) keeps the purely proportional split.
+func WithMinBottomHeight(rows int) SplitPaneOption {
+	return func(s *splitPaneLayout) {
+		s.minBottomHeight = rows
 	}
 }
 

@@ -533,11 +533,15 @@ func (m *ContextPaneCmp) View() string {
 	selected := m.selected
 	m.mu.Unlock()
 
+	// PaddingLeft rather than a literal leading space: the space only indents
+	// the first line, so anything that wraps loses the indent and the pane
+	// develops a ragged left edge.
 	header := baseStyle.
 		Width(m.width).
+		PaddingLeft(1).
 		Foreground(t.Primary()).
 		Bold(true).
-		Render(fmt.Sprintf(" Context (%d)", len(entries)))
+		Render(fmt.Sprintf("Context (%d)", len(entries)))
 	dashboard := m.dashboardView()
 	activitySection := m.activityView()
 	workbenchSection := m.workbenchView()
@@ -545,8 +549,9 @@ func (m *ContextPaneCmp) View() string {
 
 	footer := baseStyle.
 		Width(m.width).
+		PaddingLeft(1).
 		Foreground(t.TextMuted()).
-		Render(" ↑/↓ move · x off · u on · c clear")
+		Render("↑/↓ move · x off · u on · c clear")
 
 	if len(entries) == 0 {
 		// A bold header, an empty-state line, and the hotkey footer for zero
@@ -555,9 +560,10 @@ func (m *ContextPaneCmp) View() string {
 		// act on, so this collapses to one muted line instead.
 		compact := baseStyle.
 			Width(m.width).
+			PaddingLeft(1).
 			Foreground(t.TextMuted()).
 			Italic(true).
-			Render(" Context — no files loaded yet")
+			Render("Context — no files loaded yet")
 		sections := []string{dashboard, m.divider()}
 		if activitySection != "" {
 			sections = append(sections, activitySection, m.divider())
@@ -893,8 +899,9 @@ func (m *ContextPaneCmp) dashboardView() string {
 	}
 	line := baseStyle.
 		Width(m.width).
+		PaddingLeft(1).
 		Render(
-			lipgloss.NewStyle().Foreground(t.Primary()).Bold(true).Render(" Dashboard") +
+			lipgloss.NewStyle().Foreground(t.Primary()).Bold(true).Render("Dashboard") +
 				"  " +
 				lipgloss.NewStyle().Foreground(stateColor).Render(state) +
 				lipgloss.NewStyle().Foreground(t.TextMuted()).Render(hint),

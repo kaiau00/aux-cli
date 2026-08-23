@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"regexp"
 	"strings"
 	"unicode"
 
@@ -215,60 +214,49 @@ func resolveLocalModelLimits(model localModel, endpoint string) (contextWindow, 
 	return contextWindow, defaultMaxTokens
 }
 
-var modelInfoRegex = regexp.MustCompile(`(?i)^([a-z0-9]+)(?:[-_]?([rv]?\d[\.\d]*))?(?:[-_]?([a-z]+))?.*`)
-
+// friendlyModelName turns a raw model ID into something readable in the task
+// header and status bar. It only reformats separators and capitalisation:
+// every alphanumeric run in the ID survives. The previous heuristic parsed the
+// ID into family/version/label and let a trailing ".*" swallow the rest, so
+// "MiniMax-M3" displayed as "MiniMax M" and "Qwen2.5-Coder-32B-Instruct" as
+// "Qwen2" -- dropping exactly the part that says which model this is. Fitting
+// the name to a narrow terminal is the caller's job, where it shows up as a
+// visible ellipsis instead of silent loss.
 func friendlyModelName(modelID string) string {
-	mainID := modelID
+	name := modelID
+
+	// A registry or publisher path is noise; the tag after "@" is not.
+	if slash := strings.LastIndex(name, "/"); slash != -1 {
+		name = name[slash+1:]
+	}
 	tag := ""
-
-	if slash := strings.LastIndex(mainID, "/"); slash != -1 {
-		mainID = mainID[slash+1:]
+	if at := strings.Index(name, "@"); at != -1 {
+		name, tag = name[:at], name[at+1:]
 	}
 
-	if at := strings.Index(modelID, "@"); at != -1 {
-		mainID = modelID[:at]
-		tag = modelID[at+1:]
-	}
-
-	match := modelInfoRegex.FindStringSubmatch(mainID)
-	if match == nil {
-		return modelID
-	}
-
-	capitalize := func(s string) string {
-		if s == "" {
-			return ""
-		}
-		runes := []rune(s)
-		runes[0] = unicode.ToUpper(runes[0])
-		return string(runes)
-	}
-
-	family := capitalize(match[1])
-	version := ""
-	label := ""
-
-	if len(match) > 2 && match[2] != "" {
-		version = strings.ToUpper(match[2])
-	}
-
-	if len(match) > 3 && match[3] != "" {
-		label = capitalize(match[3])
-	}
-
-	var parts []string
-	if family != "" {
-		parts = append(parts, family)
-	}
-	if version != "" {
-		parts = append(parts, version)
-	}
-	if label != "" {
-		parts = append(parts, label)
+	segments := strings.FieldsFunc(name, func(r rune) bool {
+		return r == '-' || r == '_'
+	})
+	for i, seg := range segments {
+		segments[i] = capitalizeLeadingLower(seg)
 	}
 	if tag != "" {
-		parts = append(parts, tag)
+		segments = append(segments, tag)
 	}
+	if len(segments) == 0 {
+		return modelID
+	}
+	return strings.Join(segments, " ")
+}
 
-	return strings.Join(parts, " ")
+// capitalizeLeadingLower upper-cases a leading lower-case letter and leaves the
+// rest of the segment alone, so "minimax" reads as "Minimax" while "MiniMax"
+// and "32B" keep the casing their publisher chose.
+func capitalizeLeadingLower(s string) string {
+	runes := []rune(s)
+	if len(runes) == 0 || !unicode.IsLower(runes[0]) {
+		return s
+	}
+	runes[0] = unicode.ToUpper(runes[0])
+	return string(runes)
 }

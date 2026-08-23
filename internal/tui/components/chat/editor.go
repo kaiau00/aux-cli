@@ -244,7 +244,13 @@ func (m *editorCmp) View() string {
 	if hasAttachments {
 		body = lipgloss.JoinVertical(lipgloss.Top, m.attachmentsContent(), body)
 	}
-	return lipgloss.JoinVertical(lipgloss.Top, body, m.hintLine())
+	// Clamped to the rows actually allocated. The layout guarantees enough room
+	// for the hint, but the composer must not overflow its panel even when it
+	// is handed less than it asked for -- an extra row here scrolls the task
+	// header off the top of the alternate screen.
+	return lipgloss.NewStyle().
+		MaxHeight(max(1, m.height)).
+		Render(lipgloss.JoinVertical(lipgloss.Top, body, m.hintLine()))
 }
 
 // hintLine renders the compact, state-aware shortcut hint below the composer.
@@ -253,7 +259,11 @@ func (m *editorCmp) hintLine() string {
 	t := theme.CurrentTheme()
 	busy := m.session.ID != "" && m.app != nil && m.app.CoderAgent != nil &&
 		m.app.CoderAgent.IsSessionBusy(m.session.ID)
-	hint := composerHint(m.textarea.Focused(), busy, len(m.attachments) > 0)
+	// One column of the width goes to the leading indent, so the hint is
+	// fitted to what is actually left. MaxHeight pins the result to a single
+	// row: Width alone wraps long content instead of clipping it, and the
+	// caller reserved exactly one row here.
+	hint := composerHint(m.width-1, m.textarea.Focused(), busy, len(m.attachments) > 0)
 	color := t.TextMuted()
 	if busy {
 		color = t.Warning()
@@ -261,6 +271,7 @@ func (m *editorCmp) hintLine() string {
 	return lipgloss.NewStyle().
 		Width(m.width).
 		MaxWidth(m.width).
+		MaxHeight(1).
 		Foreground(color).
 		Render(" " + hint)
 }
