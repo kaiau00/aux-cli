@@ -52,7 +52,7 @@ The point of this section is that Aux should only say true things about itself.
 | --- | --- |
 | "Cheaper than opencode" | One repository, five Python tasks, one model. The gap **grew from 19% to 63% when runs were added**, so n=5 may still be too few, and Aux's own spread is 46%. Directionally encouraging, nowhere near a general claim |
 | "80% test coverage" | Actual coverage is **32.6%**. 19 of 74 packages have no test file at all |
-| "Demand paging saves tokens" | `--paging` defaults to off because nothing has shown it lossless. The one measurement suggesting −26% was inside the noise floor and is void |
+| "Demand paging saves tokens" | There is no demand paging. `DedupCompiler` measurably removes duplicate blobs — 47.9% on the fixture with that shape, deterministically — but it defaults to off because nobody has shown that swapping a duplicate for a reference leaves the model's behaviour unchanged. Token arithmetic is not an outcome |
 | "Aux manages the agent's context" | It does not. `ContextWindow` appears only in display code — nothing truncates, evicts, or budgets. `StateEvicted` is written nowhere. The compiler sends the full history. What actually ships is context *observability* plus manual exclude/pin, which is worth claiming and is not this |
 | "Production ready" | See the definition above |
 
@@ -107,13 +107,27 @@ including "no measurable difference" if that is the answer.
 Blocked on A1 only in the sense that deciding it against one repository would be
 Goodhart. Running it is unblocked.
 
-Two things changed here. The occupancy meter is now honest, so a run can be read
-against what the window actually holds rather than against lifetime spend. And
-`PagingCompiler` is misnamed: it does not page, it replaces an identical earlier
-copy of a large blob with a reference to the later one. That is lossless by
-construction, which makes it the cheapest thing in this file to justify turning
-on — and a type whose doc comment calls itself "the first demand-paging
-compiler" is how an untrue README claim gets born. Rename it `DedupCompiler`.
+Renamed `DedupCompiler`, because it does not page: it replaces an identical
+earlier copy of a large blob with a reference to the later one.
+
+**Measured, 2026-08-24.** `aux eval compiler` is deterministic — fixed fixtures,
+no provider calls, so none of the noise that voided the earlier number:
+
+| fixture | control | variant | saved |
+| --- | --- | --- | --- |
+| repeated-read | 2132 | 1111 | **47.9%** |
+| localized-edit | 1077 | 1077 | 0% |
+| cross-file | 2130 | 2130 | 0% |
+
+Half off the shape it targets, nothing at all elsewhere — the profile a safe
+default wants. And it is the shape real sessions have: a live session shows
+21,248 cache-read tokens repeating turn after turn.
+
+**Still not enough to flip the default.** "Lossless" means no information is
+removed, not that the prompt is byte-identical: the model sees a reference where
+a duplicate used to be, and whether that changes what it does is unmeasured.
+That question is behavioural, and A1 is what answers it. The arithmetic is
+settled; the behaviour is not.
 
 ### A4. Tool-result eviction with promotion
 

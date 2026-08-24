@@ -20,7 +20,16 @@ should not be a surprise.
   so it will not be committed, but be aware the content is on disk in your repo.
 - **Your prompts and the file contents Aux decides are relevant are sent to
   whichever model provider you configure.** Nothing else leaves the machine.
-  There is no Aux server and no telemetry.
+  There is no Aux service to sign up for and no telemetry.
+- **Aux does start a local web server**, on by default: a dashboard bound to
+  `127.0.0.1` on a random port, showing the session as it runs. It listens on
+  loopback only and every data route requires a random token carried in the URL,
+  so it is not reachable from another machine — but it is a listening socket you
+  did not ask for, and anything running as you on your own machine could reach
+  it. Turn it off with `dashboard.enabled: false` in your config.
+- **That dashboard URL, token included, is written into the session
+  transcript** in `.aux/`, because Aux tells you the address in its opening
+  message. Worth knowing before you share a transcript or a panic log.
 - Aux reads files outside the project only with your approval.
 
 Use a repository you would not mind an agent making a mess of. A scratch clone
