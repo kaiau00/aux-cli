@@ -2,4 +2,4 @@ aux-cli  ● validating  active  Context 0/64K (0%)
 
  Validation · blocked
  ✗ failed  tests pass
- ⊘ blocked  no regressions
+ ■ blocked  no regressions

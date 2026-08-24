@@ -45,18 +45,23 @@ func pickIcon(unicode, ascii string) string {
 }
 
 var (
-	AuxIcon = pickIcon("⌬", "*")
+	// Every glyph here is present in both SF Mono and Menlo -- the default and
+	// fallback monospace fonts of macOS Terminal. A glyph missing from the
+	// terminal's font is substituted from another one, which need not respect
+	// the cell grid, and codepoints with an emoji presentation (U+26A0 warning,
+	// U+2139 information) can come back double-width and coloured while the
+	// layout still counts them as one column. See TestIconsAreFontSafe.
+	AuxIcon = pickIcon("●", "*")
 
 	CheckIcon    = pickIcon("✓", "v")
-	ErrorIcon    = pickIcon("✖", "x")
-	WarningIcon  = pickIcon("⚠", "!")
-	InfoIcon     = pickIcon("ℹ", "i")
+	ErrorIcon    = pickIcon("✗", "x")
+	WarningIcon  = pickIcon("▲", "!")
+	InfoIcon     = pickIcon("•", "i")
 	HintIcon     = "i"   // already ASCII
 	SpinnerIcon  = "..." // already ASCII
-	LoadingIcon  = pickIcon("⟳", "~")
-	DocumentIcon = pickIcon("▤", "#")
-	PinIcon      = pickIcon("★", "*")
+	DocumentIcon = pickIcon("□", "#")
+	PinIcon      = pickIcon("■", "*")
 	// AgentDropIcon marks a context page the agent dropped itself, so the user
 	// can tell it apart from one they crossed off and can put it back.
-	AgentDropIcon = pickIcon("⤫", "~")
+	AgentDropIcon = pickIcon("×", "~")
 )

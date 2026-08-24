@@ -6,11 +6,13 @@ INSERT INTO sessions (
     message_count,
     prompt_tokens,
     completion_tokens,
+    context_tokens,
     cost,
     summary_message_id,
     updated_at,
     created_at
 ) VALUES (
+    ?,
     ?,
     ?,
     ?,
@@ -40,6 +42,7 @@ SET
     title = ?,
     prompt_tokens = ?,
     completion_tokens = ?,
+    context_tokens = ?,
     summary_message_id = ?,
     cost = ?
 WHERE id = ?

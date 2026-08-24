@@ -961,8 +961,13 @@ func (a *agent) reconcileSession(ctx context.Context, sessionID string) error {
 	if err != nil {
 		return fmt.Errorf("failed to get session: %w", err)
 	}
+	contextTokens, err := a.ledger.SessionContextTokens(ctx, sessionID)
+	if err != nil {
+		return fmt.Errorf("failed to compute session context tokens: %w", err)
+	}
 	sess.PromptTokens = totals.PromptTokens
 	sess.CompletionTokens = totals.CompletionTokens
+	sess.ContextTokens = contextTokens
 	sess.Cost = totals.Cost
 	if _, err := a.sessions.Save(ctx, sess); err != nil {
 		return fmt.Errorf("failed to save session totals: %w", err)
@@ -1130,6 +1135,10 @@ func (a *agent) Summarize(ctx context.Context, sessionID string) error {
 		oldSession.SummaryMessageID = msg.ID
 		oldSession.CompletionTokens = response.Usage.OutputTokens
 		oldSession.PromptTokens = 0
+		// The transcript has been replaced by its summary, so the window now
+		// holds only that summary. Leaving the pre-compaction occupancy behind
+		// would keep the meter pinned high and re-trigger auto-compaction.
+		oldSession.ContextTokens = response.Usage.OutputTokens
 		model := a.summarizeProvider.Model()
 		usage := response.Usage
 		cost := model.CostPer1MInCached/1e6*float64(usage.CacheCreationTokens) +

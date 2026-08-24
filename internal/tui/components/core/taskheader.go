@@ -258,21 +258,21 @@ func budgetVariants(vm viewmodel.TaskHeaderVM) []string {
 func stateIcon(state viewmodel.ComponentState) string {
 	switch state {
 	case viewmodel.StateActive:
-		return "●" // ●
+		return "●"
 	case viewmodel.StateWaiting, viewmodel.StateQueued:
-		return "○" // ○
+		return "○"
 	case viewmodel.StateCompleted, viewmodel.StateValidated:
 		return styles.CheckIcon
 	case viewmodel.StateFailed:
-		return "✗" // ✗
+		return "✗"
 	case viewmodel.StateBlocked:
-		return "⊘" // ⊘
+		return "■"
 	case viewmodel.StateCancelled:
-		return "∅" // ∅
+		return "×"
 	case viewmodel.StateStale, viewmodel.StateUnverified:
-		return "◐" // ◐
+		return "≈"
 	default:
-		return "•" // •
+		return "•"
 	}
 }
 

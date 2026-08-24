@@ -51,8 +51,9 @@ The point of this section is that Aux should only say true things about itself.
 | Claim | Why not |
 | --- | --- |
 | "Cheaper than opencode" | One repository, five Python tasks, one model. The gap **grew from 19% to 63% when runs were added**, so n=5 may still be too few, and Aux's own spread is 46%. Directionally encouraging, nowhere near a general claim |
-| "80% test coverage" | Actual coverage is **31.3%**. 19 of 74 packages have no test file at all |
+| "80% test coverage" | Actual coverage is **32.6%**. 19 of 74 packages have no test file at all |
 | "Demand paging saves tokens" | `--paging` defaults to off because nothing has shown it lossless. The one measurement suggesting −26% was inside the noise floor and is void |
+| "Aux manages the agent's context" | It does not. `ContextWindow` appears only in display code — nothing truncates, evicts, or budgets. `StateEvicted` is written nowhere. The compiler sends the full history. What actually ships is context *observability* plus manual exclude/pin, which is worth claiming and is not this |
 | "Production ready" | See the definition above |
 
 **A standing rule.** Four times now, an item in this file has been wrong about
@@ -85,7 +86,7 @@ bypass every permission prompt. Benchmark repositories must be scratch checkouts
 
 ### A2. Coverage, deliberately
 
-31.3% against a stated bar of 80%. The floor ratchet stops it regressing but
+32.6% against a stated bar of 80%. The floor ratchet stops it regressing but
 does not close the gap. 19 packages have no test file:
 
 `cmd`, `cmd/schema`, `internal/diff`, `internal/format`, `internal/history`,
@@ -106,6 +107,14 @@ including "no measurable difference" if that is the answer.
 Blocked on A1 only in the sense that deciding it against one repository would be
 Goodhart. Running it is unblocked.
 
+Two things changed here. The occupancy meter is now honest, so a run can be read
+against what the window actually holds rather than against lifetime spend. And
+`PagingCompiler` is misnamed: it does not page, it replaces an identical earlier
+copy of a large blob with a reference to the later one. That is lossless by
+construction, which makes it the cheapest thing in this file to justify turning
+on — and a type whose doc comment calls itself "the first demand-paging
+compiler" is how an untrue README claim gets born. Rename it `DedupCompiler`.
+
 ### A4. Tool-result eviction with promotion
 
 The most valuable idea in this file and the most dangerous. When a tool result
@@ -119,6 +128,11 @@ is dropped. Blind eviction is how an agent forgets what it was told.
 
 Do not build this before A1 can measure it, or there is no way to tell token
 savings from silent context loss.
+
+Meanwhile the UI already implies this shipped. `contextstore.StateEvicted` is
+read in `viewmodel/build.go` and written nowhere, so the expanded context view
+renders an "evicted" section that cannot be non-empty outside a test fixture.
+Delete the branch or label it, before someone reads it as evidence of A4.
 
 ### A5. Skill promotion path
 
@@ -175,8 +189,23 @@ Real, small, or low-confidence. None of it blocks anything.
 - **Correction detection** — "propose, never auto-write" remains right; the
   heuristics are ~70% unreliable at telling one-shot from durable
 - **`grep` spawns `rg` per call** — measure before optimizing
+- **Some turns never reconcile the session** — two top-level sessions in a real
+  database hold a completed ~21K call but read `prompt_tokens = 0, cost = 0`.
+  Invisible on a local model; under-reports spend on a paid one
 - **Four-tier context model** — a principle for reviewing the above, not a task:
   saving tokens means moving Tier 2 → Tier 3, not deleting Tier 2
+
+### A10. Make compaction a decision, not an ambush
+
+Auto-compaction fires silently at 95% of the window. It is the single worst
+moment in every agent tool: the thread is lost and the user finds out
+afterwards. The page list needed to do better already exists, and the meter
+driving it is now correct.
+
+Warn approaching the limit, say **what is largest in the window**, and let the
+user drop specific pages or compact deliberately. This is the differentiator A4
+is reaching for, without A4's risk of silently discarding something the agent
+needed — and unlike eviction, it needs no evidence from A1 to justify.
 
 ---
 
@@ -259,4 +288,8 @@ reorder this list — which is the point of B1.
 | Module identity | `github.com/aux-ai/aux-cli` resolved to nothing. Renamed with the repository. Go rejects `aux` as a path element outright — a reserved Windows device name |
 | Install instructions | Every method in the README was fictional |
 | Package attribution | Named the upstream author, with his personal address, in files meant to ship to strangers |
+| Terminal layout | The screen rendered more rows than the terminal had at nearly every size — three too many at 40 columns, one too many even at 200x20 — so the alt screen scrolled and the task header left the top for good. Hint lines rendered at a fixed width wrap rather than clip; two of them said the same thing; and a 90/10 vertical split starves the composer below 24 rows |
+| Model name | `friendlyModelName` let a trailing `.*` eat the end of the ID. `MiniMax-M3` displayed as "MiniMax M", `kimi-k2` as "Kimi K", `Qwen2.5-Coder-32B-Instruct` as "Qwen2" — always the part that says which model it is |
+| Font coverage | 12 of 32 non-ASCII glyphs were absent from SF Mono, the default font of the default macOS terminal, the `⌬` logo among them and absent from Menlo too. A substituted glyph need not honour the cell grid, and an emoji-presentation codepoint renders double-width while the layout counts one. `TestIconsAreFontSafe` now walks the tree |
+| Context meter | "Context X/Y" summed lifetime spend against the context window, counting the resident conversation once per turn: seven turns over 21K read 148.3K. Auto-compaction fires off the same number, so a long session summarised itself away with the window a third full |
 | User-defined hooks | Dropped, not deferred. A config file naming commands to run turns cloning a repository into running its code |

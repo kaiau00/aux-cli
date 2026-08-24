@@ -101,9 +101,9 @@ func stateGlyph(state viewmodel.ComponentState) string {
 	case viewmodel.StateFailed:
 		return "✗"
 	case viewmodel.StateBlocked:
-		return "⊘"
+		return "■"
 	case viewmodel.StateWaiting:
-		return "◔"
+		return "○"
 	default:
 		return "•"
 	}

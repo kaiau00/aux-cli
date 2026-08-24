@@ -16,6 +16,12 @@ type Session struct {
 	MessageCount     int64
 	PromptTokens     int64
 	CompletionTokens int64
+	// ContextTokens is how many tokens the most recent completed call actually
+	// occupied in the model's window. PromptTokens/CompletionTokens are
+	// lifetime sums and answer "what did this cost"; this answers "how full is
+	// the window", which is what the header, the status bar and auto-compaction
+	// need. Reconciled from the call ledger after every turn.
+	ContextTokens    int64
 	SummaryMessageID string
 	Cost             float64
 	CreatedAt        int64
@@ -106,6 +112,7 @@ func (s *service) Save(ctx context.Context, session Session) (Session, error) {
 		Title:            session.Title,
 		PromptTokens:     session.PromptTokens,
 		CompletionTokens: session.CompletionTokens,
+		ContextTokens:    session.ContextTokens,
 		SummaryMessageID: sql.NullString{
 			String: session.SummaryMessageID,
 			Valid:  session.SummaryMessageID != "",
@@ -140,6 +147,7 @@ func (s service) fromDBItem(item db.Session) Session {
 		MessageCount:     item.MessageCount,
 		PromptTokens:     item.PromptTokens,
 		CompletionTokens: item.CompletionTokens,
+		ContextTokens:    item.ContextTokens,
 		SummaryMessageID: item.SummaryMessageID.String,
 		Cost:             item.Cost,
 		CreatedAt:        item.CreatedAt,

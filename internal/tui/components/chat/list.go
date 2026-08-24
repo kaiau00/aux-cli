@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/kaiau00/aux-cli/internal/app"
 	"github.com/kaiau00/aux-cli/internal/message"
 	"github.com/kaiau00/aux-cli/internal/pubsub"
@@ -383,53 +384,35 @@ func promptReasoningMessages(messages []message.Message, anchorIndex int) []mess
 func (m *messagesCmp) View() string {
 	baseStyle := styles.BaseStyle()
 
-	if m.rendering {
+	// Every branch renders exactly m.height rows. The alternate screen has no
+	// slack: one row too many and the whole app shifts up, taking the task
+	// header -- model, context budget, cost -- off the top of the screen with
+	// no way to scroll back to it.
+	fit := func(content string) string {
 		return baseStyle.
 			Width(m.width).
-			Render(
-				lipgloss.JoinVertical(
-					lipgloss.Top,
-					"Loading...",
-					m.working(),
-					m.help(),
-				),
-			)
+			Height(m.height).
+			MaxHeight(m.height).
+			Render(content)
 	}
+
+	if m.rendering {
+		return fit(lipgloss.JoinVertical(lipgloss.Top, "Loading...", m.working()))
+	}
+
 	if len(m.messages) == 0 {
-		// Two lines are spoken for below: the blank spacer and the help line.
-		// Reserving only one overflowed the pane by a line, and MaxHeight is
-		// what stops a greeting taller than the terminal from pushing the rest
-		// off the top -- Height alone sets a floor, not a ceiling.
+		// One row below is spoken for by the working line. MaxHeight is what
+		// stops a greeting taller than the terminal from pushing the rest off
+		// the top: Height alone sets a floor, not a ceiling.
 		content := baseStyle.
 			Width(m.width).
-			Height(max(0, m.height-2)).
-			MaxHeight(max(1, m.height-2)).
-			Render(
-				m.initialScreen(),
-			)
-
-		return baseStyle.
-			Width(m.width).
-			Render(
-				lipgloss.JoinVertical(
-					lipgloss.Top,
-					content,
-					"",
-					m.help(),
-				),
-			)
+			Height(max(0, m.height-1)).
+			MaxHeight(max(1, m.height-1)).
+			Render(m.initialScreen())
+		return fit(lipgloss.JoinVertical(lipgloss.Top, content, m.working()))
 	}
 
-	return baseStyle.
-		Width(m.width).
-		Render(
-			lipgloss.JoinVertical(
-				lipgloss.Top,
-				m.viewport.View(),
-				m.working(),
-				m.help(),
-			),
-		)
+	return fit(lipgloss.JoinVertical(lipgloss.Top, m.viewport.View(), m.working()))
 }
 
 func hasToolsWithoutResponse(messages []message.Message) bool {
@@ -496,50 +479,24 @@ func (m *messagesCmp) workingStatusLabel() string {
 }
 
 func (m *messagesCmp) working() string {
-	text := ""
-	if m.IsAgentWorking() && len(m.messages) > 0 {
-		t := theme.CurrentTheme()
-		baseStyle := styles.BaseStyle()
-
-		task := m.workingStatusLabel()
-		if task != "" {
-			text += baseStyle.
-				Width(m.width).
-				Foreground(t.Primary()).
-				Bold(true).
-				Render(fmt.Sprintf("%s %s ", m.spinner.View(), task))
-		}
+	if !m.IsAgentWorking() || len(m.messages) == 0 {
+		return ""
 	}
-	return text
-}
+	task := m.workingStatusLabel()
+	if task == "" {
+		return ""
+	}
 
-func (m *messagesCmp) help() string {
 	t := theme.CurrentTheme()
-	baseStyle := styles.BaseStyle()
-
-	text := ""
-
-	if m.app.CoderAgent.IsBusy() {
-		text += lipgloss.JoinHorizontal(
-			lipgloss.Left,
-			baseStyle.Foreground(t.TextMuted()).Bold(true).Render("press "),
-			baseStyle.Foreground(t.Text()).Bold(true).Render("esc"),
-			baseStyle.Foreground(t.TextMuted()).Bold(true).Render(" to exit cancel"),
-		)
-	} else {
-		text += lipgloss.JoinHorizontal(
-			lipgloss.Left,
-			baseStyle.Foreground(t.TextMuted()).Bold(true).Render("press "),
-			baseStyle.Foreground(t.Text()).Bold(true).Render("enter"),
-			baseStyle.Foreground(t.TextMuted()).Bold(true).Render(" to send the message,"),
-			baseStyle.Foreground(t.TextMuted()).Bold(true).Render(" write"),
-			baseStyle.Foreground(t.Text()).Bold(true).Render(" \\"),
-			baseStyle.Foreground(t.TextMuted()).Bold(true).Render(" and enter to add a new line"),
-		)
-	}
-	return baseStyle.
+	// This line has exactly one reserved row, and a long tool label would
+	// otherwise wrap into the row the composer occupies.
+	line := ansi.Truncate(fmt.Sprintf("%s %s ", m.spinner.View(), task), m.width, "…")
+	return styles.BaseStyle().
 		Width(m.width).
-		Render(text)
+		MaxHeight(1).
+		Foreground(t.Primary()).
+		Bold(true).
+		Render(line)
 }
 
 func (m *messagesCmp) initialScreen() string {
@@ -583,7 +540,7 @@ func (m *messagesCmp) SetSize(width, height int) tea.Cmd {
 	m.width = width
 	m.height = height
 	m.viewport.Width = width
-	m.viewport.Height = height - 2
+	m.viewport.Height = height - 1
 	m.attachments.Width = width + 40
 	m.attachments.Height = 3
 	m.rerender()

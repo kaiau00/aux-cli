@@ -25,6 +25,10 @@ var ChatPage PageID = "chat"
 // context drawer, never fully lost.
 const narrowWidthThreshold = 80
 
+// composerMinHeight is the smallest the editor panel can be and still show its
+// border, one row of input, and the shortcut hint.
+const composerMinHeight = 3
+
 type chatPage struct {
 	app                  *app.App
 	editor               layout.Container
@@ -291,6 +295,10 @@ func NewChatPage(app *app.App) tea.Model {
 			layout.WithLeftPanel(messagesContainer),
 			layout.WithRightPanel(contextPaneContainer),
 			layout.WithBottomPanel(editorContainer),
+			// The composer needs three rows: its top border, one line of input,
+			// and the shortcut hint. Below that the vertical ratio alone would
+			// under-allocate and the composer would overflow its panel.
+			layout.WithMinBottomHeight(composerMinHeight),
 			// Narrow terminals drop to a single conversation column so core task
 			// operation stays usable at every breakpoint; the context
 			// drawer (ctrl+g) is what makes the dropped panel reachable again.
