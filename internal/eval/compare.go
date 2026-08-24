@@ -76,7 +76,7 @@ func preservesContent(control, variant []message.Message) bool {
 // fixtures — the central known-project compilation hypothesis measurement.
 func RunBaseline() []CompilerResult {
 	control := promptcompiler.NewCompatibilityCompiler()
-	variant := promptcompiler.NewPagingCompiler()
+	variant := promptcompiler.NewDedupCompiler()
 	var out []CompilerResult
 	for _, f := range BaselineFixtures() {
 		out = append(out, CompareCompilers(f, control, variant))

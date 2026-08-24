@@ -25,7 +25,7 @@ func TestPagingReducesRepeatedReads(t *testing.T) {
 	msgs, bigContent := repeatedReadHistory()
 
 	compat := promptcompiler.NewCompatibilityCompiler().Compile(promptcompiler.Input{History: msgs})
-	paging := promptcompiler.NewPagingCompiler().Compile(promptcompiler.Input{History: msgs})
+	paging := promptcompiler.NewDedupCompiler().Compile(promptcompiler.Input{History: msgs})
 
 	// Paging sends materially fewer tokens than the full transcript.
 	if paging.EstimatedTokens >= compat.EstimatedTokens {
@@ -68,7 +68,7 @@ func TestPagingNoOpWhenNoDuplicates(t *testing.T) {
 		{Role: message.Tool, Parts: []message.ContentPart{message.ToolResult{ToolCallID: "a", Content: strings.Repeat("x", 500)}}},
 		{Role: message.Tool, Parts: []message.ContentPart{message.ToolResult{ToolCallID: "b", Content: strings.Repeat("y", 500)}}},
 	}
-	out := promptcompiler.NewPagingCompiler().Compile(promptcompiler.Input{History: msgs})
+	out := promptcompiler.NewDedupCompiler().Compile(promptcompiler.Input{History: msgs})
 	if out.SavedTokens != 0 {
 		t.Fatalf("distinct content should not be deduped, saved=%d", out.SavedTokens)
 	}
@@ -80,7 +80,7 @@ func TestPagingLeavesSmallDuplicatesAlone(t *testing.T) {
 		{Role: message.Tool, Parts: []message.ContentPart{message.ToolResult{ToolCallID: "a", Content: small}}},
 		{Role: message.Tool, Parts: []message.ContentPart{message.ToolResult{ToolCallID: "b", Content: small}}},
 	}
-	out := promptcompiler.NewPagingCompiler().Compile(promptcompiler.Input{History: msgs})
+	out := promptcompiler.NewDedupCompiler().Compile(promptcompiler.Input{History: msgs})
 	if out.SavedTokens != 0 {
 		t.Fatalf("small duplicates below threshold should be left alone, saved=%d", out.SavedTokens)
 	}
