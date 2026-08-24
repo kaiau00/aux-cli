@@ -154,6 +154,37 @@ func (q *Queries) ListSessions(ctx context.Context) ([]Session, error) {
 	return items, nil
 }
 
+const updateSessionTitle = `-- name: UpdateSessionTitle :one
+UPDATE sessions
+SET title = ?
+WHERE id = ?
+RETURNING id, parent_session_id, title, message_count, prompt_tokens, completion_tokens, cost, updated_at, created_at, summary_message_id, context_tokens
+`
+
+type UpdateSessionTitleParams struct {
+	Title string `json:"title"`
+	ID    string `json:"id"`
+}
+
+func (q *Queries) UpdateSessionTitle(ctx context.Context, arg UpdateSessionTitleParams) (Session, error) {
+	row := q.queryRow(ctx, q.updateSessionTitleStmt, updateSessionTitle, arg.Title, arg.ID)
+	var i Session
+	err := row.Scan(
+		&i.ID,
+		&i.ParentSessionID,
+		&i.Title,
+		&i.MessageCount,
+		&i.PromptTokens,
+		&i.CompletionTokens,
+		&i.Cost,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+		&i.SummaryMessageID,
+		&i.ContextTokens,
+	)
+	return i, err
+}
+
 const updateSession = `-- name: UpdateSession :one
 UPDATE sessions
 SET

@@ -214,8 +214,7 @@ func (a *agent) generateTitle(ctx context.Context, sessionID string, content str
 	if a.titleProvider == nil {
 		return nil
 	}
-	session, err := a.sessions.Get(ctx, sessionID)
-	if err != nil {
+	if _, err := a.sessions.Get(ctx, sessionID); err != nil {
 		return err
 	}
 	ctx = context.WithValue(ctx, tools.SessionIDContextKey, sessionID)
@@ -239,8 +238,13 @@ func (a *agent) generateTitle(ctx context.Context, sessionID string, content str
 		return nil
 	}
 
-	session.Title = title
-	_, err = a.sessions.Save(ctx, session)
+	// Write the title alone. This runs in a goroutine started on the session's
+	// first message, and the turn that triggered it has been reconciling the
+	// session's token and cost totals while the title model call was in flight.
+	// Saving a Session struct read before that call would carry the pre-turn
+	// zeros back over them -- which is how first turns ended up recorded with
+	// no tokens and no cost at all.
+	_, err = a.sessions.SetTitle(ctx, sessionID, title)
 	return err
 }
 

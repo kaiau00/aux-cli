@@ -36,6 +36,10 @@ type Service interface {
 	Get(ctx context.Context, id string) (Session, error)
 	List(ctx context.Context) ([]Session, error)
 	Save(ctx context.Context, session Session) (Session, error)
+	// SetTitle writes only the title. Saving a whole Session read before a slow
+	// operation clobbers whatever the turn reconciled in the meantime, so a
+	// caller that only means to rename must say so.
+	SetTitle(ctx context.Context, id, title string) (Session, error)
 	Delete(ctx context.Context, id string) error
 }
 
@@ -123,6 +127,16 @@ func (s *service) Save(ctx context.Context, session Session) (Session, error) {
 		return Session{}, err
 	}
 	session = s.fromDBItem(dbSession)
+	s.Publish(pubsub.UpdatedEvent, session)
+	return session, nil
+}
+
+func (s *service) SetTitle(ctx context.Context, id, title string) (Session, error) {
+	dbSession, err := s.q.UpdateSessionTitle(ctx, db.UpdateSessionTitleParams{ID: id, Title: title})
+	if err != nil {
+		return Session{}, err
+	}
+	session := s.fromDBItem(dbSession)
 	s.Publish(pubsub.UpdatedEvent, session)
 	return session, nil
 }

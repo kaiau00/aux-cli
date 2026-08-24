@@ -30,6 +30,7 @@ type Querier interface {
 	UpdateFile(ctx context.Context, arg UpdateFileParams) (File, error)
 	UpdateMessage(ctx context.Context, arg UpdateMessageParams) error
 	UpdateSession(ctx context.Context, arg UpdateSessionParams) (Session, error)
+	UpdateSessionTitle(ctx context.Context, arg UpdateSessionTitleParams) (Session, error)
 }
 
 var _ Querier = (*Queries)(nil)

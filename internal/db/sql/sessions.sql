@@ -49,6 +49,13 @@ WHERE id = ?
 RETURNING *;
 
 
+-- name: UpdateSessionTitle :one
+UPDATE sessions
+SET title = ?
+WHERE id = ?
+RETURNING *;
+
+
 -- name: DeleteSession :exec
 DELETE FROM sessions
 WHERE id = ?;
