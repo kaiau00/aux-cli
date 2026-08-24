@@ -56,9 +56,9 @@ The point of this section is that Aux should only say true things about itself.
 | "Aux manages the agent's context" | It does not. `ContextWindow` appears only in display code — nothing truncates, evicts, or budgets. `StateEvicted` is written nowhere. The compiler sends the full history. What actually ships is context *observability* plus manual exclude/pin, which is worth claiming and is not this |
 | "Production ready" | See the definition above |
 
-**A standing rule.** Four times now, an item in this file has been wrong about
+**A standing rule.** Five times now, an item in this file has been wrong about
 its own symptom — the SQLite alarm, the panic bullet, the migration item, the
-first-run item. Every correction came from measuring or from running the binary,
+first-run item, the evicted-state entry in A4. Every correction came from measuring or from running the binary,
 never from re-reading the file. Treat every unmeasured claim here, including the
 confident-sounding ones, as a hypothesis.
 
@@ -129,10 +129,13 @@ is dropped. Blind eviction is how an agent forgets what it was told.
 Do not build this before A1 can measure it, or there is no way to tell token
 savings from silent context loss.
 
-Meanwhile the UI already implies this shipped. `contextstore.StateEvicted` is
-read in `viewmodel/build.go` and written nowhere, so the expanded context view
-renders an "evicted" section that cannot be non-empty outside a test fixture.
-Delete the branch or label it, before someone reads it as evidence of A4.
+Two of contextstore's five binding states, `evicted` and `faulted`, are read and
+written nowhere — nothing evicts because nothing enforces a budget. The UI turns
+out to be innocent here: `RenderExpanded` skips empty groups, so neither heading
+ever reaches the screen. (An earlier draft of this entry claimed it rendered an
+empty section. It does not. Five, now.) What was actually untrue was a comment
+in `viewmodel/build.go` calling all five states backed rather than aspirational.
+Both state models now say plainly which two have no writer.
 
 ### A5. Skill promotion path
 

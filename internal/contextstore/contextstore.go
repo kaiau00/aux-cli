@@ -26,6 +26,12 @@ const (
 )
 
 // Binding states.
+//
+// Resident, available and pinned are written by the agent as it binds each
+// call's pages. Evicted and faulted are declared but never written: nothing in
+// Aux evicts a page to fit a budget or faults one back in, because no context
+// budget is enforced anywhere. They are kept because they are part of the state
+// model the schema stores, not because the behaviour exists.
 const (
 	StateResident  = "resident"
 	StateAvailable = "available"

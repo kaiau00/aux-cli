@@ -10,19 +10,24 @@ import (
 // this, the reference stub would not save meaningful tokens.
 const minDedupBytes = 200
 
-// PagingCompiler is the first demand-paging compiler. It is safe and lossless: when the same large tool-result/file
-// content appears more than once in the transcript (the model re-read a file),
-// only the last occurrence is sent in full; earlier identical copies are
-// replaced with a compact reference, cutting repeated uncached input without
-// removing any information from the prompt.
-type PagingCompiler struct{}
+// DedupCompiler is the reduction that is safe to apply without evidence: when
+// the same large tool-result or file content appears more than once in the
+// transcript -- the model re-read a file -- only the last occurrence is sent in
+// full and earlier identical copies become a compact reference. No information
+// leaves the prompt, so the saving cannot cost a re-read.
+//
+// It is deliberately not demand paging. Nothing here evicts to fit a budget,
+// and nothing in Aux does: see TODO.md A4 for why that is gated on being able
+// to measure token savings against silent context loss, and A3 for the run that
+// would settle this compiler's default.
+type DedupCompiler struct{}
 
-// NewPagingCompiler returns the paging compiler.
-func NewPagingCompiler() *PagingCompiler { return &PagingCompiler{} }
+// NewDedupCompiler returns the paging compiler.
+func NewDedupCompiler() *DedupCompiler { return &DedupCompiler{} }
 
 // Compile deduplicates repeated identical large content, then produces the same
 // manifest/page structure as compatibility mode over the reduced messages.
-func (c *PagingCompiler) Compile(in Input) CompiledPrompt {
+func (c *DedupCompiler) Compile(in Input) CompiledPrompt {
 	original := cleanMessages(in.History)
 	fullEst := EstimateMessages(original)
 
