@@ -156,8 +156,8 @@ func historyWithRepeatedContent() []message.Message {
 	}
 }
 
-func TestPagingCompilerDedupsRepeatedContentByDefault(t *testing.T) {
-	c := promptcompiler.NewPagingCompiler()
+func TestDedupCompilerDedupsRepeatedContentByDefault(t *testing.T) {
+	c := promptcompiler.NewDedupCompiler()
 	out := c.Compile(promptcompiler.Input{History: historyWithRepeatedContent()})
 
 	var first string
@@ -174,7 +174,7 @@ func TestPagingCompilerDedupsRepeatedContentByDefault(t *testing.T) {
 }
 
 func TestPinnedToolCallOverridesDedup(t *testing.T) {
-	c := promptcompiler.NewPagingCompiler()
+	c := promptcompiler.NewDedupCompiler()
 	out := c.Compile(promptcompiler.Input{
 		History:           historyWithRepeatedContent(),
 		PinnedToolCallIDs: map[string]bool{"r1": true},
@@ -194,8 +194,8 @@ func TestPinnedToolCallOverridesDedup(t *testing.T) {
 	}
 }
 
-func TestPagingCompilerAppliesExclusions(t *testing.T) {
-	c := promptcompiler.NewPagingCompiler()
+func TestDedupCompilerAppliesExclusions(t *testing.T) {
+	c := promptcompiler.NewDedupCompiler()
 	out := c.Compile(promptcompiler.Input{History: history(), ExcludedToolCallIDs: map[string]bool{"c1": true}})
 
 	for _, m := range out.Messages {

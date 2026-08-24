@@ -85,7 +85,7 @@ type Input struct {
 	// PinnedToolCallIDs are tool-result parts whose full content is guaranteed
 	// in the compiled prompt: pinning
 	// overrides both ExcludedToolCallIDs (a pinned-and-excluded call is still
-	// sent in full) and PagingCompiler's content dedup (a pinned call is never
+	// sent in full) and DedupCompiler's content dedup (a pinned call is never
 	// replaced by a dedup reference stub, even as an earlier duplicate
 	// occurrence). Keyed by message.ToolResult.ToolCallID. Nil/empty is a no-op.
 	PinnedToolCallIDs map[string]bool

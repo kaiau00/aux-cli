@@ -198,10 +198,17 @@ type ContextPageEntryVM struct {
 }
 
 // ContextPageListVM groups a call's page bindings by state, for the expanded
-// context view that the compact budget summarizes.
-// Grouped by the states that actually exist in contextstore — resident,
-// available, pinned, evicted, faulted — not aspirational states with no
-// backing model.
+// context view that the compact budget summarizes. The groups are exactly the
+// five states contextstore declares, so a state can never be silently dropped
+// on the way to the screen -- TestContextPageListCoversEveryDeclaredState
+// holds that.
+//
+// Two of the five have no writer today. Nothing evicts, so StateEvicted is only
+// ever read; nothing faults a page in, so StateFaulted is too. That is a
+// statement about Aux, not about this projection: no page budget is enforced
+// anywhere (see TODO.md A4). The renderer skips empty groups, so neither
+// heading reaches the screen, and this comment exists so the switch below is
+// not mistaken for evidence that eviction ships.
 type ContextPageListVM struct {
 	Resident  []ContextPageEntryVM `json:"resident"`
 	Available []ContextPageEntryVM `json:"available"`

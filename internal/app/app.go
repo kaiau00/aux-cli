@@ -179,7 +179,7 @@ func New(ctx context.Context, conn *sql.DB) (*App, error) {
 	// Select the prompt compiler: demand paging when enabled, else compatibility.
 	var compiler promptcompiler.Compiler = promptcompiler.NewCompatibilityCompiler()
 	if config.Get().Context.Paging == "on" {
-		compiler = promptcompiler.NewPagingCompiler()
+		compiler = promptcompiler.NewDedupCompiler()
 	}
 	coderDeps := agent.Deps{
 		Sessions:     app.Sessions,
