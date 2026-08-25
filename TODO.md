@@ -69,7 +69,7 @@ The point of this section is that Aux should only say true things about itself.
 
 | Claim | Why not |
 | --- | --- |
-| "Cheaper than opencode" | One repository, five Python tasks, one model. The gap **grew from 19% to 63% when runs were added**, so n=5 may still be too few, and Aux's own spread is 46%. Directionally encouraging, nowhere near a general claim |
+| "Cheaper than opencode" | Python: one repository, five tasks, one model. The gap **grew from 19% to 63% when runs were added**, so n=5 may still be too few, and Aux's own spread is 46%. TypeScript (`bench/suite-ts.json`, 2026-08-24): 189% gap in median tokens, `aux eval compare` calls it **not conclusive** at n=5 (p=0.06), and aux was also *less reliable* than opencode on this suite (4 of 25 task-attempts failed vs opencode's 0 of 25) -- a caveat "cheaper" would hide. Directionally consistent across two languages, nowhere near a general claim |
 | "80% test coverage" | Actual coverage is **32.6%**. 19 of 74 packages have no test file at all |
 | "Demand paging saves tokens" | There is no demand paging. `DedupCompiler` measurably removes duplicate blobs — 47.9% on the fixture with that shape, deterministically — but it defaults to off because nobody has shown that swapping a duplicate for a reference leaves the model's behaviour unchanged. Token arithmetic is not an outcome |
 | "Aux manages the agent's context" | It does not. `ContextWindow` appears only in display code — nothing truncates, evicts, or budgets. `StateEvicted` is written nowhere. The compiler sends the full history. What actually ships is context *observability* plus manual exclude/pin, which is worth claiming and is not this |
@@ -105,6 +105,30 @@ five tasks whose success is decided by that project's own test suite, n≥5 a si
 Note before running: `aux -p` calls `AutoApproveSession`, so non-interactive runs
 bypass every permission prompt. Benchmark repositories must be scratch checkouts.
 
+**Measured, 2026-08-24.** A second-language suite exists: `bench/suite-ts.json`,
+five tasks against a scratch checkout of `sindresorhus/pretty-bytes`
+(TypeScript) pinned to `fd7eb38`. aux vs opencode, n=5 a side, same model
+(`minimax-coding-plan/MiniMax-M3` both sides — see the correction below, this
+is a real hosted API, not the free local compute "cheap on a local model"
+implied):
+
+| harness | pass rate (5 runs) | tokens, median |
+| --- | --- | --- |
+| aux | 60–100%, median 100% | 929,156 |
+| opencode | 100% every run | 2,689,882 |
+
+189% difference in median tokens, but `aux eval compare` calls it **not
+conclusive** (p=0.06, just over the 0.05 bar) — the same shape the Python
+result already has: a gap that looks large and that n=5 noise cannot yet rule
+out. New wrinkle this run adds: aux was cheaper but less reliable. 4 of its 25
+task-attempts failed across the 5 repeats (2 in one repeat, 2 in another);
+opencode passed all 25/25. A bare "cheaper" claim would now be misleading in
+the direction that matters — it would hide that it was also less consistent.
+
+Getting past p=0.06 needs more repeats, which on this evidence means real
+wall-clock (opencode's slowest single task-run took 373s and 4.8M tokens) —
+worth doing, but a deliberate call given that cost, not a default next step.
+
 ### A2. Coverage, deliberately
 
 32.6% against a stated bar of 80%. The floor ratchet stops it regressing but
@@ -127,6 +151,12 @@ including "no measurable difference" if that is the answer.
 
 Blocked on A1 only in the sense that deciding it against one repository would be
 Goodhart. Running it is unblocked.
+
+Correction, 2026-08-24: "cheap on a local model" below and in A1 overstated
+it. `local.MiniMax-M3` resolves via `LOCAL_ENDPOINT` to a real hosted API
+(`api.minimax.io`), not local compute. It happens to be cheap in practice — a
+subscription plan, not metered per call — but it is not free, and a suite run
+is a real call over the network, not a local inference request.
 
 Renamed `DedupCompiler`, because it does not page: it replaces an identical
 earlier copy of a large blob with a reference to the later one.
@@ -340,3 +370,7 @@ reorder this list — which is the point of B1.
 | Font coverage | 12 of 32 non-ASCII glyphs were absent from SF Mono, the default font of the default macOS terminal, the `⌬` logo among them and absent from Menlo too. A substituted glyph need not honour the cell grid, and an emoji-presentation codepoint renders double-width while the layout counts one. `TestIconsAreFontSafe` now walks the tree |
 | Context meter | "Context X/Y" summed lifetime spend against the context window, counting the resident conversation once per turn: seven turns over 21K read 148.3K. Auto-compaction fires off the same number, so a long session summarised itself away with the window a third full |
 | User-defined hooks | Dropped, not deferred. A config file naming commands to run turns cloning a repository into running its code |
+| Eval suite isolation | `.aux` self-protects with a nested `.gitignore` (`*`), so the runner's `git clean -fd` isolation step left it standing between tasks -- task N inherited task N-1's session database. First run of a new suite showed it directly: one task failed 4 of 5 repeats at 1-2 turns each, then passed cleanly the moment it was run alone, outside the suite. Isolation now also removes `.aux` before every task |
+| Eval suite metrics after isolation | Fixing the isolation gap above broke cost/token metrics as a direct side effect: the top-level `aux eval suite` process held one database connection for the whole run, opened before any task's `.aux` was even created. Deleting and recreating that file mid-suite (the fix above) left the held connection reading a deleted, orphaned copy. Every run reported 0 tokens, 0 turns. `ledgerMetrics` now reconnects fresh for each metrics read instead of once for the whole suite |
+| Context pane budget mislabelled and measured against the wrong thing | The context drawer's page-budget line said "Context 338/1M", the same word the task header and status bar use for actual prompt occupancy ("Context 20,000/1M") -- but it sums only resident/pinned *page bindings* (an estimate over conversation-message pages, never the system prompt or tool schemas), not the whole prompt. Relabelled "Pages". Deeper problem underneath the label: it was also divided by the *model's context window* (1M), not what the call actually sent -- against a 1M ceiling that ratio is structurally near zero regardless of reality, so it could never reach a percentage worth acting on. Checked against this repo's own live session: page sum 1,227 tokens against a real call total of 20,273 -- 6%, not 0.1%. Now divided by the same call's real total (`CallTotalTokens`, replacing `LimitTokens`), so the percentage answers what the pane exists to answer: how much of what was actually sent is tracked content you could exclude or pin |
+| Trackpad scrolling: buggy and slow | Two real bugs, found by measuring, not reading. (1) A streaming response fires a pubsub update on every content delta, and that handler called `viewport.GotoBottom()` unconditionally -- scrolling up to read earlier history while the agent was working got fought back to the bottom within a fraction of a second. (2) That same handler called `renderView`, which rejoins and re-wraps the *entire* conversation on every call, not just the changed message -- measured at 200-700ms per call on a 400-message session, blocking the whole UI loop including scroll input. Fixed: streaming updates now debounce behind a 100ms coalescing window (`rerenderDebounce`), and the eventual render only jumps to the bottom if the viewport was already there. `renderView` itself is still O(conversation length) per call; on a much longer session than tested here it would still show as a brief stutter roughly every 100ms during active streaming rather than near-continuous lag -- a further fix would need incremental content updates instead of a full rejoin, not done here |
