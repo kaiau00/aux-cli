@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
@@ -25,7 +26,11 @@ func (a cliApprover) Request(opts permission.CreatePermissionRequest) bool {
 		fmt.Printf("  running: %s\n", opts.Fingerprint)
 		return true
 	}
-	fmt.Printf("  skipped (needs --yes): %s\n", opts.Fingerprint)
+	// Denial isn't printed here: the caller already reports it once, from the
+	// error ShellRunner.Run returns. Printing here too produced two lines for
+	// one event -- "skipped (needs --yes): go build ./..." immediately
+	// followed by "error go build ./... (permission denied)" -- that read as
+	// two different things going wrong.
 	return false
 }
 
@@ -99,6 +104,8 @@ var validateCmd = &cobra.Command{
 		for _, intent := range intents {
 			result, err := svc.RunIntent(ctx, taskID, intent, res.Revision.VCSRevision, runner)
 			switch {
+			case errors.Is(err, permission.ErrorPermissionDenied):
+				fmt.Printf("  %-8s %s (needs --yes)\n", "skipped", intent.Command)
 			case err != nil:
 				fmt.Printf("  %-8s %s (%v)\n", "error", intent.Command, err)
 			case result.Cached:
