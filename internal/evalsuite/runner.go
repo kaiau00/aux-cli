@@ -107,6 +107,12 @@ func (r *Runner) runTask(ctx context.Context, t Task) Run {
 		for _, cmd := range []string{
 			"git reset --hard " + t.BaseRevision,
 			"git clean -fd",
+			// aux self-protects its data directory with a nested .gitignore
+			// (`*`), so `git clean -fd` treats it as ignored and leaves it
+			// standing. Without this, task N inherits task N-1's session
+			// database -- the exact contamination isolation exists to prevent,
+			// just one layer down from the code under test.
+			"rm -rf .aux",
 		} {
 			if out, err := r.Exec.Run(ctx, t.Repo, cmd); err != nil {
 				return finish(fmt.Sprintf("isolation failed (%s): %v: %s", cmd, err, out))

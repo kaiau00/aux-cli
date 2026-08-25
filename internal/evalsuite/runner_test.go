@@ -118,6 +118,21 @@ func TestRunnerResetsRepoToBaseRevision(t *testing.T) {
 	}
 }
 
+// aux's data directory self-protects with a nested .gitignore, so `git clean
+// -fd` alone leaves it standing and task N would inherit task N-1's session
+// database. Isolation must remove it explicitly.
+func TestRunnerRemovesAuxDataDirBetweenTasks(t *testing.T) {
+	exec := &fakeExec{}
+	r := auxRunner(exec, nil)
+
+	if _, err := r.RunSuite(t.Context(), testSuite(), ""); err != nil {
+		t.Fatalf("RunSuite: %v", err)
+	}
+	if !exec.ran("rm -rf .aux") {
+		t.Fatalf("expected the aux data directory to be removed, ran: %v", exec.commands)
+	}
+}
+
 // The success commands decide, not the agent's exit status: an agent can exit
 // non-zero having done the work.
 func TestAgentExitStatusDoesNotDecideSuccess(t *testing.T) {
