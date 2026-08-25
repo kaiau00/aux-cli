@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -45,6 +46,39 @@ type messagesCmp struct {
 
 	// workingLabelIndex advances on spinner ticks to rotate status verbs.
 	workingLabelIndex int
+
+	// rerenderPending and rerenderTailActivity coalesce streaming message
+	// updates behind rerenderDebounce; see scheduleRerender.
+	rerenderPending      bool
+	rerenderTailActivity bool
+}
+
+// rerenderDebounce caps how often a streaming response forces a full
+// conversation rejoin. renderView rejoins and re-wraps the entire
+// conversation on every call, not just the changed message; measured at
+// 200-700ms per call on a 400-message session. A real turn delivers a
+// content delta many times a second, so calling it on every single one blocks
+// the whole UI loop for most of a second at a time -- including the user's
+// own scroll input, which is what made scrolling during an active turn look
+// both frozen and, once the backlog cleared, buggy.
+const rerenderDebounce = 100 * time.Millisecond
+
+// rerenderPendingMsg fires the debounced re-render scheduled by
+// scheduleRerender.
+type rerenderPendingMsg struct{}
+
+// scheduleRerender defers the next renderView to at most once per
+// rerenderDebounce. Cheap bookkeeping (updating m.messages, invalidating
+// cachedContent) still happens synchronously when an event arrives; only the
+// expensive rejoin is coalesced.
+func (m *messagesCmp) scheduleRerender() tea.Cmd {
+	if m.rerenderPending {
+		return nil
+	}
+	m.rerenderPending = true
+	return tea.Tick(rerenderDebounce, func(time.Time) tea.Msg {
+		return rerenderPendingMsg{}
+	})
 }
 
 // workingStatusLabels cycles in the footer while the agent is responding,
@@ -205,14 +239,30 @@ func (m *messagesCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		if needsRerender {
-			m.renderView()
-			if len(m.messages) > 0 {
-				if (msg.Type == pubsub.CreatedEvent) ||
-					(msg.Type == pubsub.UpdatedEvent && msg.Payload.ID == m.messages[len(m.messages)-1].ID) {
-					m.viewport.GotoBottom()
-				}
+			if len(m.messages) > 0 &&
+				((msg.Type == pubsub.CreatedEvent) ||
+					(msg.Type == pubsub.UpdatedEvent && msg.Payload.ID == m.messages[len(m.messages)-1].ID)) {
+				m.rerenderTailActivity = true
 			}
+			cmds = append(cmds, m.scheduleRerender())
 		}
+
+	case rerenderPendingMsg:
+		if !m.rerenderPending {
+			return m, nil
+		}
+		m.rerenderPending = false
+		// Captured now, not when the triggering event arrived: a user who
+		// scrolled up to read earlier history during the debounce window
+		// must not be yanked back down by content that kept streaming in
+		// underneath them.
+		wasAtBottom := m.viewport.AtBottom()
+		m.renderView()
+		if m.rerenderTailActivity && wasAtBottom {
+			m.viewport.GotoBottom()
+		}
+		m.rerenderTailActivity = false
+		return m, nil
 	}
 
 	if _, ok := msg.(spinner.TickMsg); ok && m.IsAgentWorking() {
