@@ -39,22 +39,38 @@ func trimZero(s string) string {
 	return s
 }
 
-// Pressure returns the used fraction of the limit in the range [0,1]; 0 when the
-// limit is unknown.
+// Pressure returns pages as a fraction of what the call actually sent, in the
+// range [0,1]; 0 when that total is unknown.
+//
+// Deliberately not a fraction of the model's context window: TotalTokens is
+// an estimate over conversation-message pages only (decomposePages), which
+// never includes the system prompt or tool schemas. Against a 1M window that
+// ratio is structurally near zero regardless of reality, so it can never
+// reach a percentage worth a warning colour. Against what this call actually
+// sent, it answers what the pane exists to answer: how much of the prompt is
+// tracked content you could exclude or pin.
 func Pressure(vm viewmodel.ContextBudgetVM) float64 {
-	if vm.LimitTokens <= 0 {
+	if vm.CallTotalTokens <= 0 {
 		return 0
 	}
-	return float64(vm.TotalTokens) / float64(vm.LimitTokens)
+	return float64(vm.TotalTokens) / float64(vm.CallTotalTokens)
 }
 
 // HeaderText returns the plain-text budget header line.
+//
+// Labelled "Pages", not "Context": the task header and status bar already
+// say "Context" for the call's real, provider-reported occupancy. This line
+// is a much rougher estimate over a narrower slice (see Pressure) -- a real
+// session showed 1,227 tokens of pages against 20,099 tokens of real
+// occupancy for the identical call, which is the normal case (pages are one
+// ingredient, not the whole prompt), not a discrepancy, but the shared label
+// made it look like one.
 func HeaderText(vm viewmodel.ContextBudgetVM) string {
-	if vm.LimitTokens <= 0 {
-		return fmt.Sprintf("Context  %s", FormatTokens(vm.TotalTokens))
+	if vm.CallTotalTokens <= 0 {
+		return fmt.Sprintf("Pages  %s", FormatTokens(vm.TotalTokens))
 	}
 	pct := int(Pressure(vm) * 100)
-	return fmt.Sprintf("Context  %s / %s  (%d%%)", FormatTokens(vm.TotalTokens), FormatTokens(vm.LimitTokens), pct)
+	return fmt.Sprintf("Pages  %s / %s  (%d%%)", FormatTokens(vm.TotalTokens), FormatTokens(vm.CallTotalTokens), pct)
 }
 
 // SignalsText returns the compact resident/pinned/saved signal line, or "".

@@ -16,10 +16,22 @@ import (
 // ledgerMetrics adapts the cost ledger to evalsuite's MetricsReader. Metrics
 // come from the durable ledger rather than being parsed out of agent output, so
 // a run's cost is measured the same way whether it was watched or not.
-type ledgerMetrics struct{ ledger cost.Service }
+//
+// It reconnects for every call rather than holding one connection for the
+// whole suite run. Each task's isolation step removes and lets the agent
+// recreate .aux (see runner.go), which is a different file on disk each time;
+// a connection opened before that would keep reading the deleted one and see
+// nothing.
+type ledgerMetrics struct{}
 
 func (m ledgerMetrics) TaskMetrics(ctx context.Context, sessionID string) (int64, int64, int64, float64, bool, error) {
-	totals, err := m.ledger.SessionTotals(ctx, sessionID)
+	conn, err := db.Connect()
+	if err != nil {
+		return 0, 0, 0, 0, false, err
+	}
+	defer conn.Close()
+
+	totals, err := cost.NewService(conn).SessionTotals(ctx, sessionID)
 	if err != nil {
 		return 0, 0, 0, 0, false, err
 	}
@@ -100,7 +112,7 @@ To gate a change, record a baseline, make the change, run again, and compare:
 			if binary == "" {
 				binary = "aux"
 			}
-			h = evalsuite.AuxHarness{Binary: binary, Metrics_: ledgerMetrics{ledger: cost.NewService(conn)}}
+			h = evalsuite.AuxHarness{Binary: binary, Metrics_: ledgerMetrics{}}
 		case "opencode":
 			if binary == "" {
 				binary = "opencode"

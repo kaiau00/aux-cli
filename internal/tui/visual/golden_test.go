@@ -155,7 +155,7 @@ func fixtures() map[string]fixture {
 		"context-pressure": {
 			header: viewmodel.TaskHeaderVM{Project: "aux-cli", Stage: "thinking", State: viewmodel.StateActive, ContextUsed: 60000, ContextLimit: 64000, Cost: 1.20},
 			budget: viewmodel.ContextBudgetVM{
-				TotalTokens: 60000, LimitTokens: 64000,
+				TotalTokens: 60000, CallTotalTokens: 64000,
 				Categories:    []viewmodel.ContextCategoryVM{{Label: "Active code", Tokens: 40000}, {Label: "Tool results", Tokens: 20000}},
 				ResidentPages: 12, PinnedPages: 2, SavedTokens: 8000,
 			},

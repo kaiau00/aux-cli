@@ -71,14 +71,24 @@ type CriterionVM struct {
 }
 
 // ContextBudgetVM is the signature context composition.
+//
+// CallTotalTokens is the same call's real, provider-reported token total
+// (input + output + cache, the same figure the task header and status bar
+// show) -- not the model's context window. Dividing TotalTokens by the
+// window produced a percentage that was structurally always near zero: pages
+// only cover conversation messages, never the system prompt or tool
+// schemas, so it could never reach a number worth a warning colour. Dividing
+// by what this call actually sent answers the question the pane exists to
+// answer -- how much of what I sent is tracked page content I could exclude
+// or pin -- instead of one nobody could act on.
 type ContextBudgetVM struct {
-	TotalTokens    int64               `json:"totalTokens"`
-	LimitTokens    int64               `json:"limitTokens"`
-	Categories     []ContextCategoryVM `json:"categories"`
-	ResidentPages  int                 `json:"residentPages"`
-	AvailablePages int                 `json:"availablePages"`
-	PinnedPages    int                 `json:"pinnedPages"`
-	SavedTokens    int64               `json:"savedTokens,omitempty"`
+	TotalTokens     int64               `json:"totalTokens"`
+	CallTotalTokens int64               `json:"callTotalTokens"`
+	Categories      []ContextCategoryVM `json:"categories"`
+	ResidentPages   int                 `json:"residentPages"`
+	AvailablePages  int                 `json:"availablePages"`
+	PinnedPages     int                 `json:"pinnedPages"`
+	SavedTokens     int64               `json:"savedTokens,omitempty"`
 }
 
 // ContextCategoryVM is one budget category row.

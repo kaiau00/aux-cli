@@ -126,7 +126,7 @@ func TestBuildContextBudget(t *testing.T) {
 	if vm.ResidentPages != 2 || vm.AvailablePages != 1 {
 		t.Fatalf("page counts wrong: %+v", vm)
 	}
-	if vm.LimitTokens != 64000 || vm.SavedTokens != 20 {
+	if vm.CallTotalTokens != 64000 || vm.SavedTokens != 20 {
 		t.Fatalf("limit/saved not carried: %+v", vm)
 	}
 	// Categories reflect page types.
