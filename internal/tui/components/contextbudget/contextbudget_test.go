@@ -11,8 +11,8 @@ import (
 
 func sampleBudget() viewmodel.ContextBudgetVM {
 	return viewmodel.ContextBudgetVM{
-		TotalTokens: 18200,
-		LimitTokens: 64000,
+		TotalTokens:     18200,
+		CallTotalTokens: 64000,
 		Categories: []viewmodel.ContextCategoryVM{
 			{Label: "Task and plan", Tokens: 3100},
 			{Label: "Active code", Tokens: 8400},

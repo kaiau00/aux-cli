@@ -14,9 +14,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/kaiau00/aux-cli/internal/app"
-	"github.com/kaiau00/aux-cli/internal/config"
 	"github.com/kaiau00/aux-cli/internal/eventstore"
-	"github.com/kaiau00/aux-cli/internal/llm/models"
 	"github.com/kaiau00/aux-cli/internal/llm/tools"
 	"github.com/kaiau00/aux-cli/internal/message"
 	"github.com/kaiau00/aux-cli/internal/pubsub"
@@ -729,7 +727,10 @@ func (m *ContextPaneCmp) buildBudget(ctx context.Context, taskID string) viewmod
 	if err != nil || len(bindings) == 0 {
 		return viewmodel.ContextBudgetVM{}
 	}
-	return viewmodel.BuildContextBudget(bindings, contextLimitTokens(), m.savedTokens(ctx))
+	// The same call's real, provider-reported total -- not the model's
+	// context window. See ContextBudgetVM.CallTotalTokens.
+	callTotal := last.InputTokens + last.OutputTokens + last.CacheCreationTokens + last.CacheReadTokens
+	return viewmodel.BuildContextBudget(bindings, callTotal, m.savedTokens(ctx))
 }
 
 // buildPageList projects the same call's bindings buildBudget reads into the
@@ -748,16 +749,6 @@ func (m *ContextPaneCmp) buildPageList(ctx context.Context, taskID string) viewm
 		return viewmodel.ContextPageListVM{}
 	}
 	return viewmodel.BuildContextPageList(bindings)
-}
-
-// contextLimitTokens returns the configured coder model's context window, or 0
-// when unknown (the budget header then omits the ratio rather than faking it).
-func contextLimitTokens() int64 {
-	coder, ok := config.Get().Agents[config.AgentCoder]
-	if !ok {
-		return 0
-	}
-	return models.SupportedModels[coder.Model].ContextWindow
 }
 
 // savedTokens reads the latest context.compiled event's saved-token count for

@@ -240,9 +240,11 @@ func BuildContextPageList(bindings []contextstore.BoundPage) ContextPageListVM {
 }
 
 // BuildContextBudget projects per-call page bindings into a budget composition.
-// Only resident pages count toward the used total.
-func BuildContextBudget(bindings []contextstore.BoundPage, limitTokens, savedTokens int64) ContextBudgetVM {
-	vm := ContextBudgetVM{LimitTokens: limitTokens, SavedTokens: savedTokens}
+// Only resident pages count toward the used total. callTotalTokens is the
+// same call's real reported total, used as the denominator so the resulting
+// percentage means something -- see ContextBudgetVM.
+func BuildContextBudget(bindings []contextstore.BoundPage, callTotalTokens, savedTokens int64) ContextBudgetVM {
+	vm := ContextBudgetVM{CallTotalTokens: callTotalTokens, SavedTokens: savedTokens}
 	catTokens := map[string]int64{}
 	catOrder := []string{}
 	for _, b := range bindings {
