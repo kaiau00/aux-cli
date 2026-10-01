@@ -88,14 +88,23 @@ func safeWorkingDir() (dir string) {
 	return config.WorkingDirectory()
 }
 
+// GrantPersistant approves this request and records the grant for the rest of
+// the session.
+//
+// The grant is recorded before the waiting caller is woken, and the order
+// matters: Request holds promptMu across its grant check and its wait, so the
+// moment the waiter is signalled it can return and release promptMu. Recording
+// afterwards left a window where a queued caller needing the same approval ran
+// its grant check against a list the grant had not reached yet, and prompted a
+// second time. See promptMu.
 func (s *permissionService) GrantPersistant(permission PermissionRequest) {
-	respCh, ok := s.pendingRequests.Load(permission.ID)
-	if ok {
-		respCh.(chan bool) <- true
-	}
 	s.mu.Lock()
 	s.sessionPermissions = append(s.sessionPermissions, permission)
 	s.mu.Unlock()
+
+	if respCh, ok := s.pendingRequests.Load(permission.ID); ok {
+		respCh.(chan bool) <- true
+	}
 }
 
 func (s *permissionService) Grant(permission PermissionRequest) {
