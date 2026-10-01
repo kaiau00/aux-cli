@@ -7,13 +7,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/kaiau00/aux-cli/internal/config"
-	"github.com/kaiau00/aux-cli/internal/llm/models"
 	"github.com/kaiau00/aux-cli/internal/lsp"
 	"github.com/kaiau00/aux-cli/internal/lsp/protocol"
-	"github.com/kaiau00/aux-cli/internal/pubsub"
-	"github.com/kaiau00/aux-cli/internal/session"
-	"github.com/kaiau00/aux-cli/internal/tui/components/chat"
 	"github.com/kaiau00/aux-cli/internal/tui/styles"
 	"github.com/kaiau00/aux-cli/internal/tui/theme"
 	"github.com/kaiau00/aux-cli/internal/tui/util"
@@ -23,12 +18,17 @@ type StatusCmp interface {
 	tea.Model
 }
 
+// statusCmp is the bottom status bar. It deliberately does not repeat what
+// the task header already shows (project, stage, model, context, cost) --
+// it only carries ambient system state the header has no room for:
+// diagnostics, the help hint, and transient toast messages. See
+// taskheader.go for the task/session state this bar intentionally leaves
+// out.
 type statusCmp struct {
 	info       util.InfoMsg
 	width      int
 	messageTTL time.Duration
 	lspClients map[string]*lsp.Client
-	session    session.Session
 }
 
 // clearMessageCmd is a command that clears status messages after a timeout
@@ -47,16 +47,6 @@ func (m statusCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		return m, nil
-	case chat.SessionSelectedMsg:
-		m.session = msg
-	case chat.SessionClearedMsg:
-		m.session = session.Session{}
-	case pubsub.Event[session.Session]:
-		if msg.Type == pubsub.UpdatedEvent {
-			if m.session.ID == msg.Payload.ID {
-				m.session = msg.Payload
-			}
-		}
 	case util.InfoMsg:
 		m.info = msg
 		ttl := msg.TTL
@@ -70,20 +60,20 @@ func (m statusCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-var helpWidget = ""
-
-// getHelpWidget returns the help widget with current theme colors
+// getHelpWidget returns the help hint. It is the least important thing on
+// the bar, so it is plain muted text on the bar's shared background rather
+// than its own filled pill.
 func getHelpWidget() string {
 	t := theme.CurrentTheme()
-	helpText := "ctrl+? help"
-
 	return styles.Padded().
-		Background(t.TextMuted()).
-		Foreground(t.BackgroundDarker()).
-		Bold(true).
-		Render(helpText)
+		Background(t.BackgroundSecondary()).
+		Foreground(t.TextMuted()).
+		Render("ctrl+? help")
 }
 
+// formatTokenCount renders a token count compactly (e.g. 18200 -> "18.2K").
+// Shared with taskheader.go, which is the surviving place token/context
+// figures are shown.
 func formatTokenCount(tokens int64) string {
 	var formatted string
 	switch {
@@ -104,58 +94,21 @@ func formatTokenCount(tokens int64) string {
 	return formatted
 }
 
-func formatTokensAndCost(tokens, contextWindow int64, cost float64) string {
-	formattedTokens := formatTokenCount(tokens)
-	formattedWindow := formatTokenCount(contextWindow)
-	formattedCost := fmt.Sprintf("$%.2f", cost)
-
-	percentage := 0
-	if contextWindow > 0 {
-		percentage = int((float64(tokens) / float64(contextWindow)) * 100)
-	}
-
-	contextPart := fmt.Sprintf("%s / %s (%d%%)", formattedTokens, formattedWindow, percentage)
-	if percentage > 80 {
-		contextPart = fmt.Sprintf("%s %s", styles.WarningIcon, contextPart)
-	}
-
-	return fmt.Sprintf("Context: %s, Cost: %s", contextPart, formattedCost)
-}
-
 func (m statusCmp) View() string {
 	t := theme.CurrentTheme()
-	modelID := config.Get().Agents[config.AgentCoder].Model
-	model := models.SupportedModels[modelID]
+	barBg := styles.Padded().Background(t.BackgroundSecondary())
 
 	help := getHelpWidget()
-
-	tokenInfo := ""
-	tokensStyle := styles.Padded().
-		Background(t.Text()).
-		Foreground(t.BackgroundSecondary())
-	if m.session.ID != "" {
-		contextTokens := m.session.ContextTokens
-		tokenInfo = formatTokensAndCost(contextTokens, model.ContextWindow, m.session.Cost)
-		percentage := (float64(contextTokens) / float64(model.ContextWindow)) * 100
-		if percentage > 80 {
-			tokensStyle = tokensStyle.Background(t.Warning())
-		}
+	diagnostics := m.projectDiagnostics()
+	diagnosticsSegment := ""
+	if diagnostics != "" {
+		diagnosticsSegment = barBg.Render(diagnostics)
 	}
 
-	diagnostics := styles.Padded().
-		Background(t.BackgroundDarker()).
-		Render(m.projectDiagnostics())
-
-	// Budget the fixed segments before rendering any of them. The spacer below
-	// clamps at zero, so without this the fixed parts run past the edge of the
-	// terminal and it clips whatever is last -- which is the model name.
-	fit := fitStatus(
-		m.width,
-		lipgloss.Width(help),
-		lipgloss.Width(tokensStyle.Render(tokenInfo)),
-		lipgloss.Width(diagnostics),
-		lipgloss.Width(m.model()),
-	)
+	// Budget the fixed segments before rendering any of them: help first
+	// (static text, the same key works whether or not it is shown), then
+	// diagnostics (a count, visible in full on the diagnostics view).
+	fit := fitStatus(m.width, lipgloss.Width(help), lipgloss.Width(diagnosticsSegment))
 
 	status := ""
 	usedWidth := 0
@@ -163,23 +116,17 @@ func (m statusCmp) View() string {
 		status += help
 		usedWidth += lipgloss.Width(help)
 	}
-	if fit.ShowTokens && tokenInfo != "" {
-		rendered := tokensStyle.Render(tokenInfo)
-		status += rendered
-		usedWidth += lipgloss.Width(rendered)
-	}
 	if !fit.ShowDiagnostics {
-		diagnostics = ""
+		diagnosticsSegment = ""
 	}
-	modelSegment := m.modelFitted(fit.ModelBudget)
-	usedWidth += lipgloss.Width(diagnostics) + lipgloss.Width(modelSegment)
+	usedWidth += lipgloss.Width(diagnosticsSegment)
 
-	availableWidht := max(0, m.width-usedWidth)
+	availableWidth := max(0, m.width-usedWidth)
 
 	if m.info.Msg != "" {
 		infoStyle := styles.Padded().
 			Foreground(t.Background()).
-			Width(availableWidht)
+			Width(availableWidth)
 
 		switch m.info.Type {
 		case util.InfoTypeInfo:
@@ -190,7 +137,7 @@ func (m statusCmp) View() string {
 			infoStyle = infoStyle.Background(t.Error())
 		}
 
-		infoWidth := availableWidht - 10
+		infoWidth := availableWidth - 10
 		// Truncate message if it's longer than available width
 		msg := m.info.Msg
 		if len(msg) > infoWidth && infoWidth > 0 {
@@ -198,56 +145,21 @@ func (m statusCmp) View() string {
 		}
 		status += infoStyle.Render(msg)
 	} else {
-		status += styles.Padded().
-			Foreground(t.Text()).
-			Background(t.BackgroundSecondary()).
-			Width(availableWidht).
-			Render("")
+		// Nothing to say: fill with the plain bar background instead of a
+		// separately-colored blank pill, so an idle bar stays quiet.
+		status += barBg.Width(availableWidth).Render("")
 	}
 
-	status += diagnostics
-	status += modelSegment
+	status += diagnosticsSegment
 	return status
 }
 
-// modelFitted renders the model segment within a width budget, truncating the
-// name rather than the styled string so the escape sequences stay intact.
-func (m statusCmp) modelFitted(budget int) string {
-	full := m.model()
-	if budget <= 0 {
-		return ""
-	}
-	if lipgloss.Width(full) <= budget {
-		return full
-	}
-
-	t := theme.CurrentTheme()
-	name := modelName()
-	// Padded() adds one cell either side, and an ellipsis needs one more.
-	room := budget - 3
-	if room < 1 {
-		return ""
-	}
-	if len(name) > room {
-		name = name[:room] + "…"
-	}
-	return styles.Padded().
-		Background(t.Secondary()).
-		Foreground(t.Background()).
-		Render(name)
-}
-
-// modelName is the plain, unstyled name of the coder agent's model.
-func modelName() string {
-	coder, ok := config.Get().Agents[config.AgentCoder]
-	if !ok {
-		return "Unknown"
-	}
-	return models.SupportedModels[coder.Model].Name
-}
-
+// projectDiagnostics returns the styled diagnostics summary, or "" when
+// there is nothing to report -- a clean project shows nothing on the bar
+// rather than a permanent "No diagnostics".
 func (m *statusCmp) projectDiagnostics() string {
 	t := theme.CurrentTheme()
+	bg := t.BackgroundSecondary()
 
 	// Check if any LSP server is still initializing
 	initializing := false
@@ -261,7 +173,7 @@ func (m *statusCmp) projectDiagnostics() string {
 	// If any server is initializing, show that status
 	if initializing {
 		return lipgloss.NewStyle().
-			Background(t.BackgroundDarker()).
+			Background(bg).
 			Foreground(t.Warning()).
 			Render(fmt.Sprintf("%s Initializing LSP...", styles.SpinnerIcon))
 	}
@@ -288,35 +200,35 @@ func (m *statusCmp) projectDiagnostics() string {
 	}
 
 	if len(errorDiagnostics) == 0 && len(warnDiagnostics) == 0 && len(hintDiagnostics) == 0 && len(infoDiagnostics) == 0 {
-		return "No diagnostics"
+		return ""
 	}
 
 	diagnostics := []string{}
 
 	if len(errorDiagnostics) > 0 {
 		errStr := lipgloss.NewStyle().
-			Background(t.BackgroundDarker()).
+			Background(bg).
 			Foreground(t.Error()).
 			Render(fmt.Sprintf("%s %d", styles.ErrorIcon, len(errorDiagnostics)))
 		diagnostics = append(diagnostics, errStr)
 	}
 	if len(warnDiagnostics) > 0 {
 		warnStr := lipgloss.NewStyle().
-			Background(t.BackgroundDarker()).
+			Background(bg).
 			Foreground(t.Warning()).
 			Render(fmt.Sprintf("%s %d", styles.WarningIcon, len(warnDiagnostics)))
 		diagnostics = append(diagnostics, warnStr)
 	}
 	if len(hintDiagnostics) > 0 {
 		hintStr := lipgloss.NewStyle().
-			Background(t.BackgroundDarker()).
+			Background(bg).
 			Foreground(t.Text()).
 			Render(fmt.Sprintf("%s %d", styles.HintIcon, len(hintDiagnostics)))
 		diagnostics = append(diagnostics, hintStr)
 	}
 	if len(infoDiagnostics) > 0 {
 		infoStr := lipgloss.NewStyle().
-			Background(t.BackgroundDarker()).
+			Background(bg).
 			Foreground(t.Info()).
 			Render(fmt.Sprintf("%s %d", styles.InfoIcon, len(infoDiagnostics)))
 		diagnostics = append(diagnostics, infoStr)
@@ -325,18 +237,7 @@ func (m *statusCmp) projectDiagnostics() string {
 	return strings.Join(diagnostics, " ")
 }
 
-func (m statusCmp) model() string {
-	t := theme.CurrentTheme()
-
-	return styles.Padded().
-		Background(t.Secondary()).
-		Foreground(t.Background()).
-		Render(modelName())
-}
-
 func NewStatusCmp(lspClients map[string]*lsp.Client) StatusCmp {
-	helpWidget = getHelpWidget()
-
 	return &statusCmp{
 		messageTTL: 10 * time.Second,
 		lspClients: lspClients,
