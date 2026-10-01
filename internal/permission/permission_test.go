@@ -242,3 +242,53 @@ func TestConcurrentIdenticalRequestsPromptOnce(t *testing.T) {
 		t.Fatalf("identical concurrent requests should prompt once, prompted %d times", got)
 	}
 }
+
+// The test above states the contract but can only catch a violation when the
+// scheduler cooperates -- it went red once in CI and never on a laptop. This one
+// pins the ordering the contract actually rests on, without racing for it.
+//
+// Request holds promptMu across its grant check and its wait, so the instant the
+// waiter is woken it can return and release promptMu. The grant must therefore
+// already be recorded by then, or the next caller needing the same approval
+// finds nothing and prompts a second time.
+//
+// Made deterministic by an unbuffered channel: GrantPersistant parks on the send
+// until something receives, so anything it has not done by then is observably
+// not done, however the goroutines happen to be scheduled.
+func TestGrantIsRecordedBeforeTheWaiterIsWoken(t *testing.T) {
+	s := NewPermissionService().(*permissionService)
+
+	req := PermissionRequest{
+		ID:          "p1",
+		SessionID:   "s1",
+		ToolName:    "bash",
+		Action:      "execute",
+		Path:        "/tmp",
+		Fingerprint: "go test ./...",
+	}
+
+	respCh := make(chan bool)
+	s.pendingRequests.Store(req.ID, respCh)
+
+	go s.GrantPersistant(req)
+
+	recorded := false
+	for deadline := time.Now().Add(2 * time.Second); time.Now().Before(deadline); {
+		if s.hasSessionGrant(req) {
+			recorded = true
+			break
+		}
+		time.Sleep(time.Millisecond)
+	}
+	if !recorded {
+		t.Fatal("the waiter was woken before the grant was recorded, so a queued " +
+			"caller needing the same approval would prompt a second time")
+	}
+
+	// Drain the handoff so the goroutine does not outlive the test.
+	select {
+	case <-respCh:
+	case <-time.After(2 * time.Second):
+		t.Fatal("GrantPersistant never signalled the waiter")
+	}
+}
