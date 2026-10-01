@@ -16,7 +16,7 @@ jobs:
   goreleaser:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -36,5 +36,13 @@ jobs:
           version: latest
           args: release --clean
         env:
-          GITHUB_TOKEN: ${{ secrets.HOMEBREW_GITHUB_TOKEN }}
-          AUR_KEY: ${{ secrets.AUR_KEY }}
+          # The workflow's own token. This used to be HOMEBREW_GITHUB_TOKEN, a
+          # cross-repository token needed back when goreleaser also pushed to a
+          # Homebrew tap and to AUR. Those blocks are gone from .goreleaser.yml,
+          # so the only thing left to authenticate is publishing the release to
+          # this repository -- which the built-in token already covers.
+          #
+          # That secret was never set (the repository has none), so it resolved
+          # to an empty string and the first tag pushed would have failed to
+          # publish. AUR_KEY went the same way and is dropped with it.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
