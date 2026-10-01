@@ -48,18 +48,20 @@ func renderMessage(msg string, isUser bool, isFocused bool, width int, info ...s
 	t := theme.CurrentTheme()
 	bg := t.Background()
 
+	// A single-width accent bar, not a filled block: user and assistant
+	// messages are told apart by BorderForeground hue alone (Info vs
+	// Primary), not by weight or fill, so the framing stays light no matter
+	// how long the conversation gets.
 	style := styles.BaseStyle().
 		Width(width - 1).
 		BorderLeft(true).
 		Foreground(t.TextMuted()).
 		BorderForeground(t.Primary()).
-		BorderStyle(lipgloss.ThickBorder())
+		BorderStyle(lipgloss.NormalBorder())
 
 	if isUser {
-		bg = t.BackgroundSecondary()
 		style = style.
 			BorderForeground(t.Info()).
-			Background(bg).
 			Foreground(t.Text())
 	}
 
@@ -291,7 +293,7 @@ func renderReasoningDetails(
 		BorderLeft(true).
 		Foreground(t.TextMuted()).
 		BorderForeground(t.Primary()).
-		BorderStyle(lipgloss.ThickBorder())
+		BorderStyle(lipgloss.NormalBorder())
 
 	parts := []string{}
 
@@ -709,7 +711,7 @@ func renderToolMessage(
 	style := baseStyle.
 		Width(width - 1).
 		BorderLeft(true).
-		BorderStyle(lipgloss.ThickBorder()).
+		BorderStyle(lipgloss.NormalBorder()).
 		PaddingLeft(1).
 		BorderForeground(t.TextMuted())
 
@@ -859,7 +861,7 @@ func renderReasoningPreview(width int, spinnerFrame string) string {
 	style := baseStyle.
 		Width(width - 1).
 		BorderLeft(true).
-		BorderStyle(lipgloss.ThickBorder()).
+		BorderStyle(lipgloss.NormalBorder()).
 		BorderForeground(t.Primary()).
 		PaddingLeft(1)
 

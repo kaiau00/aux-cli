@@ -5,11 +5,8 @@ import "testing"
 // The property that matters: whatever fitStatus decides, the segments it keeps
 // must fit the width. Everything else is a preference; this is correctness,
 // because overflow is what the terminal silently clips.
-func totalWidth(f statusFit, help, tokens, diagnostics int) int {
-	w := f.ModelBudget
-	if f.ShowTokens {
-		w += tokens
-	}
+func totalWidth(f statusFit, help, diagnostics int) int {
+	w := 0
 	if f.ShowHelp {
 		w += help
 	}
@@ -21,79 +18,56 @@ func totalWidth(f statusFit, help, tokens, diagnostics int) int {
 
 func TestFitStatusNeverExceedsTheWidth(t *testing.T) {
 	const (
-		help  = 13 // "ctrl+? help" plus padding
-		diag  = 8
-		model = 22 // e.g. " Claude Sonnet 4.5 " plus padding
+		help = 13 // "ctrl+? help" plus padding
+		diag = 8
 	)
 	for _, width := range []int{200, 120, 100, 80, 70, 60, 50, 45, 40, 30, 20, 10, 5, 1, 0} {
-		for _, tokens := range []int{0, 18, 34} {
-			f := fitStatus(width, help, tokens, diag, model)
-			if got := totalWidth(f, help, tokens, diag); got > width {
-				t.Errorf("width=%d tokens=%d: kept %d cells, overflowing by %d", width, tokens, got, got-width)
-			}
+		f := fitStatus(width, help, diag)
+		if got := totalWidth(f, help, diag); got > width {
+			t.Errorf("width=%d: kept %d cells, overflowing by %d", width, got, got-width)
 		}
 	}
 }
 
 // A wide terminal must lose nothing.
 func TestFitStatusKeepsEverythingWhenThereIsRoom(t *testing.T) {
-	f := fitStatus(200, 13, 34, 8, 22)
-	if !f.ShowHelp || !f.ShowDiagnostics || !f.ShowTokens || f.ModelBudget != 22 {
+	f := fitStatus(200, 13, 8)
+	if !f.ShowHelp || !f.ShowDiagnostics {
 		t.Fatalf("a wide bar dropped something: %+v", f)
 	}
 }
 
-// The order is the whole design: the help hint is the most recoverable thing on
-// the bar, the model name the least, so the model must outlive both the hint
-// and the diagnostics count.
-func TestFitStatusGivesUpTheHintBeforeTheModel(t *testing.T) {
+// The order is the whole design: the help hint is the most recoverable thing
+// on the bar, so it must be the first thing dropped, and diagnostics must
+// outlive it.
+func TestFitStatusGivesUpTheHintBeforeDiagnostics(t *testing.T) {
 	const (
-		help   = 13
-		diag   = 8
-		model  = 22
-		tokens = 34
+		help = 13
+		diag = 8
 	)
-	// Wide enough for everything but the hint.
-	f := fitStatus(tokens+diag+model, help, tokens, diag, model)
+	// Wide enough for diagnostics but not the hint.
+	f := fitStatus(diag, help, diag)
 	if f.ShowHelp {
 		t.Fatal("the hint should be the first thing dropped")
 	}
-	if !f.ShowDiagnostics || f.ModelBudget != model {
-		t.Fatalf("dropping the hint alone should have sufficed: %+v", f)
-	}
-
-	// Wide enough only for tokens and the model.
-	f = fitStatus(tokens+model, help, tokens, diag, model)
-	if f.ShowHelp || f.ShowDiagnostics {
-		t.Fatalf("hint and diagnostics should both be gone: %+v", f)
-	}
-	if f.ModelBudget != model {
-		t.Fatalf("the model should still be whole: %+v", f)
-	}
-
-	// Narrower than that: the model gives ground, tokens do not.
-	f = fitStatus(tokens+5, help, tokens, diag, model)
-	if f.ModelBudget != 5 {
-		t.Fatalf("the model should take exactly the remaining room, got %+v", f)
+	if !f.ShowDiagnostics {
+		t.Fatalf("diagnostics should survive alone: %+v", f)
 	}
 }
 
-// Below the width where even the token figure fits, it goes too -- overflow is
-// the one outcome this function exists to make impossible.
-func TestFitStatusDropsTokensRatherThanOverflow(t *testing.T) {
-	f := fitStatus(10, 13, 34, 8, 22)
-	if f.ShowTokens {
-		t.Fatalf("tokens cannot fit in 10 cells and must be dropped: %+v", f)
-	}
-	if f.ModelBudget != 10 {
-		t.Fatalf("the remaining room should go to the model, got %+v", f)
+// Below the width where even diagnostics fit, both go -- overflow is the one
+// outcome this function exists to make impossible.
+func TestFitStatusDropsDiagnosticsRatherThanOverflow(t *testing.T) {
+	f := fitStatus(5, 13, 8)
+	if f.ShowHelp || f.ShowDiagnostics {
+		t.Fatalf("nothing fits in 5 cells and both must be dropped: %+v", f)
 	}
 }
 
 func TestFitStatusHandlesNoRoomAtAll(t *testing.T) {
 	for _, w := range []int{0, -1} {
-		f := fitStatus(w, 13, 34, 8, 22)
-		if f.ShowHelp || f.ShowDiagnostics || f.ShowTokens || f.ModelBudget != 0 {
+		f := fitStatus(w, 13, 8)
+		if f.ShowHelp || f.ShowDiagnostics {
 			t.Fatalf("width %d should render nothing, got %+v", w, f)
 		}
 	}

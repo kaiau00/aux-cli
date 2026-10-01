@@ -12,38 +12,44 @@ type AuxTheme struct {
 
 // NewAuxTheme creates a new instance of the Aux theme.
 func NewAuxTheme() *AuxTheme {
-	// Aux amber color palette
+	// Aux amber color palette, desaturated into a muted, natural earth-tone
+	// family. Primary/Secondary/Accent keep the amber identity; Error/
+	// Warning/Success/Info are each given their own distinct hue (rust,
+	// burnt orange, sage, dusty teal) instead of all clustering in the same
+	// yellow band the brand color lives in -- previously Primary and
+	// Warning were the literal same hex, and Success/Info were both yellows
+	// indistinguishable from Primary.
 	// Dark mode colors
-	darkBackground := "#15110a"
-	darkCurrentLine := "#1f1a12"
-	darkSelection := "#3a2d18"
-	darkForeground := "#f4e8d0"
-	darkComment := "#a9894d"
-	darkPrimary := "#f59e0b"
-	darkSecondary := "#fbbf24"
-	darkAccent := "#d97706"
-	darkRed := "#f97316"
-	darkOrange := "#f59e0b"
-	darkGreen := "#eab308"
-	darkCyan := "#facc15"
-	darkYellow := "#fde68a"
-	darkBorder := "#6b4e16"
+	darkBackground := "#1a1512"
+	darkCurrentLine := "#231d16"
+	darkSelection := "#3a2f22"
+	darkForeground := "#e8dcc8"
+	darkComment := "#9c8768"
+	darkPrimary := "#c98a3c"
+	darkSecondary := "#c2a05e"
+	darkAccent := "#a86b34"
+	darkRed := "#b5533d"
+	darkOrange := "#c2703a"
+	darkGreen := "#8a9a5b"
+	darkCyan := "#6f8f8a"
+	darkYellow := "#d9b876"
+	darkBorder := "#5a4526"
 
 	// Light mode colors
-	lightBackground := "#fff9ed"
-	lightCurrentLine := "#fff3d6"
-	lightSelection := "#fde7ad"
+	lightBackground := "#faf5e9"
+	lightCurrentLine := "#f3ead4"
+	lightSelection := "#e8d7ad"
 	lightForeground := "#2f2412"
-	lightComment := "#8a6324"
-	lightPrimary := "#b45309"
-	lightSecondary := "#d97706"
-	lightAccent := "#92400e"
-	lightRed := "#c2410c"
-	lightOrange := "#b45309"
-	lightGreen := "#a16207"
-	lightCyan := "#bb8004" // darkened from #ca8a04 for WCAG contrast against the light background
-	lightYellow := "#713f12"
-	lightBorder := "#e4b765"
+	lightComment := "#7a6544"
+	lightPrimary := "#9c6427"
+	lightSecondary := "#8f7233"
+	lightAccent := "#7a4c22"
+	lightRed := "#943f2c"
+	lightOrange := "#93532a"
+	lightGreen := "#5f6b3a"
+	lightCyan := "#3f6360" // darkened for WCAG contrast against the light background
+	lightYellow := "#5c4419"
+	lightBorder := "#c9ab72"
 
 	theme := &AuxTheme{}
 
@@ -123,52 +129,52 @@ func NewAuxTheme() *AuxTheme {
 
 	// Diff view colors
 	theme.DiffAddedColor = lipgloss.AdaptiveColor{
-		Dark:  "#fbbf24",
-		Light: "#b45309",
+		Dark:  "#9ba86a",
+		Light: "#5f6b3a",
 	}
 	theme.DiffRemovedColor = lipgloss.AdaptiveColor{
-		Dark:  "#fb923c",
-		Light: "#c2410c",
+		Dark:  "#c2703a",
+		Light: "#93532a",
 	}
 	theme.DiffContextColor = lipgloss.AdaptiveColor{
-		Dark:  "#d6b981",
+		Dark:  "#b8a684",
 		Light: "#7c5a1d",
 	}
 	theme.DiffHunkHeaderColor = lipgloss.AdaptiveColor{
-		Dark:  "#facc15",
-		Light: "#92400e",
+		Dark:  "#c2a05e",
+		Light: "#7a4c22",
 	}
 	theme.DiffHighlightAddedColor = lipgloss.AdaptiveColor{
-		Dark:  "#fff7cc",
-		Light: "#fcd34d",
+		Dark:  "#e8ecc9",
+		Light: "#a9b57a",
 	}
 	theme.DiffHighlightRemovedColor = lipgloss.AdaptiveColor{
-		Dark:  "#ffedd5",
-		Light: "#fdba74",
+		Dark:  "#ecd3bb",
+		Light: "#c48a5e",
 	}
 	theme.DiffAddedBgColor = lipgloss.AdaptiveColor{
-		Dark:  "#30250f",
-		Light: "#fef3c7",
+		Dark:  "#242918",
+		Light: "#eef0dd",
 	}
 	theme.DiffRemovedBgColor = lipgloss.AdaptiveColor{
-		Dark:  "#352112",
-		Light: "#ffedd5",
+		Dark:  "#2b2016",
+		Light: "#f3e4d6",
 	}
 	theme.DiffContextBgColor = lipgloss.AdaptiveColor{
 		Dark:  darkBackground,
 		Light: lightBackground,
 	}
 	theme.DiffLineNumberColor = lipgloss.AdaptiveColor{
-		Dark:  "#a9894d",
-		Light: "#9a6b25",
+		Dark:  "#9c8768",
+		Light: "#7a6544",
 	}
 	theme.DiffAddedLineNumberBgColor = lipgloss.AdaptiveColor{
-		Dark:  "#2a210f",
-		Light: "#fde68a",
+		Dark:  "#232a18",
+		Light: "#e2e5c9",
 	}
 	theme.DiffRemovedLineNumberBgColor = lipgloss.AdaptiveColor{
-		Dark:  "#2f1d10",
-		Light: "#fed7aa",
+		Dark:  "#2a2015",
+		Light: "#ecdcc9",
 	}
 
 	// Markdown colors
