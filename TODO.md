@@ -54,8 +54,8 @@ The point of this section is that Aux should only say true things about itself.
 
 | Claim | Backing |
 | --- | --- |
-| Race-clean under `-race` | Full suite, every push |
-| No unreachable code outside a declared baseline | `scripts/deadcode.sh`, 49 accepted entries with reasons |
+| Race-clean under `-race` | Full suite, every push. **Qualified 2026-10-01** — see below; the gate works, but a green gate was not being watched |
+| No unreachable code outside a declared baseline | `scripts/deadcode.sh`, 48 accepted entries with reasons |
 | Coverage cannot regress | `scripts/coverage.sh` against `.coverage-floor` |
 | Upgrades across schema versions work | Tested from every recorded version with a populated database |
 | A database from a newer build is refused | `ensureNotNewer`, tested |
@@ -65,12 +65,36 @@ The point of this section is that Aux should only say true things about itself.
 | The TUI fits the terminal it was given | Height invariant asserted across a width×height grid, empty and mid-turn, at page and app level |
 | Every glyph the TUI draws exists in the default macOS terminal font | `TestIconsAreFontSafe` walks the tree against a checked set |
 
+**Qualifying the race-clean row, 2026-10-01.** The claim above was false for five
+weeks and the table said it anyway. `main` went red when #22 merged on 2026-08-25
+and stayed red until 2026-10-01: the PR branch passed, the post-merge push to
+`main` failed, the session ended on the merge, and nobody looked again.
+
+What it caught was not a flaky test. `GrantPersistant` woke the caller waiting on
+an approval *before* recording the grant, so the woken caller could return and
+release `promptMu` while the grant was still unrecorded — and the next caller
+needing the same approval checked an empty list and prompted a second time. Two
+parallel tool calls needing one approval could ask the user twice after they had
+already answered. Fixed in #23 by recording first.
+
+Two things worth keeping from it, because neither is about this bug:
+
+- **A gate nobody reads is not a gate.** Three mechanical gates run on every
+  push, and that is still true. What was missing is that a *branch* passing was
+  treated as the merge being safe. `main`'s own post-merge run is the one that
+  decides, and it is the one that went unwatched.
+- **The concurrent test stated the contract but could only fail by luck.** It
+  went red once in CI and never in ~1000 local runs, including under `-race` and
+  CPU contention. A test that needs the scheduler's cooperation will eventually
+  be dismissed as flaky, which is nearly what happened. `TestGrantIsRecordedBeforeTheWaiterIsWoken`
+  pins the ordering directly instead and fails deterministically on the old code.
+
 **Not defensible — do not claim these.**
 
 | Claim | Why not |
 | --- | --- |
 | "Cheaper than opencode" | Python: one repository, five tasks, one model. The gap **grew from 19% to 63% when runs were added**, so n=5 may still be too few, and Aux's own spread is 46%. TypeScript (`bench/suite-ts.json`, 2026-08-24): 189% gap in median tokens, `aux eval compare` calls it **not conclusive** at n=5 (p=0.06), and aux was also *less reliable* than opencode on this suite (4 of 25 task-attempts failed vs opencode's 0 of 25) -- a caveat "cheaper" would hide. Directionally consistent across two languages, nowhere near a general claim |
-| "80% test coverage" | Actual coverage is **32.6%**. 19 of 74 packages have no test file at all |
+| "80% test coverage" | Actual coverage is **33.1%**. 17 of 74 packages have no test file at all |
 | "Demand paging saves tokens" | There is no demand paging. `DedupCompiler` measurably removes duplicate blobs — 47.9% on the fixture with that shape, deterministically — but it defaults to off because nobody has shown that swapping a duplicate for a reference leaves the model's behaviour unchanged. Token arithmetic is not an outcome |
 | "Aux manages the agent's context" | It does not. `ContextWindow` appears only in display code — nothing truncates, evicts, or budgets. `StateEvicted` is written nowhere. The compiler sends the full history. What actually ships is context *observability* plus manual exclude/pin, which is worth claiming and is not this |
 | "Production ready" | See the definition above |
@@ -131,17 +155,22 @@ worth doing, but a deliberate call given that cost, not a default next step.
 
 ### A2. Coverage, deliberately
 
-32.6% against a stated bar of 80%. The floor ratchet stops it regressing but
-does not close the gap. 19 packages have no test file:
+33.1% against a stated bar of 80%. The floor ratchet stops it regressing but
+does not close the gap. 17 packages have no test file (re-counted 2026-10-01;
+`internal/session` and `internal/tui` have since gained tests and have been
+removed from this list, and the repository root is added to it):
 
-`cmd`, `cmd/schema`, `internal/diff`, `internal/format`, `internal/history`,
-`internal/lsp` (+`protocol`, `util`, `watcher`), `internal/session`,
-`internal/tui` (+`components/logs`, `components/util`, `image`, `util`),
+`.` (root), `cmd`, `cmd/schema`, `internal/diff`, `internal/format`,
+`internal/history`, `internal/lsp` (+`protocol`, `util`, `watcher`),
+`internal/tui` (`components/logs`, `components/util`, `image`, `util`),
 `internal/version`, and the two test-helper packages.
 
-Priority order by blast radius: `internal/session` and `internal/diff` first
-(data loss and file mutation), then `cmd` (every entry point), then the rest.
-Raise `.coverage-floor` as it climbs — that is the ratchet's whole purpose.
+Priority order by blast radius: **`internal/diff` first** — 1,481 lines that
+mutate files, still with no test of any kind, and now the largest untested
+surface left since `internal/session` was covered. Then `cmd` (every entry
+point), then the rest. Raise `.coverage-floor` as it climbs — that is the
+ratchet's whole purpose, though note it is calibrated to CI, which measures
+lower than a laptop does.
 
 ### A3. Decide demand paging's default
 
@@ -306,10 +335,20 @@ that `.aux/` holds their full transcript inside their repository.
 
 ### B2. Tag a first release
 
-There are no releases. `goreleaser release` now works (archives, checksums,
-deb/rpm) since the unusable Homebrew and AUR blocks were removed. Until a tag
-exists, the install script has nothing to download and build-from-source is the
-only path.
+There are no releases and no tags. `.goreleaser.yml` itself is in order (archives,
+checksums, deb/rpm) since the unusable Homebrew and AUR blocks were removed. Until
+a tag exists, the install script has nothing to download and build-from-source is
+the only path — `install:43` fetches `releases/latest/download/…`, so **`./install`
+currently 404s for everyone.**
+
+**Corrected 2026-10-01.** "`goreleaser release` now works" was never tested, and
+it would not have. `.github/workflows/release.yml` passed goreleaser
+`GITHUB_TOKEN: ${{ secrets.HOMEBREW_GITHUB_TOKEN }}` — a cross-repository token
+left over from the tap that no longer exists. The repository has **no secrets at
+all**, so that resolved to an empty string and the first tag pushed would have
+failed to publish. Now uses the built-in `secrets.GITHUB_TOKEN`; the vestigial
+`AUR_KEY` is dropped. Still unproven end to end: nothing here is verified until a
+tag has actually produced downloadable artifacts and `./install` has fetched them.
 
 ### B3. Distribution identity
 
@@ -350,7 +389,7 @@ reorder this list — which is the point of B1.
 | --- | --- |
 | Task benchmark | `internal/evalsuite`, pinned revisions, command-decided success, exact two-sided rank test. Repetition enforced: three runs a side cannot reach p≤0.05 and the tool says so |
 | SQLite concurrency | Mostly a false alarm, recorded rather than deleted. `synchronous`/`cache_size` were genuinely per-connection; the pool was unbounded; pragma failures were ignored and are now verified at startup |
-| Reachability audit | `scripts/deadcode.sh` ratchets against a baseline. Found a complete unwired onboarding flow in seconds. All 23 debt entries now resolved; 49 accepted remain |
+| Reachability audit | `scripts/deadcode.sh` ratchets against a baseline. Found a complete unwired onboarding flow in seconds. All 23 debt entries now resolved; 48 accepted remain |
 | Coverage gate | Ratchets against `.coverage-floor`, calibrated to CI rather than a laptop |
 | Cached-token accounting | The dependency's streaming accumulator dropped `prompt_tokens_details`, so 150 turns recorded zero cache reads and cost was overstated several-fold — with the governor stopping work against the inflated figure |
 | Validation fail-closed | A dropped evidence write could report a **failed** criterion as *Validated* |
