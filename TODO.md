@@ -122,11 +122,11 @@ correct when you read it. The two newest were both machinery.
 
 Small, mechanical, and each one is currently a false statement somewhere.
 
-### P0.3 Merge PR #28
+### P0.3 Raise the coverage floor
 
-Small, tested, CI green, description accurate. Closes the "no skill can ever be
-promoted" dead end by exposing `evaluate`/`promote`/`rollback`. Raise
-`.coverage-floor` to 33.8 in the same change or the next.
+PR #28 is merged (see the closed appendix). What remains: set
+`.coverage-floor` to what `scripts/coverage.sh` reports on CI after it, in its
+own PR so the change is visible in history.
 
 ### P0.4 Repo name (plan M0.5 **[HUMAN]**)
 
@@ -442,6 +442,7 @@ model catalog is what makes Aux usable at all day to day.
 | Module identity | `github.com/aux-ai/aux-cli` resolved to nothing; renamed |
 | Install instructions | Every method in the README was fictional; now says build from source |
 | Package attribution | Upstream author's personal address removed from shipped files |
+| Skill promotion path (PR #28), 2026-10-02 | Outside tests, `skill.Service.Evaluate` and `Promote` had no callers, so no skill could be promoted. The CLI now exposes the lifecycle it already implemented: `aux skill evaluate <id> --result pass\|fail\|inconclusive` (`--baseline`, `--eval-run`, `--metrics`), `aux skill promote`, `aux skill rollback`; `skill list` shows ids and which candidates are promotable. Found by exercising it: rolled-back skills appeared in no list (`Service.RolledBack` fixes it), and `--result Pass` would have been stored but never unlocked promotion (`ParseEvalResult` rejects it). The result still comes from a run done elsewhere; `deadcode.sh` could not have caught the gap, since a constructed-but-never-invoked service looks reachable |
 | M0.4 repo hygiene, 2026-10-03 | `.claude/settings.json` (a dev-session Claude Code bash allowlist) untracked; `.claude/` and `.kilo/` ignored (`.codebase-memory/` already was). `git ls-tree -r HEAD --name-only \| rg '^\.claude\|codebase-memory\|\.kilo'` empty; `git ls-files \| rg '\.log$'` empty |
 | Title/turn lost update | Title generation saved a stale session over the turn's totals |
 | Dashboard disclosure | Handoff note said "no server" while one started by default |
