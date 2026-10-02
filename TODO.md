@@ -94,18 +94,25 @@ Two things worth keeping from it, because neither is about this bug:
 | Claim | Why not |
 | --- | --- |
 | "Cheaper than opencode" | Python: one repository, five tasks, one model. The gap **grew from 19% to 63% when runs were added**, so n=5 may still be too few, and Aux's own spread is 46%. TypeScript (`bench/suite-ts.json`, 2026-08-24): 189% gap in median tokens, `aux eval compare` calls it **not conclusive** at n=5 (p=0.06), and aux was also *less reliable* than opencode on this suite (4 of 25 task-attempts failed vs opencode's 0 of 25) -- a caveat "cheaper" would hide. Directionally consistent across two languages, nowhere near a general claim |
-| "80% test coverage" | Actual coverage is **33.1%**. 17 of 74 packages have no test file at all |
+| "80% test coverage" | Actual coverage is **33.1%**. 16 of 74 packages have no test file at all |
 | "Demand paging saves tokens" | There is no demand paging. `DedupCompiler` measurably removes duplicate blobs — 47.9% on the fixture with that shape, deterministically — but it defaults to off because nobody has shown that swapping a duplicate for a reference leaves the model's behaviour unchanged. Token arithmetic is not an outcome |
 | "Aux manages the agent's context" | It does not. `ContextWindow` appears only in display code — nothing truncates, evicts, or budgets. `StateEvicted` is written nowhere. The compiler sends the full history. What actually ships is context *observability* plus manual exclude/pin, which is worth claiming and is not this |
 | "Production ready" | See the definition above |
 
-**A standing rule.** Six times now, an item in this file has been wrong about
+**A standing rule.** Eight times now, an item in this file has been wrong about
 its own symptom — the SQLite alarm, the panic bullet, the migration item, the
-first-run item, the evicted-state entry in A4, and the A9 line claiming some
+first-run item, the evicted-state entry in A4, the A9 line claiming some
 turns "never reconcile the session" when reconciliation ran fine and was
-overwritten a moment later. Every correction came from measuring or from running the binary,
-never from re-reading the file. Treat every unmeasured claim here, including the
-confident-sounding ones, as a hypothesis.
+overwritten a moment later, and on 2026-10-01 two more: the race-clean row above,
+which asserted a green suite on every push while `main` had been red for five
+weeks, and B2's "`goreleaser release` now works", which was never run and would
+have failed three different ways. Every correction came from measuring or from
+running the binary, never from re-reading the file. Treat every unmeasured claim
+here, including the confident-sounding ones, as a hypothesis.
+
+Note the shape of the two newest ones: both were claims that a *mechanism* worked
+— a gate, a release pipeline. Unmeasured claims about machinery are the ones this
+file keeps getting wrong, because machinery looks correct when you read it.
 
 ---
 
@@ -156,14 +163,15 @@ worth doing, but a deliberate call given that cost, not a default next step.
 ### A2. Coverage, deliberately
 
 33.1% against a stated bar of 80%. The floor ratchet stops it regressing but
-does not close the gap. 17 packages have no test file (re-counted 2026-10-01;
-`internal/session` and `internal/tui` have since gained tests and have been
-removed from this list, and the repository root is added to it):
+does not close the gap. 16 packages have no test file (re-counted 2026-10-01;
+`internal/session` and `internal/tui` had gained tests and were removed from
+this list, the repository root was added to it, and `internal/version` came off
+it the same day — see B2, where being unable to test it was how the bug got in):
 
 `.` (root), `cmd`, `cmd/schema`, `internal/diff`, `internal/format`,
 `internal/history`, `internal/lsp` (+`protocol`, `util`, `watcher`),
 `internal/tui` (`components/logs`, `components/util`, `image`, `util`),
-`internal/version`, and the two test-helper packages.
+and the two test-helper packages.
 
 Priority order by blast radius: **`internal/diff` first** — 1,481 lines that
 mutate files, still with no test of any kind, and now the largest untested
@@ -295,7 +303,11 @@ Real, small, or low-confidence. None of it blocks anything.
   stops the access token being written into the stored transcript
 - **The splash carries a 36-character Go pseudo-version** — `⌬ Aux
   v0.0.0-20260824135349-7e216e5eba8f`. Truthful, and mostly noise on every
-  launch. How builds should identify themselves is a **[B4](#b4-product-decisions-an-agent-should-not-make-for-you)** question
+  launch. How builds should identify themselves is a **[B4](#b4-product-decisions-an-agent-should-not-make-for-you)** question.
+  *Narrowed 2026-10-01:* released builds will show the tag (`0.1.0`) once one
+  exists — that was the version-stamping bug in **[B2](#b2-tag-a-first-release)**,
+  not a display choice. What remains is only the local `go build` case, where a
+  pseudo-version is the honest answer and the question is whether to shorten it
 - **Four-tier context model** — a principle for reviewing the above, not a task:
   saving tokens means moving Tier 2 → Tier 3, not deleting Tier 2
 
@@ -335,20 +347,48 @@ that `.aux/` holds their full transcript inside their repository.
 
 ### B2. Tag a first release
 
-There are no releases and no tags. `.goreleaser.yml` itself is in order (archives,
-checksums, deb/rpm) since the unusable Homebrew and AUR blocks were removed. Until
-a tag exists, the install script has nothing to download and build-from-source is
-the only path — `install:43` fetches `releases/latest/download/…`, so **`./install`
-currently 404s for everyone.**
+There are no releases and no tags. Until a tag exists, the install script has
+nothing to download and build-from-source is the only path — `install:43` fetches
+`releases/latest/download/…`, so **`./install` currently 404s for everyone.**
 
-**Corrected 2026-10-01.** "`goreleaser release` now works" was never tested, and
-it would not have. `.github/workflows/release.yml` passed goreleaser
-`GITHUB_TOKEN: ${{ secrets.HOMEBREW_GITHUB_TOKEN }}` — a cross-repository token
-left over from the tap that no longer exists. The repository has **no secrets at
-all**, so that resolved to an empty string and the first tag pushed would have
-failed to publish. Now uses the built-in `secrets.GITHUB_TOKEN`; the vestigial
-`AUR_KEY` is dropped. Still unproven end to end: nothing here is verified until a
-tag has actually produced downloadable artifacts and `./install` has fetched them.
+**Corrected 2026-10-01.** "`goreleaser release` now works" was never tested. Three
+separate things would have broken the first tag, none of them visible from reading
+the config, and each found only by running the release machinery:
+
+1. **No usable token.** `release.yml` passed goreleaser
+   `GITHUB_TOKEN: ${{ secrets.HOMEBREW_GITHUB_TOKEN }}` — a cross-repository token
+   left over from the tap that no longer exists. The repository has **no secrets at
+   all**, so it resolved to an empty string and the release could not have been
+   published. Now the built-in `secrets.GITHUB_TOKEN`; vestigial `AUR_KEY` dropped.
+2. **`goreleaser check` was failing outright.** `archives.format` and
+   `snapshot.name_template` are both deprecated. The workflow pins
+   `version: latest`, so this was a time bomb regardless of the tag: the release
+   breaks the moment goreleaser drops them. Renamed to `archives.formats` and
+   `snapshot.version_template`.
+3. **The binaries would have misreported their own version.** goreleaser stamps the
+   tag via `-ldflags -X …/internal/version.Version`, and `version.go`'s `init()`
+   overwrote it with the version embedded in build info — so a `v0.1.0` release
+   would have reported `v0.0.0-20261001171652-a2747cbfbef9` in `aux --version`, in
+   every bug report, and on the splash. The fallback was written for
+   `go install …@latest` (no ldflags) and was correct while `go build` left
+   `Main.Version` empty; Go 1.24 onwards stamps a VCS pseudo-version there too, so
+   it began firing unconditionally and the tag always lost.
+
+   Worth noting *why* it survived: the old shape was untestable. `init()` has
+   already run before any test starts, and `internal/version` had no test file.
+   The logic now lives in `resolveVersion` with the build-info read injected, and
+   has four tests.
+
+**Now proven, 2026-10-01:** `goreleaser check` passes, and
+`goreleaser release --snapshot --clean` builds all four targets, four `tar.gz`
+archives, four deb/rpm packages and checksums. The archive extracted from
+`dist/aux-mac-arm64.tar.gz` reports the version goreleaser stamped rather than a
+pseudo-version, and the generated names match what `install:23` expects for every
+os/arch pair.
+
+**Still unproven:** no tag has been pushed, so nothing has gone through the real
+`release` workflow, no artifacts have ever been downloaded, and `./install` has
+never fetched one. A snapshot is not a release.
 
 ### B3. Distribution identity
 
