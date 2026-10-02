@@ -531,6 +531,14 @@ func getUpdatedFile(text string, action PatchAction, path string) (string, error
 			destLines = append(destLines, chunk.InsLines...)
 		}
 		origIndex += len(chunk.DelLines)
+
+		// The check above only guards where a chunk starts. A chunk sitting at
+		// end-of-file that claims to delete more lines than remain pushes
+		// origIndex past the end, and the trailing slice below then panics --
+		// in the code path that rewrites the user's files. Refuse it instead.
+		if origIndex > len(origLines) {
+			return "", NewDiffError(fmt.Sprintf("%s: chunk deletes %d line(s) past the end of the file (%d lines)", path, origIndex-len(origLines), len(origLines)))
+		}
 	}
 
 	destLines = append(destLines, origLines[origIndex:]...)
