@@ -485,7 +485,7 @@ prompt because it is.
 
 **Done when.** `compiler_test.go` asserts both pages are resident; a scratch
 session's `ContextCompiled` event payload shows them (query
-`SELECT payload FROM events WHERE type='context.compiled' ORDER BY seq DESC LIMIT 1`).
+`SELECT payload_json FROM domain_events WHERE event_type='context.compiled' ORDER BY sequence DESC LIMIT 1`).
 
 ---
 
@@ -1081,7 +1081,7 @@ TASK=$(/tmp/aux-bin task list --json | jq -r '.[0].id')   # add `task list` if m
 /tmp/aux-bin memory list             # one procedural, two episodic
 
 # 3. The brain reaches the model (M1.1–M1.3)
-sqlite3 .aux/aux.db "select payload from events where type='context.compiled' order by seq desc limit 1" \
+sqlite3 .aux/aux.db "select payload_json from domain_events where event_type='context.compiled' order by sequence desc limit 1" \
   | jq '.residentPages, .tokenEstimate'
 #    expect residentPages to include the manifest and task spec pages
 

@@ -2,11 +2,6 @@
 // task/history state, separately from how that history is stored or displayed.
 // Provider adapters translate the
 // compiled messages into provider-specific formats but never choose context.
-//
-// PR 8 ships the compatibility compiler: it renders the stored transcript
-// unchanged so history and prompt become distinct code paths with parity. Later
-// phases replace the body of Compile with typed pages and demand paging behind
-// the same Compiler interface.
 package promptcompiler
 
 import (
@@ -142,13 +137,25 @@ func (c *CompatibilityCompiler) Compile(in Input) CompiledPrompt {
 // construction; empty inputs are omitted.
 func RenderSystemAddendum(projectManifest, taskSpec string) string {
 	var parts []string
-	if s := strings.TrimSpace(projectManifest); s != "" {
-		parts = append(parts, "# Project\n\n"+s)
-	}
-	if s := strings.TrimSpace(taskSpec); s != "" {
-		parts = append(parts, "# Task\n\n"+s)
+	for _, s := range []string{projectSection(projectManifest), taskSection(taskSpec)} {
+		if s != "" {
+			parts = append(parts, s)
+		}
 	}
 	return strings.Join(parts, "\n\n")
+}
+
+// projectSection and taskSection are the addendum's two pages, exactly as
+// sent, so page token estimates add up to what the provider receives.
+func projectSection(manifest string) string { return headed("# Project", manifest) }
+func taskSection(spec string) string        { return headed("# Task", spec) }
+
+func headed(heading, body string) string {
+	body = strings.TrimSpace(body)
+	if body == "" {
+		return ""
+	}
+	return heading + "\n\n" + body
 }
 
 func sections(addendum string, messageCount int, messageTokens int64) []Section {
@@ -161,8 +168,8 @@ func sections(addendum string, messageCount int, messageTokens int64) []Section 
 
 // decomposePages explains the compiled prompt page by page. Each transcript
 // message becomes a resident page (a tool message becomes a tool_digest page);
-// compiled project/task knowledge becomes available (not-yet-loaded) pages so
-// the manifest shows what is known but not sent in compatibility mode.
+// the project knowledge and task spec are resident too, sent in the system
+// addendum.
 func decomposePages(in Input, msgs []message.Message) []PageDescriptor {
 	pages := make([]PageDescriptor, 0, len(msgs)+2)
 	for i, m := range msgs {
@@ -182,20 +189,20 @@ func decomposePages(in Input, msgs []message.Message) []PageDescriptor {
 			Content:       content,
 		})
 	}
-	if in.ProjectManifest != "" {
+	if s := projectSection(in.ProjectManifest); s != "" {
 		pages = append(pages, PageDescriptor{
 			Kind: "project_manifest", StableKey: "project_manifest",
-			ContentHash: hashString(in.ProjectManifest), TokenEstimate: estimateText(in.ProjectManifest),
-			State: "available", Reason: "known project knowledge not loaded in compatibility mode",
-			Content: in.ProjectManifest,
+			ContentHash: hashString(s), TokenEstimate: estimateText(s),
+			State: "resident", Reason: "project knowledge",
+			Content: s,
 		})
 	}
-	if in.TaskSpecText != "" {
+	if s := taskSection(in.TaskSpecText); s != "" {
 		pages = append(pages, PageDescriptor{
 			Kind: "task_spec", StableKey: "task_spec:" + in.TaskID,
-			ContentHash: hashString(in.TaskSpecText), TokenEstimate: estimateText(in.TaskSpecText),
-			State: "available", Reason: "compiled task spec not loaded in compatibility mode",
-			Content: in.TaskSpecText,
+			ContentHash: hashString(s), TokenEstimate: estimateText(s),
+			State: "resident", Reason: "compiled task spec",
+			Content: s,
 		})
 	}
 	return pages

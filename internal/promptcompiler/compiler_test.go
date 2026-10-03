@@ -218,11 +218,13 @@ func TestCompileDecomposesIntoPages(t *testing.T) {
 	out := c.Compile(in)
 	pages := out.Manifest.Pages
 
-	// Three transcript messages -> three resident pages; the tool message is a
-	// tool_digest page.
+	// Three transcript messages -> three resident pages (the tool message is a
+	// tool_digest page), plus the project manifest and task spec, which are
+	// sent in the system addendum and so are resident too.
 	var resident, available int
-	var haveToolDigest, haveManifest, haveSpec bool
+	var haveToolDigest bool
 	var residentTokens int64
+	states := map[string]string{}
 	for _, p := range pages {
 		switch p.State {
 		case "resident":
@@ -231,34 +233,24 @@ func TestCompileDecomposesIntoPages(t *testing.T) {
 		case "available":
 			available++
 		}
+		states[p.Kind] = p.State
 		if p.Kind == "tool_digest" {
 			haveToolDigest = true
 		}
-		if p.Kind == "project_manifest" {
-			haveManifest = true
-		}
-		if p.Kind == "task_spec" {
-			haveSpec = true
-		}
 	}
-	if resident != 3 {
-		t.Fatalf("expected 3 resident pages (one per message), got %d", resident)
+	if resident != 5 || available != 0 {
+		t.Fatalf("expected 5 resident pages and none available, got %d resident, %d available", resident, available)
 	}
-	if available != 2 || !haveManifest || !haveSpec {
-		t.Fatalf("expected project_manifest + task_spec available pages")
+	if states["project_manifest"] != "resident" || states["task_spec"] != "resident" {
+		t.Fatalf("project_manifest and task_spec must be resident, got %v", states)
 	}
 	if !haveToolDigest {
 		t.Fatalf("tool message should become a tool_digest page")
 	}
-	// Resident page tokens reconcile with the transcript's token estimate within
-	// per-page rounding tolerance: each page rounds up independently.
-	var transcriptTokens int64
-	for _, s := range out.Manifest.Sections {
-		if s.Kind == "recent_conversation" {
-			transcriptTokens = s.TokenEstimate
-		}
-	}
-	delta := residentTokens - transcriptTokens
+	// Resident page tokens reconcile with the prompt token estimate within
+	// per-page rounding tolerance: each page rounds up independently, and the
+	// addendum joins its two pages with one separator.
+	delta := residentTokens - out.EstimatedTokens
 	if delta < 0 {
 		delta = -delta
 	}
