@@ -39,7 +39,7 @@ What the audit also found is that **the product thesis is not wired in**:
 - The bash "safe read-only" fast path was a prefix match with no shell-operator
   check, and its list included `kill`, `timeout`, `time`, `nice`, `nohup`,
   `env`, `go run`, `go test`. `echo hi; rm -rf .` ran without a prompt.
-  Closed by M0.1; argument-level holes remain (see *Opportunistic*).
+  Closed by M0.1, and the argument-level holes it found by M0.1b.
 
 So: a clean, well-tested, well-instrumented agent whose instrumentation does
 not yet feed back into the agent. The distance from here to "the thesis is
@@ -89,7 +89,7 @@ Aux should only say true things about itself. Verified 2026-10-02.
 | The TUI fits the terminal it was given | Height invariant asserted across a width×height grid |
 | `.aux/` does not leak into commits | Self-ignoring `.gitignore`, verified in a scratch repo |
 | A missing API key produces a clear message | Verified: lists every env var and the config path |
-| Chained, substituted, redirected, and wrapper commands ask before running | M0.1: `internal/llm/tools/bash_safety_test.go` — every audit exploit plus `\|\|`, backticks, `${`, newline, `>`, `<`, `&`, and each removed wrapper/`go` entry; `Run` prompts on `echo hi; rm -rf .` and refuses `ls && curl x` |
+| Commands that change files or run programs ask before running | `internal/llm/tools/bash_safety_test.go`. M0.1: every audit exploit plus `\|\|`, backticks, `${`, newline, `>`, `<`, `&`, and each removed wrapper/`go` entry; `Run` prompts on `echo hi; rm -rf .` and refuses `ls && curl x`. M0.1b: mutating arguments to safe-listed commands (`go list -toolexec`, `git log --output`, `git branch -D`, `git ls-remote --upload-pack`, quoting disguises) all prompt. Caveat: `go list`/`go doc` may still fill the module cache |
 
 **Not defensible — do not claim these.**
 
@@ -98,7 +98,6 @@ Aux should only say true things about itself. Verified 2026-10-02.
 | "Aux understands how your project works and gives the model only what it needs" | Nothing the profile, memory, or task compiler produces reaches the model. See [P1.1](#p11-send-the-project-manifest-and-task-spec) |
 | "Improves every time you use it" / "the tenth task is cheaper" | No automatic evidence producer; see [P1.3](#p13-run-validation-at-task-end). Nothing has ever been promoted to a skill |
 | "The prompt is compiled, not just concatenated" | Both compilers send the full transcript. `DedupCompiler` stubs duplicate blobs and defaults to off |
-| "Every command that changes something asks first" | Chaining and wrappers are closed (M0.1), but safe-listed commands still take mutating arguments without a prompt — measured 2026-10-03, see *Opportunistic* |
 | "Cheaper than opencode" | Python n=5: gap grew 19%→63% as runs were added. TypeScript n=5: p=0.06 and Aux failed 4/25 task-attempts vs 0/25. Decided: dropped until P1 is done |
 | "80% test coverage" | 33.8%. 15 packages have no test file |
 | "Aux manages the agent's context" | `ContextWindow` appears only in display code. Nothing truncates, evicts, or budgets. `evicted`/`faulted` are written nowhere |
@@ -392,15 +391,12 @@ Real, small, or low-confidence. None of it blocks anything.
 - Local-build version string: shorten the pseudo-version on the splash
 - Four-tier context model as a review principle: saving tokens means moving
   Tier 2 → Tier 3, not deleting Tier 2
-- **Bash safe list, argument-level holes (found during M0.1, measured in a
-  scratch repo 2026-10-03).** These pass `isSafeReadOnly` and run with no
-  prompt: `go list -export -toolexec <prog> .` executed `<prog>`;
-  `git log --output=<file>` wrote the file; `git branch -D <b>` deleted the
-  branch. By the same reading, not run: `git tag -d`, `git remote add/remove`,
-  `git grep -O<cmd>` (`--open-files-in-pager`), `go env -w`, `hostname <name>`,
-  `date -s`. Likely fix: drop `go list`/`go env` flags and the mutating `git`
-  subcommands from the fast path, or allow only argument-free forms. Worth its
-  own item before the claim above can say "every command"
+- **Bash safe list still reads outside the project without a prompt (by
+  reading, found during M0.1b).** `ls ~/.ssh` and `du ~` list names outside
+  the working directory, and `printenv` prints every environment variable,
+  provider API keys included, into the transcript. Nothing is written or
+  sent anywhere new, but it sits awkwardly next to "Reads outside the project
+  need approval", which is about the read tools, not bash
 - `bashDescription()` says commands time out after 30 minutes when no timeout
   is given; `DefaultTimeout` is 1 minute (`bash.go`)
 - The banned-command check now matches every word, so `grep -r curl .` or
@@ -439,6 +435,7 @@ model catalog is what makes Aux usable at all day to day.
 
 | | |
 | --- | --- |
+| M0.1b safe-list argument rules, 2026-10-03 | Each safe-list entry has an argument rule: dangerous `git` long options refused with their abbreviations, `-O`/`-f` short flags refused, `git branch`/`tag` listing flags only, `git remote` bare/`-v`/`show`/`get-url`, `go list`/`go env` listed flags only, `date`/`hostname` display only. Quotes, backslashes, braces and `$` force a prompt — each was measured disguising `--output`. 44 rejections and 32 kept read-only forms in `bash_safety_test.go` |
 | M0.1 bash safe-list bypass, 2026-10-03 | `isSafeReadOnly` refuses the fast path on any shell operator; wrappers (`env`, `timeout`, `nohup`, `nice`, `time`, `kill`, `killall`, `set`, `unset`, `top`) and code-executing `go` subcommands removed; banned check runs on every word. `bash_safety_test.go`: 29 bypasses rejected, 7 read-only commands kept, `Run` prompts with the full command as fingerprint |
 | Audit, 2026-10-02 | Outside read of `278b9f1`: build, vet, `-race` suite, both gates, CLI in a scratch repo, agent loop and compiler traced end to end. Found: manifest never sent, memory renders keys, learning loop has no automatic producer, bash allowlist bypass, catalog 17 months stale, slash commands inert, no resume flag, beta OpenAI SDK. Confirmed every mechanical claim in the previous claims table except "commands ask before running" |
 | Task benchmark | `internal/evalsuite`, pinned revisions, command-decided success, exact two-sided rank test. Repetition enforced |

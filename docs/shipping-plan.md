@@ -136,6 +136,7 @@ Confirmed broken, each owned by exactly one item below:
 | No automatic validation evidence; learning loop inert in TUI | `validation.Service.RunIntent` called only from `cmd/validate.go`, `cmd/eval.go` | M1.4 |
 | `govpolicy` has no non-test callers | PR #28 description; `rg` confirms | M1.5 |
 | Bash safe-list bypassable | `internal/llm/tools/bash.go:46-54, 255-261` | M0.1 |
+| Safe-listed commands take mutating arguments (found during M0.1) | `go list -toolexec`, `git log --output`, `git branch -D` measured | M0.1b |
 | `-p` auto-approves everything | `internal/app/app.go:430` | M0.2 |
 | Model catalog hardcoded, newest Anthropic entry May 2025 | `internal/llm/models/anthropic.go:88`; lookup `agent.go:1182`, `config.go:631` | M2.1 |
 | Provider SDKs stale, OpenAI SDK is a beta | `go.mod` | M2.2 |
@@ -278,6 +279,58 @@ echo $(rm -rf .)
 
 **Guardrails.** Do not add a shell parser dependency. Do not try to be clever
 about quoting; conservative is correct here. Do not change `-p` here (M0.2).
+
+---
+
+### M0.1b Safe-listed commands with mutating arguments — **S**
+
+Added 2026-10-03 from what M0.1 found. Lands after M0.1 (stacked on it).
+
+**Goal.** A safe-listed command keeps its prompt-free fast path only with
+arguments that cannot mutate state, execute a program, or print a file named
+in its arguments.
+
+**Why.** After M0.1 the fast path is a prefix match on a command with no shell
+operators, and every argument passes. Measured in a scratch repo:
+`go list -export -toolexec <prog> .` ran `<prog>`; `git log --output=<file>`
+wrote the file; `git branch -D <b>` deleted the branch;
+`git ls-remote --upload-pack='<cmd>' .` ran `<cmd>`. Quoting disguises a flag
+from a word check: `'--output=x'`, `--out\put=x`, `{--output=x,}` and
+`$'\x2d-output=x'` each wrote the file. By reading, not run: `git tag -d`,
+`git remote add/remove/set-url`, `git grep -O<cmd>`, `go env -w`,
+`hostname <name>`, `date -s`, `git diff --no-index <outside-file>`,
+`git blame --contents <file>`, `git config --file <file>`.
+
+**Files.** `internal/llm/tools/bash.go`, `bash_safety_test.go`.
+
+**Steps.**
+1. Refuse the fast path when the command contains `'`, `"`, `\`, `{`, `}`, or
+   `$`. These are how a flag is disguised; refusing them keeps the argument
+   check a plain whitespace split.
+2. Give each safe-list entry an optional argument rule, checked against the
+   words after the prefix:
+   - every `git` entry: no long option that is a prefix of `output`,
+     `upload-pack`, `exec`, `no-index`, `ext-diff`, `open-files-in-pager`,
+     `contents`, `file` (so abbreviations are caught); no short-option cluster
+     containing `O` or `f`.
+   - `git branch`, `git tag`: listing flags only, no positional arguments.
+   - `git remote`: bare, `-v`, or `show` / `get-url`.
+   - `go list`, `go env`: only listed flags (`go list`: `-json -f -m -e
+     -deps -find -test -versions -u -retracted`; `go env`: `-json -changed`),
+     with `-x` and `--x` treated alike.
+   - `date`: only `+format` and the UTC / ISO / RFC display flags.
+   - `hostname`: bare or display flags only.
+3. Tell the model in `bashDescription()` that quotes, backslashes, braces,
+   and `$` also mean a prompt.
+
+**Done when.** `bash_safety_test.go` rejects every example above and accepts
+`git branch`, `git branch -a`, `git tag`, `git remote -v`,
+`git log --oneline -5`, `git config --get user.name`, `go list ./...`,
+`go list -m all`, `go env GOPATH`, `date +%s`, `hostname`.
+
+**Guardrails.** Same as M0.1: no shell parser, prompt when in doubt. A false
+positive costs one prompt with "allow for session"; a false negative runs
+unprompted.
 
 ---
 
@@ -937,6 +990,7 @@ in M1.6.
 ## 6. Release checklist for v0.1.0 (in order)
 
 - [ ] M0.1 bash safe-list — merged, test cited in `TODO.md`
+- [ ] M0.1b safe-list argument rules — merged
 - [ ] M0.2 `--yes` — merged
 - [ ] M0.3 PR #28 merged, floor raised
 - [ ] M0.4 hygiene — merged

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 	"unicode"
@@ -44,24 +45,68 @@ var bannedCommands = []string{
 	"http-prompt", "chrome", "firefox", "safari",
 }
 
+// safeCommand is a command prefix that may run without a permission prompt.
+// argsOK, when set, must accept the whitespace-separated words after the
+// prefix; nil means no argument can make the command mutate anything.
+type safeCommand struct {
+	prefix string
+	argsOK func(args []string) bool
+}
+
 // safeReadOnlyCommands run without a permission prompt, and only when the
-// command contains none of shellOperators. Nothing that wraps another command
-// (env, timeout, nohup, …) or executes project code (go test, go run, …)
-// belongs here: either turns the prefix match into "run anything".
-var safeReadOnlyCommands = []string{
-	"ls", "echo", "pwd", "date", "cal", "uptime", "whoami", "id", "groups", "printenv", "which", "type", "whereis",
-	"whatis", "uname", "hostname", "df", "du", "free", "ps",
+// command contains none of shellOperators or disguisingChars. Nothing that
+// wraps another command (env, timeout, nohup, …) or executes project code
+// (go test, go run, …) belongs here: either turns the prefix match into "run
+// anything".
+var safeReadOnlyCommands = []safeCommand{
+	{prefix: "ls"}, {prefix: "echo"}, {prefix: "pwd"}, {prefix: "cal"}, {prefix: "uptime"}, {prefix: "whoami"},
+	{prefix: "id"}, {prefix: "groups"}, {prefix: "printenv"}, {prefix: "which"}, {prefix: "type"}, {prefix: "whereis"},
+	{prefix: "whatis"}, {prefix: "uname"}, {prefix: "df"}, {prefix: "du"}, {prefix: "free"}, {prefix: "ps"},
+	{prefix: "date", argsOK: dateDisplayOnly},
+	{prefix: "hostname", argsOK: onlyFlags("-s", "--short", "-f", "--fqdn", "--long", "-d", "--domain",
+		"-i", "--ip-address", "-I", "--all-ip-addresses")},
 
-	"git status", "git log", "git diff", "git show", "git branch", "git tag", "git remote", "git ls-files", "git ls-remote",
-	"git rev-parse", "git config --get", "git config --list", "git describe", "git blame", "git grep", "git shortlog",
+	{prefix: "git status", argsOK: gitReadOnlyArgs},
+	{prefix: "git log", argsOK: gitReadOnlyArgs},
+	{prefix: "git diff", argsOK: gitReadOnlyArgs},
+	{prefix: "git show", argsOK: gitReadOnlyArgs},
+	{prefix: "git branch", argsOK: onlyFlags("-a", "--all", "-r", "--remotes", "-v", "-vv", "--verbose", "-l", "--list",
+		"--show-current", "--merged", "--no-merged", "--contains", "--no-contains", "--points-at", "--sort", "--format",
+		"--color", "--no-color", "--column", "--no-column")},
+	{prefix: "git tag", argsOK: onlyFlags("-l", "--list", "-n", "--sort", "--format", "--merged", "--no-merged",
+		"--contains", "--no-contains", "--points-at", "--color", "--column", "--no-column", "-i", "--ignore-case")},
+	{prefix: "git remote", argsOK: gitRemoteReadOnly},
+	{prefix: "git ls-files", argsOK: gitReadOnlyArgs},
+	{prefix: "git ls-remote", argsOK: gitReadOnlyArgs},
+	{prefix: "git rev-parse", argsOK: gitReadOnlyArgs},
+	{prefix: "git config --get", argsOK: gitReadOnlyArgs},
+	{prefix: "git config --list", argsOK: gitReadOnlyArgs},
+	{prefix: "git describe", argsOK: gitReadOnlyArgs},
+	{prefix: "git blame", argsOK: gitReadOnlyArgs},
+	{prefix: "git grep", argsOK: gitReadOnlyArgs},
+	{prefix: "git shortlog", argsOK: gitReadOnlyArgs},
 
-	"go version", "go help", "go list", "go env", "go doc",
+	{prefix: "go version"}, {prefix: "go help"}, {prefix: "go doc"},
+	{prefix: "go list", argsOK: goFlagsOnly("json", "f", "m", "e", "deps", "find", "test", "versions", "u", "retracted")},
+	{prefix: "go env", argsOK: goFlagsOnly("json", "changed")},
 }
 
 // shellOperators chain, substitute, redirect, or background commands. Any of
 // them lets a safe-looking prefix carry a second command, so their presence
-// disqualifies the fast path. Quoting is deliberately not considered.
+// disqualifies the fast path.
 var shellOperators = []string{";", "&&", "||", "|", "`", "$(", "${", "\n", ">", "<", "&"}
+
+// disguisingChars let the shell turn a harmless-looking word into a flag:
+// '--output=x', --out\put=x, {--output=x,} and $'\x2d-output=x' all reach git
+// as --output=x. Refusing them keeps the argument rules a whitespace split.
+const disguisingChars = `'"\{}$`
+
+// gitDangerousLongOptions mutate, execute a program, or print a file named in
+// the arguments. Git accepts unambiguous abbreviations, so any long option
+// that is a prefix of one of these is refused too.
+var gitDangerousLongOptions = []string{
+	"output", "upload-pack", "exec", "no-index", "ext-diff", "open-files-in-pager", "contents", "file",
+}
 
 // isSafeReadOnly reports whether command may run without asking the user.
 func isSafeReadOnly(command string) bool {
@@ -70,15 +115,97 @@ func isSafeReadOnly(command string) bool {
 			return false
 		}
 	}
-	cmdLower := strings.ToLower(command)
+	if strings.ContainsAny(command, disguisingChars) {
+		return false
+	}
 	for _, safe := range safeReadOnlyCommands {
-		if strings.HasPrefix(cmdLower, safe) {
-			if len(cmdLower) == len(safe) || cmdLower[len(safe)] == ' ' || cmdLower[len(safe)] == '-' {
-				return true
-			}
+		p := safe.prefix
+		if len(command) < len(p) || !strings.EqualFold(command[:len(p)], p) {
+			continue
+		}
+		if len(command) == len(p) || command[len(p)] == ' ' || command[len(p)] == '-' {
+			return safe.argsOK == nil || safe.argsOK(strings.Fields(command[len(p):]))
 		}
 	}
 	return false
+}
+
+func gitReadOnlyArgs(args []string) bool {
+	for _, arg := range args {
+		switch {
+		case arg == "--":
+		case strings.HasPrefix(arg, "--"):
+			name, _, _ := strings.Cut(arg[2:], "=")
+			for _, dangerous := range gitDangerousLongOptions {
+				if strings.HasPrefix(dangerous, name) {
+					return false
+				}
+			}
+		case strings.HasPrefix(arg, "-"):
+			// -O opens matches in a program (git grep); -f reads a named file.
+			if strings.ContainsAny(arg[1:], "Of") {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func gitRemoteReadOnly(args []string) bool {
+	for len(args) > 0 && (args[0] == "-v" || args[0] == "--verbose") {
+		args = args[1:]
+	}
+	if len(args) == 0 {
+		return true
+	}
+	return (args[0] == "show" || args[0] == "get-url") && gitReadOnlyArgs(args[1:])
+}
+
+// onlyFlags accepts arguments that are all listed flags, optionally with an
+// =value. Positional arguments are refused: for git branch and git tag a
+// bare name creates one.
+func onlyFlags(allowed ...string) func([]string) bool {
+	return func(args []string) bool {
+		for _, arg := range args {
+			name, _, _ := strings.Cut(arg, "=")
+			if !strings.HasPrefix(arg, "-") || !slices.Contains(allowed, name) {
+				return false
+			}
+		}
+		return true
+	}
+}
+
+// goFlagsOnly accepts positional arguments and the listed flags. The go
+// command treats -x and --x alike, and -toolexec or -w must never get through.
+func goFlagsOnly(allowed ...string) func([]string) bool {
+	return func(args []string) bool {
+		for _, arg := range args {
+			if !strings.HasPrefix(arg, "-") {
+				continue
+			}
+			name, _, _ := strings.Cut(strings.TrimPrefix(strings.TrimPrefix(arg, "-"), "-"), "=")
+			if !slices.Contains(allowed, name) {
+				return false
+			}
+		}
+		return true
+	}
+}
+
+// dateDisplayOnly accepts +format and display flags; any other argument may
+// set the clock (date -s, date MMDDhhmm).
+func dateDisplayOnly(args []string) bool {
+	for _, arg := range args {
+		switch {
+		case strings.HasPrefix(arg, "+"):
+		case arg == "-u", arg == "--utc", arg == "--universal", arg == "-R", arg == "--rfc-email":
+		case strings.HasPrefix(arg, "-I"), strings.HasPrefix(arg, "--iso-8601"), strings.HasPrefix(arg, "--rfc-3339"):
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 // bannedCommandIn returns the first banned command appearing anywhere in
@@ -99,7 +226,11 @@ func bannedCommandIn(command string) (string, bool) {
 
 func bashDescription() string {
 	bannedCommandsStr := strings.Join(bannedCommands, ", ")
-	safeCommandsStr := strings.Join(safeReadOnlyCommands, ", ")
+	safePrefixes := make([]string, len(safeReadOnlyCommands))
+	for i, safe := range safeReadOnlyCommands {
+		safePrefixes[i] = safe.prefix
+	}
+	safeCommandsStr := strings.Join(safePrefixes, ", ")
 	return fmt.Sprintf(`Executes a given bash command in a persistent shell session with optional timeout, ensuring proper handling and security measures.
 
 Before executing the command, please follow these steps:
@@ -111,7 +242,7 @@ Before executing the command, please follow these steps:
 2. Security Check:
  - For security and to limit the threat of a prompt injection attack, some commands are limited or banned. If you use a disallowed command, you will receive an error message explaining the restriction. Explain the error to the User.
  - Verify that the command does not use any of the banned commands, anywhere in it: %s.
- - Only a single command starting with one of these runs without asking the user: %s. Any other command asks the user for permission first, and so does any command containing ;, &&, ||, |, &, a backtick, $(, ${, a redirection (> or <), or a newline.
+ - Only a single command starting with one of these, with read-only arguments, runs without asking the user: %s. Any other command asks the user for permission first, and so does any command containing ;, &&, ||, |, &, a backtick, $, a quote, a backslash, a brace, a redirection (> or <), or a newline.
 
 3. Command Execution:
  - After ensuring proper quoting, execute the command.
