@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/kaiau00/aux-cli/internal/eval"
-	"github.com/kaiau00/aux-cli/internal/govpolicy"
 )
 
 // ExperimentVM is one experiment for the dashboard's Optimization view.
@@ -22,21 +21,11 @@ type ExperimentVM struct {
 	Comparison *eval.Comparison `json:"comparison,omitempty"`
 }
 
-// PolicyVM is one governed-cost policy for the dashboard's Optimization view.
-type PolicyVM struct {
-	ID        string `json:"id"`
-	OwnerType string `json:"ownerType,omitempty"`
-	TaskClass string `json:"taskClass,omitempty"`
-	State     string `json:"state"`
-}
-
-// OptimizationVM is the project's optimization history — evaluated
-// experiments and governed-cost policies. This is where "governed vs baseline" and "skill vs baseline" results
-// computed by `aux eval ab` become visible once a user has run them.
+// OptimizationVM is the project's optimization history: evaluated
+// experiments. This is where "governed vs baseline" and "skill vs baseline"
+// results computed by `aux eval ab` become visible once a user has run them.
 type OptimizationVM struct {
-	Experiments       []ExperimentVM `json:"experiments"`
-	ActivePolicies    []PolicyVM     `json:"activePolicies"`
-	CandidatePolicies []PolicyVM     `json:"candidatePolicies"`
+	Experiments []ExperimentVM `json:"experiments"`
 }
 
 // BuildExperimentVM projects an experiment for display. If any of runs holds
@@ -57,28 +46,16 @@ func BuildExperimentVM(e eval.Experiment, runs []eval.Run) ExperimentVM {
 	return vm
 }
 
-// BuildPolicyVM projects a governed-cost policy for display.
-func BuildPolicyVM(p govpolicy.Policy) PolicyVM {
-	return PolicyVM{ID: p.ID, OwnerType: p.OwnerType, TaskClass: p.TaskClass, State: string(p.State)}
-}
-
 // ExperimentReader lists a project's experiments and their runs.
 type ExperimentReader interface {
 	ListExperiments(ctx context.Context, projectID string) ([]eval.Experiment, error)
 	ListRuns(ctx context.Context, experimentID string) ([]eval.Run, error)
 }
 
-// PolicyReader lists governed-cost policies.
-type PolicyReader interface {
-	Active(ctx context.Context) ([]govpolicy.Policy, error)
-	Candidates(ctx context.Context) ([]govpolicy.Policy, error)
-}
-
 // OptimizationStores bundles the read dependencies needed to assemble an
 // OptimizationVM.
 type OptimizationStores struct {
 	Experiments ExperimentReader
-	Policies    PolicyReader
 }
 
 // OptimizationView assembles a project's optimization history for display.
@@ -90,18 +67,6 @@ func (s OptimizationStores) OptimizationView(ctx context.Context, projectID stri
 				var runs []eval.Run
 				runs, _ = s.Experiments.ListRuns(ctx, e.ID)
 				view.Experiments = append(view.Experiments, BuildExperimentVM(e, runs))
-			}
-		}
-	}
-	if s.Policies != nil {
-		if active, err := s.Policies.Active(ctx); err == nil {
-			for _, p := range active {
-				view.ActivePolicies = append(view.ActivePolicies, BuildPolicyVM(p))
-			}
-		}
-		if candidates, err := s.Policies.Candidates(ctx); err == nil {
-			for _, p := range candidates {
-				view.CandidatePolicies = append(view.CandidatePolicies, BuildPolicyVM(p))
 			}
 		}
 	}

@@ -1,9 +1,9 @@
-// Package bundle exports and imports shareable optimization bundles — active
-// skills and governor policies — for sharing across projects or an organization.
-// Bundles are content-addressed for integrity, and the
-// import path is deliberately safe: everything comes in as a candidate, never
-// active, so imported optimizations must earn local evaluation evidence before
-// they can become defaults (the evaluation gate is never bypassed by import).
+// Package bundle exports and imports shareable skill bundles, for sharing
+// across projects or an organization. Bundles are content-addressed for
+// integrity, and the import path is deliberately safe: everything comes in as
+// a candidate, never active, so imported skills must earn local evaluation
+// evidence before they can become defaults (the evaluation gate is never
+// bypassed by import).
 package bundle
 
 import (
@@ -14,20 +14,20 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kaiau00/aux-cli/internal/govpolicy"
 	"github.com/kaiau00/aux-cli/internal/skill"
 )
 
-// FormatVersion is the bundle wire-format version.
-const FormatVersion = 1
+// FormatVersion is the bundle wire-format version. Version 1 also carried
+// governor policies, which were removed; its hash covers them, so it is
+// refused rather than misreported as tampered.
+const FormatVersion = 2
 
-// Bundle is a portable, content-addressed set of optimizations.
+// Bundle is a portable, content-addressed set of skills.
 type Bundle struct {
-	FormatVersion int           `json:"formatVersion"`
-	CreatedAt     int64         `json:"createdAt"`
-	Skills        []SkillEntry  `json:"skills"`
-	Policies      []PolicyEntry `json:"policies"`
-	Hash          string        `json:"hash"`
+	FormatVersion int          `json:"formatVersion"`
+	CreatedAt     int64        `json:"createdAt"`
+	Skills        []SkillEntry `json:"skills"`
+	Hash          string       `json:"hash"`
 }
 
 // SkillEntry is one exported skill's portable content.
@@ -36,22 +36,10 @@ type SkillEntry struct {
 	Content   skill.Content `json:"content"`
 }
 
-// PolicyEntry is one exported governor policy.
-type PolicyEntry struct {
-	OwnerType  string `json:"ownerType"`
-	TaskClass  string `json:"taskClass"`
-	PolicyJSON string `json:"policyJson"`
-}
-
 // SkillReader reads active skills and their latest content for export.
 type SkillReader interface {
 	ListByState(ctx context.Context, state skill.State) ([]skill.Skill, error)
 	LatestVersion(ctx context.Context, skillID string) (skill.Version, bool, error)
-}
-
-// PolicyReader reads active policies for export.
-type PolicyReader interface {
-	ListByState(ctx context.Context, state govpolicy.State) ([]govpolicy.Policy, error)
 }
 
 // SkillWriter imports a skill as a candidate.
@@ -59,13 +47,8 @@ type SkillWriter interface {
 	Candidate(ctx context.Context, ownerType, ownerID string, content skill.Content, sourceType string, sourceIDs []string) (skill.Skill, skill.Version, error)
 }
 
-// PolicyWriter imports a policy as a candidate.
-type PolicyWriter interface {
-	Candidate(ctx context.Context, ownerType, ownerID, taskClass, policyJSON string) (govpolicy.Policy, error)
-}
-
-// Export collects the active skills and policies into a content-addressed bundle.
-func Export(ctx context.Context, skills SkillReader, policies PolicyReader) (Bundle, error) {
+// Export collects the active skills into a content-addressed bundle.
+func Export(ctx context.Context, skills SkillReader) (Bundle, error) {
 	b := Bundle{FormatVersion: FormatVersion, CreatedAt: time.Now().UnixMilli()}
 
 	sks, err := skills.ListByState(ctx, skill.StateActive)
@@ -83,28 +66,19 @@ func Export(ctx context.Context, skills SkillReader, policies PolicyReader) (Bun
 		b.Skills = append(b.Skills, SkillEntry{OwnerType: sk.OwnerType, Content: ver.Content})
 	}
 
-	pols, err := policies.ListByState(ctx, govpolicy.StateActive)
-	if err != nil {
-		return Bundle{}, err
-	}
-	for _, p := range pols {
-		b.Policies = append(b.Policies, PolicyEntry{OwnerType: p.OwnerType, TaskClass: p.TaskClass, PolicyJSON: p.PolicyJSON})
-	}
-
 	b.Hash = b.computeHash()
 	return b, nil
 }
 
 // ImportResult reports what an import created.
 type ImportResult struct {
-	SkillsImported   int
-	PoliciesImported int
+	SkillsImported int
 }
 
-// Import verifies the bundle's integrity and creates every skill and policy as a
-// CANDIDATE — never active. Imported optimizations must be evaluated locally
-// before promotion.
-func Import(ctx context.Context, b Bundle, skills SkillWriter, policies PolicyWriter) (ImportResult, error) {
+// Import verifies the bundle's integrity and creates every skill as a
+// CANDIDATE — never active. Imported skills must be evaluated locally before
+// promotion.
+func Import(ctx context.Context, b Bundle, skills SkillWriter) (ImportResult, error) {
 	if err := b.Verify(); err != nil {
 		return ImportResult{}, err
 	}
@@ -118,16 +92,6 @@ func Import(ctx context.Context, b Bundle, skills SkillWriter, policies PolicyWr
 			return res, fmt.Errorf("import skill %q: %w", e.Content.Name, err)
 		}
 		res.SkillsImported++
-	}
-	for _, e := range b.Policies {
-		owner := e.OwnerType
-		if owner == "" {
-			owner = "user"
-		}
-		if _, err := policies.Candidate(ctx, owner, "", e.TaskClass, e.PolicyJSON); err != nil {
-			return res, fmt.Errorf("import policy %q: %w", e.TaskClass, err)
-		}
-		res.PoliciesImported++
 	}
 	return res, nil
 }
@@ -155,13 +119,12 @@ func (b Bundle) Verify() error {
 	return nil
 }
 
-// computeHash is the sha256 of the canonical content (skills+policies), excluding
-// the hash and timestamp so the same optimizations always address identically.
+// computeHash is the sha256 of the canonical content (skills), excluding the
+// hash and timestamp so the same skills always address identically.
 func (b Bundle) computeHash() string {
 	canonical := struct {
-		Skills   []SkillEntry  `json:"skills"`
-		Policies []PolicyEntry `json:"policies"`
-	}{Skills: b.Skills, Policies: b.Policies}
+		Skills []SkillEntry `json:"skills"`
+	}{Skills: b.Skills}
 	data, _ := json.Marshal(canonical)
 	sum := sha256.Sum256(data)
 	return hex.EncodeToString(sum[:])

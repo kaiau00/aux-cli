@@ -23,7 +23,6 @@ import (
 	"github.com/kaiau00/aux-cli/internal/eval"
 	"github.com/kaiau00/aux-cli/internal/eventstore"
 	"github.com/kaiau00/aux-cli/internal/format"
-	"github.com/kaiau00/aux-cli/internal/govpolicy"
 	"github.com/kaiau00/aux-cli/internal/history"
 	"github.com/kaiau00/aux-cli/internal/hooks"
 	"github.com/kaiau00/aux-cli/internal/impact"
@@ -66,7 +65,6 @@ type App struct {
 	Impact          *impact.Service
 	Validations     *validation.Service
 	Skills          *skill.Service
-	Policies        *govpolicy.Service
 	Checkpoints     *checkpoint.Service
 	CheckpointStore *checkpoint.Store
 	Hooks           *hooks.Registry
@@ -118,7 +116,6 @@ func New(ctx context.Context, conn *sql.DB) (*App, error) {
 	// A completed task proposes skill candidates from the commands it actually
 	// validated. They stay inert behind the evaluation gate until promoted.
 	taskCoord.WithSkills(skills)
-	policies := govpolicy.NewService(govpolicy.NewStore(conn), events)
 	checkpointStore := checkpoint.NewStore(conn)
 	checkpoints := checkpoint.NewService(checkpointStore, artifacts, events)
 	// A completed task automatically checkpoints what it changed, using the file
@@ -152,7 +149,6 @@ func New(ctx context.Context, conn *sql.DB) (*App, error) {
 		Impact:          impactSvc,
 		Validations:     validations,
 		Skills:          skills,
-		Policies:        policies,
 		Checkpoints:     checkpoints,
 		CheckpointStore: checkpointStore,
 		Hooks:           hookRegistry,
@@ -242,7 +238,6 @@ func New(ctx context.Context, conn *sql.DB) (*App, error) {
 		},
 		Optimization: viewmodel.OptimizationStores{
 			Experiments: eval.NewExperimentStore(conn),
-			Policies:    app.Policies,
 		},
 		Workdir: config.WorkingDirectory(),
 	}, dashboardOptions)

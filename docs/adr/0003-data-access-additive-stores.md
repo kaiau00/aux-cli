@@ -39,3 +39,9 @@ serve legacy paths.
 
 Adopt sqlc generation for a domain once sqlc is part of the toolchain and the domain's query set
 is stable.
+
+## Orphaned tables
+
+- 2026-10-03: `governor_policies` (migration `20260724000011`) and `governor_policy_evaluations`
+  (`20260727000013`) have no reader or writer since `internal/govpolicy` was removed (plan M1.5).
+  Migrations only add, so the tables stay; a later store may reuse or drop them.

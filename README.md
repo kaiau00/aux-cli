@@ -30,7 +30,7 @@ Most coding agents win by adding more model providers or copying features. Aux's
 1. **Project Brain** — a living, project-specific model of architecture, conventions, decisions, skills, and experience, built automatically from your repo (`go.mod`/`package.json`/`Makefile`/instruction files, layered by precedence).
 2. **Context OS** — page-level accounting of what every model call contains, with exclude and pin controls that change what is sent, not just what is shown.
 3. **One-Key Cost Governor** — a single efficiency layer (budgets, waste detection, trajectory tracking) for the one model you've chosen, not per-action model routing.
-4. **Experience Compiler** — a learning loop that turns validated work and corrections into reusable memory, evaluation-gated skills, and cost policy — so the tenth similar task is cheaper and better than the first.
+4. **Experience Compiler** — a learning loop that turns validated work and corrections into reusable memory, and evaluation-gated skills, so later tasks start with what earlier ones proved.
 
 ```text
 Understand the project
@@ -127,7 +127,7 @@ Beyond the interactive TUI (`aux`) and one-shot prompts (`aux -p "..."`), Aux sh
 | `aux eval ab <baseline-task-id> <variant-task-id>` | Compare accepted validated changes per dollar for two recorded runs |
 | `aux learn` | Record a workflow as a skill candidate (activated only after evaluation) |
 | `aux skill list` | List skill candidates and active skills |
-| `aux bundle export <file>` | Export active skills and governor policies to a content-addressed bundle |
+| `aux bundle export <file>` | Export active skills to a content-addressed bundle |
 | `aux bundle import <file>` | Import a bundle; entries arrive as candidates and must be evaluated before use |
 
 ### Command-line flags (`aux`)
@@ -157,7 +157,7 @@ The dashboard starts automatically on every run, bound to `127.0.0.1` on a rando
 | `/project` | Project Brain — identity, effective profile (with conflicts), related-project graph |
 | `/memory` | Memory & skills — active/candidate/stale memory, skills |
 | `/impact` | Impact graph — indexed nodes and edges, with a lightweight diagram |
-| `/optimization` | Optimization — experiment history, governed-cost policies |
+| `/optimization` | Optimization — experiment history |
 | `/sessions` | Session/log inspector — the secondary, debugging-oriented view: session tree, live activity, event feed, logs |
 
 Set `dashboard.fullContent: true` if you want the dashboard to show full local prompt/tool content instead of redacted snippets, or `dashboard.enabled: false` to turn it off entirely.
@@ -426,11 +426,10 @@ internal/mutationcp/      First-mutation-time auto-checkpoint
 internal/validation/      Validation intents, runs, and proof-of-done state
 internal/cost/            Per-call ledger, budgets, waste detection, trajectory
 internal/skill/           Evaluation-gated learned skills (+ Agent Skills interchange)
-internal/govpolicy/       Evaluation-gated learned cost-governor policies
 internal/eval/            Offline experiments, replay, and A/B comparison
 internal/hooks/           Lifecycle hooks (task/subtask boundaries)
 internal/runtime/         Runtime compatibility shell + adapter conformance contract
-internal/bundle/          Shareable export/import of skills and policies
+internal/bundle/          Shareable export/import of skills
 internal/worktree/        Git worktree creation for isolated subagent work
 internal/eventstore/      Durable, append-only, schema-versioned domain events
 

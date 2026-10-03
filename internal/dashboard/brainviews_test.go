@@ -13,7 +13,6 @@ import (
 	"github.com/kaiau00/aux-cli/internal/db/dbtest"
 	"github.com/kaiau00/aux-cli/internal/eval"
 	"github.com/kaiau00/aux-cli/internal/eventstore"
-	"github.com/kaiau00/aux-cli/internal/govpolicy"
 	"github.com/kaiau00/aux-cli/internal/impact"
 	"github.com/kaiau00/aux-cli/internal/memory"
 	"github.com/kaiau00/aux-cli/internal/profile"
@@ -164,16 +163,13 @@ func TestOptimizationViewEndpoint(t *testing.T) {
 	conn := dbtest.New(t)
 	ctx := context.Background()
 	expStore := eval.NewExperimentStore(conn)
-	events := eventstore.NewService(conn)
-	policySvc := govpolicy.NewService(govpolicy.NewStore(conn), events)
-
 	if _, _, err := eval.RunCompilerExperiment(ctx, expStore, "proj-1"); err != nil {
 		t.Fatalf("RunCompilerExperiment: %v", err)
 	}
 
 	server := &Server{token: "secret", services: Services{
 		Project:      testProjectReader("proj-1"),
-		Optimization: viewmodel.OptimizationStores{Experiments: expStore, Policies: policySvc},
+		Optimization: viewmodel.OptimizationStores{Experiments: expStore},
 		Workdir:      "/tmp/widget",
 	}}
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/optimization?token=secret", nil)

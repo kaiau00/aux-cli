@@ -153,14 +153,10 @@ See the closed appendix.
 See the closed appendix. Not done: the impact graph's targeted-vs-broad
 decision is not consulted; every profile command runs (see *Opportunistic*).
 
-### P1.4 Wire or delete `govpolicy`
+### P1.4 Wire or delete `govpolicy` — closed (M1.5, deleted)
 
-`Policies.Evaluate` and `Policies.Promote` have no non-test callers (PR #28
-confirmed). The cost governor defaults `off`, and `on` only stops at a fixed
-`DefaultBudget(ModeBalanced)`. Either make learned policies feed the governor's
-budget, or delete the package and its dashboard panel. An evaluation-gated
-pipeline with no producer and no consumer is the exact shape
-`scripts/deadcode.sh` cannot see.
+See the closed appendix. Learned budgets can return in 0.2 with a producer and
+an evaluator.
 
 ### P1.5 Make the two unwritten context states honest
 
@@ -407,6 +403,7 @@ model catalog is what makes Aux usable at all day to day.
 | Install instructions | Every method in the README was fictional; now says build from source |
 | Package attribution | Upstream author's personal address removed from shipped files |
 | Skill promotion path (PR #28), 2026-10-02 | Outside tests, `skill.Service.Evaluate` and `Promote` had no callers, so no skill could be promoted. The CLI now exposes the lifecycle it already implemented: `aux skill evaluate <id> --result pass\|fail\|inconclusive` (`--baseline`, `--eval-run`, `--metrics`), `aux skill promote`, `aux skill rollback`; `skill list` shows ids and which candidates are promotable. Found by exercising it: rolled-back skills appeared in no list (`Service.RolledBack` fixes it), and `--result Pass` would have been stored but never unlocked promotion (`ParseEvalResult` rejects it). The result still comes from a run done elsewhere; `deadcode.sh` could not have caught the gap, since a constructed-but-never-invoked service looks reachable |
+| M1.5 `govpolicy` deleted, 2026-10-03 | No producer, no evaluator, no non-test caller. Removed the package, its app wiring, the dashboard "Governed-cost policies" panel and view-model fields, and policies from bundles (format version 2, so a version-1 bundle is refused by version rather than misreported as tampered). The two tables stay and are noted in ADR 0003. `rg govpolicy` matches only the plan, this file, and the ADR note |
 | M1.4 validation at task end, 2026-10-03 | `agent.validateTaskIfNeeded` runs before the deferred `Finish`: skips (with `validation.skipped{reason}`) when `validation.auto` is off, there are no criteria, no file version was recorded during the task, or the profile has no commands, and inside subagents. Otherwise plans as `aux validate` does, runs each command through `validation.ShellRunner` with the session's permission service, and appends the results to the final message. The pass cache is keyed on commit + edited-file content. A denied command is now a `skipped` run with no evidence (before, it was recorded `failed` and blocked every criterion, also via `aux validate` without `--yes`). `aux task show` reports proof of done from evidence instead of the compile-time state. Tests in `agent/validate_test.go` (changed → validated + memory + skill; no change → skipped; denied → skipped, no memory; subagent → not run) and `validation_test.go`. Scratch repo, real provider, `--yes`: both commands passed, both criteria `validated`, two procedural memories, one skill candidate |
 | M1.7 README "How it works", 2026-10-03 | Steps 3–6 rewritten to what M1.1–M1.4 do; tagline performance claim removed (D13); "demand paging" removed from README and `--paging` help |
 | M1.3 memory content, 2026-10-03 | `memorySection` rendered `[episodic] episode:<task-id>`, the stable key. It now loads each active memory's latest version (`Store.LatestVersion`, `Service.RetrieveWithContent`) and renders one line per type: the fact; `` `command` `` — validated in N task(s) since <rev>; "Earlier task: objective → outcome (changed …)". Newest first, bounded at 600 estimated tokens rather than 5 rows. Tests: one memory of each type renders content and no keys, a stale memory is left out, 50 memories stay under budget. "Since <rev>" not "last at": re-validation reuses the same version, so its revision is when the command was first recorded |
