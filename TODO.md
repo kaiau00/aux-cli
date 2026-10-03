@@ -96,7 +96,7 @@ Aux should only say true things about itself. Verified 2026-10-02.
 
 | Claim | Why not |
 | --- | --- |
-| "Aux understands how your project works and gives the model only what it needs" | Project knowledge and the task spec reach the model since M1.1/M1.2, but memory still renders keys, not content (P1.2), the scanners are thin, and nothing trims the transcript, so "only what it needs" is not true |
+| "Aux understands how your project works and gives the model only what it needs" | Project knowledge, memory content, and the task spec reach the model since M1.1–M1.3, but the scanners are thin and nothing trims the transcript, so "only what it needs" is not true |
 | "Improves every time you use it" / "the tenth task is cheaper" | No automatic evidence producer; see [P1.3](#p13-run-validation-at-task-end). Nothing has ever been promoted to a skill |
 | "The prompt is compiled, not just concatenated" | Both compilers send the full transcript. `DedupCompiler` stubs duplicate blobs and defaults to off |
 | "Cheaper than opencode" | Python n=5: gap grew 19%→63% as runs were added. TypeScript n=5: p=0.06 and Aux failed 4/25 task-attempts vs 0/25. Decided: dropped until P1 is done |
@@ -142,16 +142,9 @@ See the closed appendix. The caveat stands: for a Go project the manifest is
 scanners are thin, so sending it is necessary, not sufficient. What makes it
 worth sending is P1.2 and P1.3.
 
-### P1.2 Render memory content, not keys
+### P1.2 Render memory content, not keys — closed (M1.3)
 
-`coordinator.memorySection` (`coordinator.go:273-288`) writes
-`[episodic] episode:<task-id>` — the stable key. The content
-(`{objective, mode, outcome, changedPaths}` or `{command, purpose}`) is in the
-version row and never read here. Zero information even once P1.1 ships.
-
-Fix: load the latest version per memory, render a one-line summary per type
-(episodic: objective → outcome; procedural: the command and when it was last
-validated; factual: the fact), bound the total by tokens not count.
+See the closed appendix.
 
 ### P1.3 Run validation at task end
 
@@ -421,6 +414,7 @@ model catalog is what makes Aux usable at all day to day.
 | Install instructions | Every method in the README was fictional; now says build from source |
 | Package attribution | Upstream author's personal address removed from shipped files |
 | Skill promotion path (PR #28), 2026-10-02 | Outside tests, `skill.Service.Evaluate` and `Promote` had no callers, so no skill could be promoted. The CLI now exposes the lifecycle it already implemented: `aux skill evaluate <id> --result pass\|fail\|inconclusive` (`--baseline`, `--eval-run`, `--metrics`), `aux skill promote`, `aux skill rollback`; `skill list` shows ids and which candidates are promotable. Found by exercising it: rolled-back skills appeared in no list (`Service.RolledBack` fixes it), and `--result Pass` would have been stored but never unlocked promotion (`ParseEvalResult` rejects it). The result still comes from a run done elsewhere; `deadcode.sh` could not have caught the gap, since a constructed-but-never-invoked service looks reachable |
+| M1.3 memory content, 2026-10-03 | `memorySection` rendered `[episodic] episode:<task-id>`, the stable key. It now loads each active memory's latest version (`Store.LatestVersion`, `Service.RetrieveWithContent`) and renders one line per type: the fact; `` `command` `` — validated in N task(s) since <rev>; "Earlier task: objective → outcome (changed …)". Newest first, bounded at 600 estimated tokens rather than 5 rows. Tests: one memory of each type renders content and no keys, a stale memory is left out, 50 memories stay under budget. "Since <rev>" not "last at": re-validation reuses the same version, so its revision is when the command was first recorded |
 | M1.2 addendum pages resident, 2026-10-03 | `project_manifest` and `task_spec` pages are `resident` (reasons "project knowledge", "compiled task spec") and carry exactly the text sent, headings included, so resident page tokens reconcile with `EstimatedTokens` again. Scratch repo, real provider: `context.compiled` payload `residentPages: 3`, no available pages; bindings show `project_manifest` resident (36 tokens) and `task_spec` resident (85); the model answered "go build ./... / go test ./..." with tools forbidden |
 | M1.1 system addendum, 2026-10-03 | Both compilers render `# Project` (manifest + memory + related projects) then `# Task` into `CompiledPrompt.SystemAddendum`, counted in `EstimatedTokens`. The agent attaches it to the provider call's context only; Anthropic sends it as a second system block after the cached base, OpenAI/OpenRouter/local/Copilot/Gemini append it to the system message (Azure, Bedrock, Vertex inherit). Tests: wire requests captured by an `httptest` server for Anthropic and OpenAI, compiler order/estimate/determinism, and an agent turn through the mock provider that also proves tools do not inherit it |
 | M0.3 coverage floor, 2026-10-03 | `.coverage-floor` 30.8 → 33.8, the value `scripts/coverage.sh` reported on CI for `main` at `8707a1a` (after #28) |

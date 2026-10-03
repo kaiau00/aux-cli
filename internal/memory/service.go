@@ -2,6 +2,7 @@ package memory
 
 import (
 	"context"
+	"sort"
 
 	"github.com/kaiau00/aux-cli/internal/eventstore"
 )
@@ -57,6 +58,41 @@ func (s *Service) Learn(ctx context.Context, candidates []Candidate) error {
 // Retrieve returns active memories for a project, filtered and capped.
 func (s *Service) Retrieve(ctx context.Context, projectID string, types []Type, limit int) ([]Memory, error) {
 	return s.store.Retrieve(ctx, projectID, types, limit)
+}
+
+// MemoryWithContent is an active memory with its latest content version.
+type MemoryWithContent struct {
+	Memory
+	Version Version
+	// Tasks is how many distinct tasks confirmed the memory (see Store.TaskCount).
+	Tasks int
+}
+
+// RetrieveWithContent returns active memories with their latest content,
+// newest first. Memories without a version are skipped: there is nothing to
+// say about them.
+func (s *Service) RetrieveWithContent(ctx context.Context, projectID string, types []Type, limit int) ([]MemoryWithContent, error) {
+	mems, err := s.store.Retrieve(ctx, projectID, types, limit)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]MemoryWithContent, 0, len(mems))
+	for _, m := range mems {
+		v, ok, err := s.store.LatestVersion(ctx, m.ID)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			continue
+		}
+		n, err := s.store.TaskCount(ctx, m.ID)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, MemoryWithContent{Memory: m, Version: v, Tasks: n})
+	}
+	sort.SliceStable(out, func(i, j int) bool { return out[i].UpdatedAt > out[j].UpdatedAt })
+	return out, nil
 }
 
 // InvalidateForRevision marks active memories whose supporting revision changed
