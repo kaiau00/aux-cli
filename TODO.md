@@ -193,11 +193,10 @@ Fix, in order of leverage:
 
 ### P2.2 Provider SDKs
 
-`openai-go v0.1.0-beta.2` (current: 1.12), `anthropic-sdk-go v1.4.0` (current:
-1.78), `mcp-go v0.17.0` (current: 1.1), `google.golang.org/genai v1.3.0`
+`mcp-go` is v1.1.1 (see the appendix). Still to bump: `openai-go v0.1.0-beta.2`
+(current: 1.12), `anthropic-sdk-go v1.4.0` (current: 1.78), `google.golang.org/genai v1.3.0`
 (current: 1.72). New model parameters, tool-schema changes, and streaming fixes
-all live in the gap. The OpenAI dependency is a *beta*. Bump all four; the
-suite is offline and deterministic so this is cheap to verify.
+all live in the gap. One pull request per SDK; the suite is offline.
 
 ### P2.3 Slash commands
 
@@ -385,6 +384,7 @@ model catalog is what makes Aux usable at all day to day.
 
 | | |
 | --- | --- |
+| M2.2 mcp-go v1.1.1, 2026-10-03 | `go get github.com/mark3labs/mcp-go@v1.1.1`. The stdio and SSE call sites compiled unchanged, including `InputSchema.Properties`/`Required` and `mcp.TextContent`. The module requires Go 1.25.5, so `go.mod`'s `go` line moved from 1.24.0; CI reads that line. `TestGetMcpToolsWithoutConfigDoesNotPanic`, `TestParseGraphResponse`, and `TestParseGraphResponseSupportsAlternateKeys` pass. MCP does not stream model tokens, so there is no usage fixture |
 | M0.1b safe-list argument rules, 2026-10-03 | Each safe-list entry has an argument rule: dangerous `git` long options refused with their abbreviations, `-O`/`-f` short flags refused, `git branch`/`tag` listing flags only, `git remote` bare/`-v`/`show`/`get-url`, `go list`/`go env` listed flags only, `date`/`hostname` display only. Quotes, backslashes, braces and `$` force a prompt — each was measured disguising `--output`. 44 rejections and 32 kept read-only forms in `bash_safety_test.go` |
 | M0.1 bash safe-list bypass, 2026-10-03 | `isSafeReadOnly` refuses the fast path on any shell operator; wrappers (`env`, `timeout`, `nohup`, `nice`, `time`, `kill`, `killall`, `set`, `unset`, `top`) and code-executing `go` subcommands removed; banned check runs on every word. `bash_safety_test.go`: 29 bypasses rejected, 7 read-only commands kept, `Run` prompts with the full command as fingerprint |
 | Audit, 2026-10-02 | Outside read of `278b9f1`: build, vet, `-race` suite, both gates, CLI in a scratch repo, agent loop and compiler traced end to end. Found: manifest never sent, memory renders keys, learning loop has no automatic producer, bash allowlist bypass, catalog 17 months stale, slash commands inert, no resume flag, beta OpenAI SDK. Confirmed every mechanical claim in the previous claims table except "commands ask before running" |
