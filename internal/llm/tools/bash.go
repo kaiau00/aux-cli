@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/kaiau00/aux-cli/internal/llm/tools/shell"
 	"github.com/kaiau00/aux-cli/internal/permission"
@@ -43,18 +44,62 @@ var bannedCommands = []string{
 	"http-prompt", "chrome", "firefox", "safari",
 }
 
+// safeReadOnlyCommands run without a permission prompt, and only when the
+// command contains none of shellOperators. Nothing that wraps another command
+// (env, timeout, nohup, …) or executes project code (go test, go run, …)
+// belongs here: either turns the prefix match into "run anything".
 var safeReadOnlyCommands = []string{
-	"ls", "echo", "pwd", "date", "cal", "uptime", "whoami", "id", "groups", "env", "printenv", "set", "unset", "which", "type", "whereis",
-	"whatis", "uname", "hostname", "df", "du", "free", "top", "ps", "kill", "killall", "nice", "nohup", "time", "timeout",
+	"ls", "echo", "pwd", "date", "cal", "uptime", "whoami", "id", "groups", "printenv", "which", "type", "whereis",
+	"whatis", "uname", "hostname", "df", "du", "free", "ps",
 
 	"git status", "git log", "git diff", "git show", "git branch", "git tag", "git remote", "git ls-files", "git ls-remote",
 	"git rev-parse", "git config --get", "git config --list", "git describe", "git blame", "git grep", "git shortlog",
 
-	"go version", "go help", "go list", "go env", "go doc", "go vet", "go fmt", "go mod", "go test", "go build", "go run", "go install", "go clean",
+	"go version", "go help", "go list", "go env", "go doc",
+}
+
+// shellOperators chain, substitute, redirect, or background commands. Any of
+// them lets a safe-looking prefix carry a second command, so their presence
+// disqualifies the fast path. Quoting is deliberately not considered.
+var shellOperators = []string{";", "&&", "||", "|", "`", "$(", "${", "\n", ">", "<", "&"}
+
+// isSafeReadOnly reports whether command may run without asking the user.
+func isSafeReadOnly(command string) bool {
+	for _, op := range shellOperators {
+		if strings.Contains(command, op) {
+			return false
+		}
+	}
+	cmdLower := strings.ToLower(command)
+	for _, safe := range safeReadOnlyCommands {
+		if strings.HasPrefix(cmdLower, safe) {
+			if len(cmdLower) == len(safe) || cmdLower[len(safe)] == ' ' || cmdLower[len(safe)] == '-' {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// bannedCommandIn returns the first banned command appearing anywhere in
+// command, not only in first position, so `ls && curl x` is caught.
+func bannedCommandIn(command string) (string, bool) {
+	words := strings.FieldsFunc(command, func(r rune) bool {
+		return unicode.IsSpace(r) || strings.ContainsRune(";&|`<>$(){}", r)
+	})
+	for _, word := range words {
+		for _, banned := range bannedCommands {
+			if strings.EqualFold(word, banned) {
+				return word, true
+			}
+		}
+	}
+	return "", false
 }
 
 func bashDescription() string {
 	bannedCommandsStr := strings.Join(bannedCommands, ", ")
+	safeCommandsStr := strings.Join(safeReadOnlyCommands, ", ")
 	return fmt.Sprintf(`Executes a given bash command in a persistent shell session with optional timeout, ensuring proper handling and security measures.
 
 Before executing the command, please follow these steps:
@@ -65,7 +110,8 @@ Before executing the command, please follow these steps:
 
 2. Security Check:
  - For security and to limit the threat of a prompt injection attack, some commands are limited or banned. If you use a disallowed command, you will receive an error message explaining the restriction. Explain the error to the User.
- - Verify that the command is not one of the banned commands: %s.
+ - Verify that the command does not use any of the banned commands, anywhere in it: %s.
+ - Only a single command starting with one of these runs without asking the user: %s. Any other command asks the user for permission first, and so does any command containing ;, &&, ||, |, &, a backtick, $(, ${, a redirection (> or <), or a newline.
 
 3. Command Execution:
  - After ensuring proper quoting, execute the command.
@@ -199,7 +245,7 @@ EOF
 
 Important:
 - Return an empty response - the user will see the gh output directly
-- Never update git config`, bannedCommandsStr, MaxOutputLength)
+- Never update git config`, bannedCommandsStr, safeCommandsStr, MaxOutputLength)
 }
 
 func NewBashTool(permission permission.Service) BaseTool {
@@ -242,30 +288,15 @@ func (b *bashTool) Run(ctx context.Context, call ToolCall) (ToolResponse, error)
 		return NewTextErrorResponse("missing command"), nil
 	}
 
-	baseCmd := strings.Fields(params.Command)[0]
-	for _, banned := range bannedCommands {
-		if strings.EqualFold(baseCmd, banned) {
-			return NewTextErrorResponse(fmt.Sprintf("command '%s' is not allowed", baseCmd)), nil
-		}
-	}
-
-	isSafeReadOnly := false
-	cmdLower := strings.ToLower(params.Command)
-
-	for _, safe := range safeReadOnlyCommands {
-		if strings.HasPrefix(cmdLower, strings.ToLower(safe)) {
-			if len(cmdLower) == len(safe) || cmdLower[len(safe)] == ' ' || cmdLower[len(safe)] == '-' {
-				isSafeReadOnly = true
-				break
-			}
-		}
+	if banned, ok := bannedCommandIn(params.Command); ok {
+		return NewTextErrorResponse(fmt.Sprintf("command '%s' is not allowed", banned)), nil
 	}
 
 	sessionID, messageID := GetContextValues(ctx)
 	if sessionID == "" || messageID == "" {
 		return ToolResponse{}, fmt.Errorf("session ID and message ID are required for creating a new file")
 	}
-	if !isSafeReadOnly {
+	if !isSafeReadOnly(params.Command) {
 		p := b.permissions.Request(
 			permission.CreatePermissionRequest{
 				SessionID:   sessionID,

@@ -1,455 +1,471 @@
 # Aux — the master list
 
-Everything that stands between Aux and being something a stranger can depend on.
-Rewritten 2026-08-23, replacing `roadmap.md` and `roadmapplan.md` (both deleted;
-their content is in git history at `859109b~1` if it is ever wanted).
+Everything that stands between Aux and a public release a stranger can depend
+on. Rewritten 2026-10-02 from an outside audit of `origin/main` at `278b9f1`
+(PR #27). The previous version of this file is in git history at `278b9f1`;
+its closed-items appendix is carried forward at the bottom.
 
-Two tracks: **[Track A](#track-a--an-agent-can-do-these)** is work an AI agent can
-do unattended. **[Track B](#track-b--only-you-can-do-these)** is work that needs a
-human, either because it needs another person or because it is a decision about
-what this product is.
+Everything here was checked by building, running, or reading the code at that
+commit — not by re-reading the old file. Where an item cites a file and line,
+that is where the evidence is.
+
+**This is the status list.** The detailed execution spec for every item —
+goal, files, steps, done-when tests, guardrails, decisions, and the release
+checklist — is [`docs/shipping-plan.md`](docs/shipping-plan.md). Items here
+map to milestones there (P0→M0, P1→M1, P2→M2, P3→M3, P4→M4). When the two
+disagree, the plan wins and this file gets corrected.
 
 ---
 
 ## Where this actually stands
 
-A strong late alpha. The architecture is coherent, the security posture is real,
-the suite is race-clean, and three mechanical gates (tests, reachability,
-coverage) run on every push.
+Aux is a fork of OpenCode's Go agent loop with a serious observability layer
+built around it: a per-call ledger, an append-only event store, page bindings,
+checkpoints, an impact graph, a project profile, memory, skills, validation,
+and a read-only dashboard. The engineering discipline is real — ADRs, three
+ratcheting CI gates, a race-clean suite — and the audit confirmed every
+mechanical claim it tested (see [Claims](#claims-what-is-defensible-today)).
 
-It is **not production ready**, and the remaining gap is mostly *evidence*, not
-code.
+What the audit also found is that **the product thesis is not wired in**:
 
-**Amended 2026-08-24.** "Mostly" was doing more work than it should have. One
-day of looking at the running product turned up six defects: the screen was
-taller than the terminal at nearly every size, the model name was truncated
-where it was built rather than where it was drawn, a third of the glyphs were
-absent from the default macOS terminal font, the context meter reported lifetime
-spend against the context window, title generation raced the turn and zeroed its
-tokens and cost, and this file's own handoff note assured outside reviewers that
-Aux runs no server while it starts one by default.
+- The compiled project manifest, memory, related-project context, and task
+  spec are computed on every turn and **never sent to the model**. Both prompt
+  compilers mark them `available` and send the bare transcript
+  (`internal/promptcompiler/compiler.go:109-132`, `dedup.go:30-67`).
+- The learning loop only learns from validation evidence, and nothing in the
+  agent loop produces validation evidence — only `aux validate <task-id>` does
+  (`cmd/validate.go`). After a normal session: no procedural memory, no skill
+  candidates, one episodic memory holding `{objective, mode, outcome}`.
+- The bash "safe read-only" fast path was a prefix match with no shell-operator
+  check, and its list included `kill`, `timeout`, `time`, `nice`, `nohup`,
+  `env`, `go run`, `go test`. `echo hi; rm -rf .` ran without a prompt.
+  Closed by M0.1; argument-level holes remain (see *Opportunistic*).
 
-Not one of them was visible from reading the source. Every one came from
-rendering a screen, reading a row in a real database, or checking a sentence
-against a default. That does not change the conclusion below — it sharpens it.
-The reason to get this in front of someone else is not only that outside
-findings are needed, it is that looking from the outside is what finds things at
-all.
+So: a clean, well-tested, well-instrumented agent whose instrumentation does
+not yet feed back into the agent. The distance from here to "the thesis is
+mechanically true" is small. The distance to "proven" is a benchmark away.
+
+## Goals (decided 2026-10-02)
+
+These are product decisions, recorded so the ordering below is not relitigated
+every time someone opens this file.
+
+| Decision | Choice |
+| --- | --- |
+| What comes first | **Wire the Project Brain into the prompt.** The thesis is the point; UX parity follows |
+| Audience for this phase | **Public release**: tagged, install script works, README accurate |
+| Providers that matter | Anthropic, OpenAI, Gemini, OpenRouter, local/OpenAI-compatible. Groq, Azure, Bedrock, Vertex, Copilot, xAI are unmaintained — keep only if free |
+| Learning loop | **Agent runs validation itself at task end**; procedural memory and skill candidates accrue automatically |
+| Performance claim | **Dropped from the README** until the brain is wired and measured |
+| Upstream attribution | **Credit OpenCode plainly** in the README |
 
 ## Definition of done
 
-**Someone who is not the author installs Aux, uses it on their own repository
-for a week, and depends on the result.**
+**A tagged release that someone who is not the author installs with one
+command, uses on their own repository for a week, and depends on — where the
+README's description of what Aux does is true.**
 
-Concretely: Track B item 1 done, plus a soak in which outside findings taper
-off. That second half is not padding. A checklist written by the person who
-wrote the code cannot enumerate what they cannot see, so the signal is not "the
-list is empty" — it is **the list growing slower than it is closed**.
+Concretely: P0 through P3 below complete, a tag pushed, and a soak in which
+outside findings taper off.
 
 ## Claims: what is defensible today
 
-The point of this section is that Aux should only say true things about itself.
+Aux should only say true things about itself. Verified 2026-10-02.
 
 **Defensible now.**
 
 | Claim | Backing |
 | --- | --- |
-| Race-clean under `-race` | Full suite, every push. **Qualified 2026-10-01** — see below; the gate works, but a green gate was not being watched |
-| No unreachable code outside a declared baseline | `scripts/deadcode.sh`, 48 accepted entries with reasons |
-| Coverage cannot regress | `scripts/coverage.sh` against `.coverage-floor` |
+| Builds and vets clean | `go build ./... && go vet ./...` at `278b9f1` |
+| Race-clean under `-race` | Full suite, 2m03s, exit 0, locally and on `main`'s own post-merge CI run |
+| No unreachable code outside a declared baseline | `scripts/deadcode.sh`, 48 accepted entries, unchanged |
+| Coverage cannot regress | `scripts/coverage.sh`: 33.8% against a 30.8% floor |
 | Upgrades across schema versions work | Tested from every recorded version with a populated database |
 | A database from a newer build is refused | `ensureNotNewer`, tested |
-| Commands ask before running | Permission service, fingerprinted grants |
+| Reads outside the project need approval | `RequireReadAccess` canonicalizes through symlinks and fails closed |
+| Dashboard is loopback-only and token-gated | Random token, constant-time compare, every data route |
 | Sessions survive a panic | Deferred teardown, tested both directions |
-| The context meter reflects what the window holds | Latest completed call's occupancy from the ledger, not lifetime spend. Backfilled on upgrade, verified against a real database |
-| The TUI fits the terminal it was given | Height invariant asserted across a width×height grid, empty and mid-turn, at page and app level |
-| Every glyph the TUI draws exists in the default macOS terminal font | `TestIconsAreFontSafe` walks the tree against a checked set |
-
-**Qualifying the race-clean row, 2026-10-01.** The claim above was false for five
-weeks and the table said it anyway. `main` went red when #22 merged on 2026-08-25
-and stayed red until 2026-10-01: the PR branch passed, the post-merge push to
-`main` failed, the session ended on the merge, and nobody looked again.
-
-What it caught was not a flaky test. `GrantPersistant` woke the caller waiting on
-an approval *before* recording the grant, so the woken caller could return and
-release `promptMu` while the grant was still unrecorded — and the next caller
-needing the same approval checked an empty list and prompted a second time. Two
-parallel tool calls needing one approval could ask the user twice after they had
-already answered. Fixed in #23 by recording first.
-
-Two things worth keeping from it, because neither is about this bug:
-
-- **A gate nobody reads is not a gate.** Three mechanical gates run on every
-  push, and that is still true. What was missing is that a *branch* passing was
-  treated as the merge being safe. `main`'s own post-merge run is the one that
-  decides, and it is the one that went unwatched.
-- **The concurrent test stated the contract but could only fail by luck.** It
-  went red once in CI and never in ~1000 local runs, including under `-race` and
-  CPU contention. A test that needs the scheduler's cooperation will eventually
-  be dismissed as flaky, which is nearly what happened. `TestGrantIsRecordedBeforeTheWaiterIsWoken`
-  pins the ordering directly instead and fails deterministically on the old code.
+| The context meter reflects what the window holds | Latest call's occupancy from the ledger |
+| The TUI fits the terminal it was given | Height invariant asserted across a width×height grid |
+| `.aux/` does not leak into commits | Self-ignoring `.gitignore`, verified in a scratch repo |
+| A missing API key produces a clear message | Verified: lists every env var and the config path |
+| Chained, substituted, redirected, and wrapper commands ask before running | M0.1: `internal/llm/tools/bash_safety_test.go` — every audit exploit plus `\|\|`, backticks, `${`, newline, `>`, `<`, `&`, and each removed wrapper/`go` entry; `Run` prompts on `echo hi; rm -rf .` and refuses `ls && curl x` |
 
 **Not defensible — do not claim these.**
 
 | Claim | Why not |
 | --- | --- |
-| "Cheaper than opencode" | Python: one repository, five tasks, one model. The gap **grew from 19% to 63% when runs were added**, so n=5 may still be too few, and Aux's own spread is 46%. TypeScript (`bench/suite-ts.json`, 2026-08-24): 189% gap in median tokens, `aux eval compare` calls it **not conclusive** at n=5 (p=0.06), and aux was also *less reliable* than opencode on this suite (4 of 25 task-attempts failed vs opencode's 0 of 25) -- a caveat "cheaper" would hide. Directionally consistent across two languages, nowhere near a general claim |
-| "80% test coverage" | Actual coverage is **33.1%**. 16 of 74 packages have no test file at all |
-| "Demand paging saves tokens" | There is no demand paging. `DedupCompiler` measurably removes duplicate blobs — 47.9% on the fixture with that shape, deterministically — but it defaults to off because nobody has shown that swapping a duplicate for a reference leaves the model's behaviour unchanged. Token arithmetic is not an outcome |
-| "Aux manages the agent's context" | It does not. `ContextWindow` appears only in display code — nothing truncates, evicts, or budgets. `StateEvicted` is written nowhere. The compiler sends the full history. What actually ships is context *observability* plus manual exclude/pin, which is worth claiming and is not this |
+| "Aux understands how your project works and gives the model only what it needs" | Nothing the profile, memory, or task compiler produces reaches the model. See [P1.1](#p11-send-the-project-manifest-and-task-spec) |
+| "Improves every time you use it" / "the tenth task is cheaper" | No automatic evidence producer; see [P1.3](#p13-run-validation-at-task-end). Nothing has ever been promoted to a skill |
+| "The prompt is compiled, not just concatenated" | Both compilers send the full transcript. `DedupCompiler` stubs duplicate blobs and defaults to off |
+| "Every command that changes something asks first" | Chaining and wrappers are closed (M0.1), but safe-listed commands still take mutating arguments without a prompt — measured 2026-10-03, see *Opportunistic* |
+| "Cheaper than opencode" | Python n=5: gap grew 19%→63% as runs were added. TypeScript n=5: p=0.06 and Aux failed 4/25 task-attempts vs 0/25. Decided: dropped until P1 is done |
+| "80% test coverage" | 33.8%. 15 packages have no test file |
+| "Aux manages the agent's context" | `ContextWindow` appears only in display code. Nothing truncates, evicts, or budgets. `evicted`/`faulted` are written nowhere |
 | "Production ready" | See the definition above |
 
-**A standing rule.** Eight times now, an item in this file has been wrong about
-its own symptom — the SQLite alarm, the panic bullet, the migration item, the
-first-run item, the evicted-state entry in A4, the A9 line claiming some
-turns "never reconcile the session" when reconciliation ran fine and was
-overwritten a moment later, and on 2026-10-01 two more: the race-clean row above,
-which asserted a green suite on every push while `main` had been red for five
-weeks, and B2's "`goreleaser release` now works", which was never run and would
-have failed three different ways. Every correction came from measuring or from
-running the binary, never from re-reading the file. Treat every unmeasured claim
-here, including the confident-sounding ones, as a hypothesis.
+**A standing rule.** This file has now been wrong about its own symptom ten
+times — the SQLite alarm, the panic bullet, the migration item, the first-run
+item, the evicted-state entry, the reconciliation line, the race-clean row,
+the release-pipeline line, and on 2026-10-02 two more: "commands ask before
+running" (the allowlist was never inspected for chaining) and the README's
+"compiled, not concatenated" (the compilers were read for what they recorded,
+not for what they sent). Every correction came from measuring or running,
+never from re-reading. Treat every unmeasured claim here as a hypothesis.
 
-Note the shape of the two newest ones: both were claims that a *mechanism* worked
-— a gate, a release pipeline. Unmeasured claims about machinery are the ones this
-file keeps getting wrong, because machinery looks correct when you read it.
+The shape to watch for: claims about a *mechanism* working. Machinery looks
+correct when you read it. The two newest were both machinery.
 
 ---
 
-## Track A — an agent can do these
+## P0 — Trust. Before anything ships to a stranger
 
-Ordered by value. Nothing here needs a human decision first.
+Small, mechanical, and each one is currently a false statement somewhere.
 
-### A1. Suite breadth — the biggest blocker to a legitimate claim
+### P0.2 Say what `-p` does, where it is seen
 
-The benchmark exists and works (`aux eval suite|gate|compare`, `--repeat`, exact
-two-sided rank test). It covers one repository, five small Python tasks, one
-model. Nothing in it generalises to Go or TypeScript work.
+`aux -p` calls `AutoApproveSession` (`internal/app/app.go:430`). The README
+mentions it once, `docs/trying-aux.md` leads with it — but `aux --help` and
+the `-p` flag text say nothing. Put it in the flag help and in the first line
+`-p` prints when not `--quiet`.
 
-Until a second repository in another language exists, the performance comparison
-cannot be stated publicly as more than a single-repository result. **This is the
-one item that converts an inadmissible claim into an admissible one.**
+### P0.3 Merge PR #28
 
-Needs: a scratch checkout of a well-tested public repo in another language,
-five tasks whose success is decided by that project's own test suite, n≥5 a side.
+Small, tested, CI green, description accurate. Closes the "no skill can ever be
+promoted" dead end by exposing `evaluate`/`promote`/`rollback`. Raise
+`.coverage-floor` to 33.8 in the same change or the next.
 
-Note before running: `aux -p` calls `AutoApproveSession`, so non-interactive runs
-bypass every permission prompt. Benchmark repositories must be scratch checkouts.
+### P0.4 Repo hygiene
 
-**Measured, 2026-08-24.** A second-language suite exists: `bench/suite-ts.json`,
-five tasks against a scratch checkout of `sindresorhus/pretty-bytes`
-(TypeScript) pinned to `fd7eb38`. aux vs opencode, n=5 a side, same model
-(`minimax-coding-plan/MiniMax-M3` both sides — see the correction below, this
-is a real hosted API, not the free local compute "cheap on a local model"
-implied):
+- `.claude/settings.json` is committed: a Claude Code bash allowlist from a
+  development session, including `Bash(go run *)` and `Bash(git commit *)`.
+  Remove it; add `.claude/` to `.gitignore`.
+- `.codebase-memory/` (from `codebase-memory-mcp`) sits untracked in the
+  working tree. Ignore it.
+- The remote is `kaiau00/Aux`; the module path and every README link say
+  `kaiau00/aux-cli`. `gh` follows the redirect; `go install` and the install
+  script's `releases/latest` URL may not. Pick one name. See [P3.2](#p32-install-paths-that-work).
 
-| harness | pass rate (5 runs) | tokens, median |
-| --- | --- | --- |
-| aux | 60–100%, median 100% | 929,156 |
-| opencode | 100% every run | 2,689,882 |
+---
 
-189% difference in median tokens, but `aux eval compare` calls it **not
-conclusive** (p=0.06, just over the 0.05 bar) — the same shape the Python
-result already has: a gap that looks large and that n=5 noise cannot yet rule
-out. New wrinkle this run adds: aux was cheaper but less reliable. 4 of its 25
-task-attempts failed across the 5 repeats (2 in one repeat, 2 in another);
-opencode passed all 25/25. A bare "cheaper" claim would now be misleading in
-the direction that matters — it would hide that it was also less consistent.
+## P1 — Make the thesis true
 
-Getting past p=0.06 needs more repeats, which on this evidence means real
-wall-clock (opencode's slowest single task-run took 373s and 4.8M tokens) —
-worth doing, but a deliberate call given that cost, not a default next step.
+The product claim is that Aux knows the project and the model benefits. Four
+changes make that mechanically true. Measuring whether it *helps* is P4.
 
-### A2. Coverage, deliberately
+### P1.1 Send the project manifest and task spec
 
-33.1% against a stated bar of 80%. The floor ratchet stops it regressing but
-does not close the gap. 16 packages have no test file (re-counted 2026-10-01;
-`internal/session` and `internal/tui` had gained tests and were removed from
-this list, the repository root was added to it, and `internal/version` came off
-it the same day — see B2, where being unable to test it was how the bug got in):
+`task.Coordinator.beginWithParent` (`coordinator.go:214-215`) builds
+`eff.Manifest + memorySection + relatedSection` and the rendered task spec and
+puts them on the context. `agent.streamAndHandleEvents` (`agent.go:466`) reads
+them and passes them to `Compile`. `decomposePages` records them as `available`
+pages and `Compile` returns `Messages: msgs` — the transcript only.
 
-`.` (root), `cmd`, `cmd/schema`, `internal/diff`, `internal/format`,
-`internal/history`, `internal/lsp` (+`protocol`, `util`, `watcher`),
-`internal/tui` (`components/logs`, `components/util`, `image`, `util`),
-and the two test-helper packages.
+Fix: render manifest and task spec into the system prompt (or a leading system
+section the provider adapters already support), mark those pages `resident`,
+and count them in `EstimatedTokens`. Keep it deterministic: this text goes into
+the cached prefix, so the order must be stable (the same lesson as
+`processContextPaths`).
 
-Priority order by blast radius: **`internal/diff` first** — 1,481 lines that
-mutate files, still with no test of any kind, and now the largest untested
-surface left since `internal/session` was covered. Then `cmd` (every entry
-point), then the rest. Raise `.coverage-floor` as it climbs — that is the
-ratchet's whole purpose, though note it is calibrated to CI, which measures
-lower than a laptop does.
+Caveat worth knowing before measuring: for a Go project the manifest is ~34
+tokens — `Languages: go`, `go build ./...`, `go test ./...`. The profile
+scanners are thin. Sending it is necessary, not sufficient. What makes the
+manifest worth sending is P1.2 and P1.3.
 
-### A3. Decide demand paging's default
+Done when: a test asserts the compiled messages contain the manifest text and
+the `project_manifest` page is `resident`; a real session's `ContextCompiled`
+event shows `ResidentPages` including it.
 
-`--paging` exists, defaults to off, and the machinery to settle it now exists.
-Runs are cheap on a local model. Just needs an adequate n and an honest verdict,
-including "no measurable difference" if that is the answer.
+### P1.2 Render memory content, not keys
 
-Blocked on A1 only in the sense that deciding it against one repository would be
-Goodhart. Running it is unblocked.
+`coordinator.memorySection` (`coordinator.go:273-288`) writes
+`[episodic] episode:<task-id>` — the stable key. The content
+(`{objective, mode, outcome, changedPaths}` or `{command, purpose}`) is in the
+version row and never read here. Zero information even once P1.1 ships.
 
-Correction, 2026-08-24: "cheap on a local model" below and in A1 overstated
-it. `local.MiniMax-M3` resolves via `LOCAL_ENDPOINT` to a real hosted API
-(`api.minimax.io`), not local compute. It happens to be cheap in practice — a
-subscription plan, not metered per call — but it is not free, and a suite run
-is a real call over the network, not a local inference request.
+Fix: load the latest version per memory, render a one-line summary per type
+(episodic: objective → outcome; procedural: the command and when it was last
+validated; factual: the fact), bound the total by tokens not count.
 
-Renamed `DedupCompiler`, because it does not page: it replaces an identical
-earlier copy of a large blob with a reference to the later one.
+### P1.3 Run validation at task end
 
-**Measured, 2026-08-24.** `aux eval compiler` is deterministic — fixed fixtures,
-no provider calls, so none of the noise that voided the earlier number:
+Decided: the agent runs validation itself. Today `validation.Service.RunIntent`
+is called only from `cmd/validate.go` and `cmd/eval.go`. `coordinator.Finish`
+reads `SuccessfulCommands`, which is therefore always empty in the TUI.
 
-| fixture | control | variant | saved |
-| --- | --- | --- | --- |
-| repeated-read | 2132 | 1111 | **47.9%** |
-| localized-edit | 1077 | 1077 | 0% |
-| cross-file | 2130 | 2130 | 0% |
+Fix: in `Finish` (or a step the agent takes before yielding), plan intents from
+the effective profile's validation commands against the task's acceptance
+criteria (the same code `cmd/validate.go:77-90` already runs), execute them
+through the permission service with a fingerprint per command, record evidence,
+and only then extract memory and skills. Respect the impact graph's
+targeted-vs-broad decision. Make it skippable per task and configurable off.
 
-Half off the shape it targets, nothing at all elsewhere — the profile a safe
-default wants. And it is the shape real sessions have: a live session shows
-21,248 cache-read tokens repeating turn after turn.
+This is what turns "validated commands become procedural memory" from a
+sentence into a path that runs. It also closes A5 properly: skill candidates
+will exist without a human running three CLI commands.
 
-**Still not enough to flip the default.** "Lossless" means no information is
-removed, not that the prompt is byte-identical: the model sees a reference where
-a duplicate used to be, and whether that changes what it does is unmeasured.
-That question is behavioural, and A1 is what answers it. The arithmetic is
-settled; the behaviour is not.
+Done when: a scratch-repo session that edits a file ends with a
+`validation.run` event, a procedural memory, and a skill candidate, with no CLI
+step.
 
-### A4. Tool-result eviction with promotion
+### P1.4 Wire or delete `govpolicy`
 
-The most valuable idea in this file and the most dangerous. When a tool result
-has been consumed, replace its content with a one-line pointer
-(`// file.go (1.2K lines) — read, no action needed`), leaving retrieval able to
-re-pull it. Plausibly 40–70% off history size on long sessions.
+`Policies.Evaluate` and `Policies.Promote` have no non-test callers (PR #28
+confirmed). The cost governor defaults `off`, and `on` only stops at a fixed
+`DefaultBudget(ModeBalanced)`. Either make learned policies feed the governor's
+budget, or delete the package and its dashboard panel. An evaluation-gated
+pipeline with no producer and no consumer is the exact shape
+`scripts/deadcode.sh` cannot see.
 
-The pairing that makes it safe: eviction must ask **"is this a fact about the
-project, or about this turn?"** Facts get promoted to memory; turn-local content
-is dropped. Blind eviction is how an agent forgets what it was told.
+### P1.5 Make the two unwritten context states honest
 
-Do not build this before A1 can measure it, or there is no way to tell token
-savings from silent context loss.
+`contextstore` has five binding states; `evicted` and `faulted` are read and
+written nowhere. Both state models now say so in comments. Either implement
+A4-style eviction (after P4.1 can measure it) or remove the two states so the
+dashboard's "evicted" group stops implying a mechanism.
 
-Two of contextstore's five binding states, `evicted` and `faulted`, are read and
-written nowhere — nothing evicts because nothing enforces a budget. The UI turns
-out to be innocent here: `RenderExpanded` skips empty groups, so neither heading
-ever reaches the screen. (An earlier draft of this entry claimed it rendered an
-empty section. It does not. Five, now.) What was actually untrue was a comment
-in `viewmodel/build.go` calling all five states backed rather than aspirational.
-Both state models now say plainly which two have no writer.
+### P1.6 Rewrite the README's "How it works" to match
 
-### A5. Skill promotion path
+Once P1.1–P1.3 land, the section is true. Until then, it isn't — and it is the
+first thing a stranger reads. Do this in the same PR as P1.3, not after.
 
-Candidates are produced automatically from validated commands, and promotion
-correctly requires a passing evaluation. Nothing can currently produce that
-evaluation, so **no skill can ever be promoted** — the pipeline terminates one
-step short. A1 supplies the missing evidence.
+---
 
-Keep the risk note in force: a wrong skill is worse than no skill, and one that
-fires on every task is the bad outcome to design against.
+## P2 — Daily-driver parity
 
-### A6. `/remember`
+The things that decide whether you reach for Aux or for Claude Code when you
+sit down. In order of how often they bite.
 
-`/remember always use the new auth API, not legacy` writes to `.aux/memory.md`
-(project) or `~/.aux/memory.md` (user), loaded next session as Project Brain
-input. Default project scope; explicit opt-in for user scope. Closes the "the
-agent forgets what I told it" complaint, and it is small.
+### P2.1 The model catalog
 
-### A7. Memory UX
+Hardcoded; the newest Anthropic entry is `claude-sonnet-4-20250514`
+(`internal/llm/models/anthropic.go:88`), seventeen months old at the time of
+the audit. `models.SupportedModels[agentConfig.Model]` must match
+(`agent.go:1182`, `config.go:631`), so a newer model ID is unreachable except
+through `LOCAL_ENDPOINT`. For a product whose pitch is "pick one model" this is
+the most user-hostile gap in the tree.
 
-Ship before more memory features, not after. Without it memory is a black box
-that surprises people, which is worse than no memory:
+Fix, in order of leverage:
 
-- **Discoverable** — plain markdown, plus `aux memory list`
-- **Editable** — by hand
-- **Deletable** — "forget that", "forget session X", "wipe everything"
-- **Provenance visible** — when the agent acts on a memory, show which line
-- **Portable** — export, import, sync
+1. Let `agents.<name>.model` accept any API model ID for a configured
+   provider, with limits looked up from models.dev (`catalog.go` already fetches
+   it for context limits) and a sane fallback when the lookup fails.
+2. Refresh the hardcoded entries for the five providers that matter.
+3. Drop or stop maintaining Groq, Azure, Bedrock, Vertex, Copilot, xAI, per
+   the decision above. If they stay, say "unmaintained" in the README.
 
-### A8. Memory primitive gaps
+### P2.2 Provider SDKs
 
-Most of the original list exists (`promote`, `confidence`, `provenance`,
-project/task scope, revision-based invalidation). Genuinely missing:
+`openai-go v0.1.0-beta.2` (current: 1.12), `anthropic-sdk-go v1.4.0` (current:
+1.78), `mcp-go v0.17.0` (current: 1.1), `google.golang.org/genai v1.3.0`
+(current: 1.72). New model parameters, tool-schema changes, and streaming fixes
+all live in the gap. The OpenAI dependency is a *beta*. Bump all four; the
+suite is offline and deterministic so this is cheap to verify.
 
-| Primitive | Gap |
-| --- | --- |
-| `supersede` | versions exist, no explicit supersede |
-| `expire` | revision-based only, no date-based expiry |
-| `scope` | project/task only — user and org scope needs **[B4](#b4-product-decisions-an-agent-should-not-make-for-you)** |
+### P2.3 Slash commands
 
-### A9. Opportunistic
+`isSlashCommand` (`composer.go:73`) changes the placeholder to "Run a command…".
+On Enter, `editorCmp.send` forwards the text to the model unchanged. `/init`
+is sent as the literal string `/init`. Dispatch `/`-prefixed input to the
+command registry that Ctrl+K already uses (`tui.go:989-1021`), with completion.
+The placeholder is currently a lie; fixing the placeholder alone is not the fix.
+
+### P2.4 `--continue` and `--resume`
+
+No flag resumes a session. `-c` is `--cwd`. Add `--continue` (most recent
+session in this project) and `--resume <id|picker>`, matching what people
+expect from the tool they are comparing Aux to.
+
+### P2.5 Compaction as a decision, not an ambush
+
+Auto-compaction fires silently at 95% of the window. The page list and the
+corrected meter already exist. Warn approaching the limit, show what is largest
+in the window, offer exclude/pin/compact. This is the differentiator A4 reaches
+for without A4's risk, and needs no benchmark to justify.
+
+### P2.6 `/remember` and memory UX
+
+`/remember <fact>` writes a factual memory (project scope by default). Then
+make memory not a black box: `aux memory list`, delete ("forget that"),
+provenance on use, export. Ship this before more memory *features*; a memory
+that surprises people is worse than none. Depends on P2.3 for the slash form.
+
+### P2.7 Text that still says the wrong thing
+
+- The OpenAI coder prompt begins "built by OpenAI" (`prompt/coder.go:28`).
+- `aux --help` opens with OpenCode's description, not Aux's.
+- The instruction file is spelled `Aux.md`, `aux.md`, and `AUX.md` in the
+  prompt and `defaultContextPaths`. Pick one, document it, keep the others as
+  aliases.
+- The dashboard URL breaks mid-address in the intro message (glamour splits at
+  `127.0.0.`); print the bare origin and point at `d` in the context pane,
+  which also stops the token being written into the transcript.
+
+---
+
+## P3 — Ship it publicly
+
+### P3.1 Tag `v0.1.0`
+
+There are no releases and no tags. `goreleaser check` passes and a snapshot
+build produces all four archives (proven 2026-10-01), but nothing has gone
+through the real `release` workflow and `./install` has never fetched an
+artifact. Tag after P0 and P1.1–P1.3; a release whose README is false is
+worse than no release.
+
+### P3.2 Install paths that work
+
+- `./install` fetches `github.com/kaiau00/aux-cli/releases/latest` — fix the
+  repo name (P0.4) or the URL, then run the script on a clean machine.
+- `go install github.com/kaiau00/aux-cli@latest` requires the module path to
+  resolve. Test it after the rename decision.
+- Homebrew tap and AUR need owned namespaces; `aux-ai` is taken. Decide whether
+  to create `kaiau00/homebrew-tap` or skip both for 0.1.
+
+### P3.3 `aux --version` for local builds
+
+Prints `unknown` for `go build` (verified). The B2 fix made the stamped tag
+win, which is right; the fallback should still surface the VCS pseudo-version
+when the linker stamped nothing.
+
+### P3.4 README rewrite
+
+After P1 and P2.1: accurate "How it works", no performance claim, OpenCode
+credited in the first screen, install section that is true, provider list that
+matches what is maintained, model names current. `docs/trying-aux.md` updated
+to match.
+
+### P3.5 Coverage, deliberately
+
+33.8% against a stated 80%. The ratchet holds the floor; it does not climb.
+15 packages have no test file: `.` (root), `cmd`, `cmd/schema`,
+`internal/format`, `internal/history`, `internal/lsp` (+`protocol`, `util`,
+`watcher`), `internal/tui/{components/logs,components/util,image,util}`, and
+the two test-helper packages. `internal/diff` came off this list in PR #27.
+Priority by blast radius: `cmd` (every entry point), then `internal/history`
+(file versions back every checkpoint), then the rest. Raise the floor as it
+climbs; it is calibrated to CI, which measures ~0.6 points lower than a laptop.
+
+---
+
+## P4 — Evidence. After P1, not before
+
+### P4.1 Suite breadth
+
+`aux eval suite|gate|compare` exists and works. Python: one repository, five
+tasks. TypeScript (`bench/suite-ts.json`): five tasks, p=0.06, and Aux was less
+reliable (4/25 failures vs 0/25). Both were measured against a build that did
+not send the manifest (P1.1), so neither measures the thesis. Re-run both
+suites after P1 with n≥10 a side, same model both sides, and report the
+reliability number next to the token number every time.
+
+Cost note: `local.MiniMax-M3` resolves via `LOCAL_ENDPOINT` to a hosted API, not
+local compute. A suite run is network calls on a subscription, not free.
+
+### P4.2 Decide `--paging`'s default
+
+`DedupCompiler` saves 47.9% on the repeated-read fixture, 0% elsewhere,
+deterministically. Whether a reference stub changes model behaviour is
+unmeasured and is what P4.1 answers. Flip the default only on evidence.
+
+### P4.3 Tool-result eviction with promotion
+
+The most valuable idea in this file and the most dangerous. Replace consumed
+tool results with one-line pointers; promote facts about the project to memory
+first; drop turn-local content. Plausibly 40–70% off history on long sessions.
+Do not build before P4.1 can tell token savings from silent context loss.
+
+---
+
+## Opportunistic
 
 Real, small, or low-confidence. None of it blocks anything.
 
-- **MCP tool curation** — a 50-tool MCP server costs ~15K tokens of definitions
-  per turn. Interacts directly with cache stability
-- **Smart window around the search match in `view`** (the bash half shipped)
-- **Trajectory waste detection** — "you grepped this three times"
-- **Cost-aware tool selection** — suggest `--testPathPattern` when budget is low
-- **Differential inclusion for edits** — send diffs, not whole files
-- **`--budget strict` preset**, wiring existing governor policies
-- **PageRank as file-inclusion oracle** — needs a <50ms p99 retriever with
-  per-file invalidation first
-- **Correction detection** — "propose, never auto-write" remains right; the
-  heuristics are ~70% unreliable at telling one-shot from durable
-- **`grep` spawns `rg` per call** — measure before optimizing
-- **The dashboard URL breaks mid-address in the intro message** —
-  `http://127.0.0.` on one line, `1:60823/?token=…` on the next. glamour breaks
-  it at that `.` whatever the markdown form: inline, code span, fenced block,
-  indented block all reproduce it. Needs a content change rather than a
-  formatting one — print the bare `http://127.0.0.1:60823` and point at `d` in
-  the context pane, which already renders the tokened link correctly. That also
-  stops the access token being written into the stored transcript
-- **The splash carries a 36-character Go pseudo-version** — `⌬ Aux
-  v0.0.0-20260824135349-7e216e5eba8f`. Truthful, and mostly noise on every
-  launch. How builds should identify themselves is a **[B4](#b4-product-decisions-an-agent-should-not-make-for-you)** question.
-  *Narrowed 2026-10-01:* released builds will show the tag (`0.1.0`) once one
-  exists — that was the version-stamping bug in **[B2](#b2-tag-a-first-release)**,
-  not a display choice. What remains is only the local `go build` case, where a
-  pseudo-version is the honest answer and the question is whether to shorten it
-- **Four-tier context model** — a principle for reviewing the above, not a task:
-  saving tokens means moving Tier 2 → Tier 3, not deleting Tier 2
+- MCP tool curation — a 50-tool server costs ~15K tokens of definitions per
+  turn and churns the cache prefix
+- Smart window around the search match in `view`
+- Trajectory waste detection — "you grepped this three times"
+- `--budget strict` preset wiring the existing governor
+- `grep` spawns `rg` per call — measure before optimizing
+- `renderView` is O(conversation) per call; debounced to 100ms, still a
+  stutter on very long sessions. Incremental rendering would fix it
+- Local-build version string: shorten the pseudo-version on the splash
+- Four-tier context model as a review principle: saving tokens means moving
+  Tier 2 → Tier 3, not deleting Tier 2
+- **Bash safe list, argument-level holes (found during M0.1, measured in a
+  scratch repo 2026-10-03).** These pass `isSafeReadOnly` and run with no
+  prompt: `go list -export -toolexec <prog> .` executed `<prog>`;
+  `git log --output=<file>` wrote the file; `git branch -D <b>` deleted the
+  branch. By the same reading, not run: `git tag -d`, `git remote add/remove`,
+  `git grep -O<cmd>` (`--open-files-in-pager`), `go env -w`, `hostname <name>`,
+  `date -s`. Likely fix: drop `go list`/`go env` flags and the mutating `git`
+  subcommands from the fast path, or allow only argument-free forms. Worth its
+  own item before the claim above can say "every command"
+- `bashDescription()` says commands time out after 30 minutes when no timeout
+  is given; `DefaultTimeout` is 1 minute (`bash.go`)
+- The banned-command check now matches every word, so `grep -r curl .` or
+  `ls links` is refused outright rather than prompting. Conservative by design
+  (plan M0.1 guardrails); revisit if it bites
 
-### A10. Make compaction a decision, not an ambush
+## Decisions still open
 
-Auto-compaction fires silently at 95% of the window. It is the single worst
-moment in every agent tool: the thread is lost and the user finds out
-afterwards. The page list needed to do better already exists, and the meter
-driving it is now correct.
-
-Warn approaching the limit, say **what is largest in the window**, and let the
-user drop specific pages or compact deliberately. This is the differentiator A4
-is reaching for, without A4's risk of silently discarding something the agent
-needed — and unlike eviction, it needs no evidence from A1 to justify.
-
----
-
-## Track B — only you can do these
-
-### B1. Get it in front of someone else — the only real blocker
-
-Nothing in Track A substitutes for this, and everything in Track A is written by
-the same process that keeps being wrong about its own symptoms.
-
-Priority order:
-
-1. **The security surface** — permission fingerprinting, read confinement, the
-   dashboard's auth. All of it is weeks old and has never met an adversary
-2. **The agent loop** — `RunTurn`, the coalescing write buffer, parallel tool
-   execution
-3. **One real user on a real repository for a week**
-
-[docs/trying-aux.md](docs/trying-aux.md) exists so this costs ten minutes: it
-covers install, what to try, what to report, and leads with the two things that
-should never surprise anyone — that `-p` auto-approves every permission, and
-that `.aux/` holds their full transcript inside their repository.
-
-### B2. Tag a first release
-
-There are no releases and no tags. Until a tag exists, the install script has
-nothing to download and build-from-source is the only path — `install:43` fetches
-`releases/latest/download/…`, so **`./install` currently 404s for everyone.**
-
-**Corrected 2026-10-01.** "`goreleaser release` now works" was never tested. Three
-separate things would have broken the first tag, none of them visible from reading
-the config, and each found only by running the release machinery:
-
-1. **No usable token.** `release.yml` passed goreleaser
-   `GITHUB_TOKEN: ${{ secrets.HOMEBREW_GITHUB_TOKEN }}` — a cross-repository token
-   left over from the tap that no longer exists. The repository has **no secrets at
-   all**, so it resolved to an empty string and the release could not have been
-   published. Now the built-in `secrets.GITHUB_TOKEN`; vestigial `AUR_KEY` dropped.
-2. **`goreleaser check` was failing outright.** `archives.format` and
-   `snapshot.name_template` are both deprecated. The workflow pins
-   `version: latest`, so this was a time bomb regardless of the tag: the release
-   breaks the moment goreleaser drops them. Renamed to `archives.formats` and
-   `snapshot.version_template`.
-3. **The binaries would have misreported their own version.** goreleaser stamps the
-   tag via `-ldflags -X …/internal/version.Version`, and `version.go`'s `init()`
-   overwrote it with the version embedded in build info — so a `v0.1.0` release
-   would have reported `v0.0.0-20261001171652-a2747cbfbef9` in `aux --version`, in
-   every bug report, and on the splash. The fallback was written for
-   `go install …@latest` (no ldflags) and was correct while `go build` left
-   `Main.Version` empty; Go 1.24 onwards stamps a VCS pseudo-version there too, so
-   it began firing unconditionally and the tag always lost.
-
-   Worth noting *why* it survived: the old shape was untestable. `init()` has
-   already run before any test starts, and `internal/version` had no test file.
-   The logic now lives in `resolveVersion` with the build-info read injected, and
-   has four tests.
-
-**Now proven, 2026-10-01:** `goreleaser check` passes, and
-`goreleaser release --snapshot --clean` builds all four targets, four `tar.gz`
-archives, four deb/rpm packages and checksums. The archive extracted from
-`dist/aux-mac-arm64.tar.gz` reports the version goreleaser stamped rather than a
-pseudo-version, and the generated names match what `install:23` expects for every
-os/arch pair.
-
-**Still unproven:** no tag has been pushed, so nothing has gone through the real
-`release` workflow, no artifacts have ever been downloaded, and `./install` has
-never fetched one. A snapshot is not a release.
-
-### B3. Distribution identity
-
-`.goreleaser.yml` no longer publishes to a Homebrew tap or AUR. Re-adding either
-means creating and owning them. The `aux-ai` organisation is **not yours** —
-registered by someone else in 2021 — so anything under that name is unavailable.
-
-Also note the package maintainer is now `kaiau00 <258971420+kaiau00@users.noreply.github.com>`;
-change it if that is not the identity you want on public packages.
-
-### B4. Product decisions an agent should not make for you
-
-- **Memory user/org scope** (blocks part of [A8](#a8-memory-primitive-gaps)) —
-  where does memory live when it is not project-local?
-- **Whether the performance claim matters enough** to fund [A1](#a1-suite-breadth--the-biggest-blocker-to-a-legitimate-claim)'s
-  benchmark runs
-- **Whether to credit the upstream project in the README.** `LICENSE` keeps
-  `Copyright (c) 2025 Kujtim Hoxha`, which is what MIT requires, but nothing
-  user-facing says Aux is derived from that work. Not a legal question; a
-  question about how you want to present it
-
----
+- **Memory beyond project scope.** Where does user- or org-level memory live?
+  Blocks the `supersede`/`expire`/`scope` primitives in A8 (old numbering).
+- **Distribution identity.** `aux-ai` is not yours. Tap and AUR under
+  `kaiau00`, or neither for 0.1?
+- **Windows.** Not supported; the shell tool is Unix-only. Decide whether
+  that is permanent and say so in the README (it currently does).
+- **Package maintainer identity** on deb/rpm is `kaiau00 <noreply>`. Change if
+  that is not what public packages should carry.
 
 ## Sequencing
 
-**Start B1 today.** It is a week of wall-clock that has not started, nothing in
-Track A shortens it, and every day it does not start is a day added to the end.
+**P0 this week** — small changes, mostly one-file. Nothing else should merge
+ahead of M0.1.
 
-Track A in parallel, in order: **A1** (it is what makes a claim admissible), then
-**A2**, then **A3**. Do not start A4 before A1 can measure it.
+**P1.1 → P1.2 → P1.3 next**, in that order; each is testable alone, and P1.3
+is where the loop closes. P1.6 lands with P1.3.
 
-Everything else waits until outside findings start arriving, because those will
-reorder this list — which is the point of B1.
+**P2.1 and P2.2 in parallel with P1** — they touch different code and the
+model catalog is what makes Aux usable at all day to day.
+
+**P3 after P1 is true.** Tag when the README is honest, not before.
+
+**P4 only after P1.** Measuring the current build measures the wrong thing.
+
+---
 
 ## Appendix: what has been closed
 
 | | |
 | --- | --- |
-| Task benchmark | `internal/evalsuite`, pinned revisions, command-decided success, exact two-sided rank test. Repetition enforced: three runs a side cannot reach p≤0.05 and the tool says so |
-| SQLite concurrency | Mostly a false alarm, recorded rather than deleted. `synchronous`/`cache_size` were genuinely per-connection; the pool was unbounded; pragma failures were ignored and are now verified at startup |
-| Reachability audit | `scripts/deadcode.sh` ratchets against a baseline. Found a complete unwired onboarding flow in seconds. All 23 debt entries now resolved; 48 accepted remain |
-| Coverage gate | Ratchets against `.coverage-floor`, calibrated to CI rather than a laptop |
-| Cached-token accounting | The dependency's streaming accumulator dropped `prompt_tokens_details`, so 150 turns recorded zero cache reads and cost was overstated several-fold — with the governor stopping work against the inflated figure |
-| Validation fail-closed | A dropped evidence write could report a **failed** criterion as *Validated* |
-| Deterministic context order | Goroutine completion order was leaking into the cacheable prompt prefix |
-| Panic teardown | Recovery existed; it skipped the session's busy marker, the context and the channel, so a panic wedged the session permanently and silently |
-| Upgrade safety | Tested from every recorded version with a populated database; a newer database is refused instead of silently accepted |
-| Silent failures | 137 sites triaged; three were misreporting state (`finishMessage`, `scanVersionOpt`, `Reindex`). The rest annotated with why discarding is correct |
-| First run | `agent coder not found` for a missing API key, plus a usage dump. And `.aux/` sat uncommitted in the user's repository holding their full transcript — now self-ignoring |
-| pubsub race | `Publish` sent on channels a concurrent unsubscribe had closed. A crash log from 2026-07-04 in the repository root had recorded it happening |
-| Module identity | `github.com/aux-ai/aux-cli` resolved to nothing. Renamed with the repository. Go rejects `aux` as a path element outright — a reserved Windows device name |
-| Install instructions | Every method in the README was fictional |
-| Package attribution | Named the upstream author, with his personal address, in files meant to ship to strangers |
-| Title/turn lost update | Title generation runs in a goroutine on a session's first message. It read the whole session, made a model call to name it, then saved that stale copy back over everything the turn had reconciled meanwhile. Two sessions in a real database held a completed ~21K call while reading zero tokens and zero cost. It also silently zeroed the occupancy field, so a first turn could show "Context 0" however full the window was |
-| Dashboard disclosure | The handoff note told outside reviewers "there is no Aux server" while `dashboard.enabled` defaults to true. Loopback-bound with a token on every data route, so not reachable off the machine — but not nothing, and not what the document said |
-| Terminal layout | The screen rendered more rows than the terminal had at nearly every size — three too many at 40 columns, one too many even at 200x20 — so the alt screen scrolled and the task header left the top for good. Hint lines rendered at a fixed width wrap rather than clip; two of them said the same thing; and a 90/10 vertical split starves the composer below 24 rows |
-| Model name | `friendlyModelName` let a trailing `.*` eat the end of the ID. `MiniMax-M3` displayed as "MiniMax M", `kimi-k2` as "Kimi K", `Qwen2.5-Coder-32B-Instruct` as "Qwen2" — always the part that says which model it is |
-| Font coverage | 12 of 32 non-ASCII glyphs were absent from SF Mono, the default font of the default macOS terminal, the `⌬` logo among them and absent from Menlo too. A substituted glyph need not honour the cell grid, and an emoji-presentation codepoint renders double-width while the layout counts one. `TestIconsAreFontSafe` now walks the tree |
-| Context meter | "Context X/Y" summed lifetime spend against the context window, counting the resident conversation once per turn: seven turns over 21K read 148.3K. Auto-compaction fires off the same number, so a long session summarised itself away with the window a third full |
-| User-defined hooks | Dropped, not deferred. A config file naming commands to run turns cloning a repository into running its code |
-| Eval suite isolation | `.aux` self-protects with a nested `.gitignore` (`*`), so the runner's `git clean -fd` isolation step left it standing between tasks -- task N inherited task N-1's session database. First run of a new suite showed it directly: one task failed 4 of 5 repeats at 1-2 turns each, then passed cleanly the moment it was run alone, outside the suite. Isolation now also removes `.aux` before every task |
-| Eval suite metrics after isolation | Fixing the isolation gap above broke cost/token metrics as a direct side effect: the top-level `aux eval suite` process held one database connection for the whole run, opened before any task's `.aux` was even created. Deleting and recreating that file mid-suite (the fix above) left the held connection reading a deleted, orphaned copy. Every run reported 0 tokens, 0 turns. `ledgerMetrics` now reconnects fresh for each metrics read instead of once for the whole suite |
-| Context pane budget mislabelled and measured against the wrong thing | The context drawer's page-budget line said "Context 338/1M", the same word the task header and status bar use for actual prompt occupancy ("Context 20,000/1M") -- but it sums only resident/pinned *page bindings* (an estimate over conversation-message pages, never the system prompt or tool schemas), not the whole prompt. Relabelled "Pages". Deeper problem underneath the label: it was also divided by the *model's context window* (1M), not what the call actually sent -- against a 1M ceiling that ratio is structurally near zero regardless of reality, so it could never reach a percentage worth acting on. Checked against this repo's own live session: page sum 1,227 tokens against a real call total of 20,273 -- 6%, not 0.1%. Now divided by the same call's real total (`CallTotalTokens`, replacing `LimitTokens`), so the percentage answers what the pane exists to answer: how much of what was actually sent is tracked content you could exclude or pin |
-| Trackpad scrolling: buggy and slow | Two real bugs, found by measuring, not reading. (1) A streaming response fires a pubsub update on every content delta, and that handler called `viewport.GotoBottom()` unconditionally -- scrolling up to read earlier history while the agent was working got fought back to the bottom within a fraction of a second. (2) That same handler called `renderView`, which rejoins and re-wraps the *entire* conversation on every call, not just the changed message -- measured at 200-700ms per call on a 400-message session, blocking the whole UI loop including scroll input. Fixed: streaming updates now debounce behind a 100ms coalescing window (`rerenderDebounce`), and the eventual render only jumps to the bottom if the viewport was already there. `renderView` itself is still O(conversation length) per call; on a much longer session than tested here it would still show as a brief stutter roughly every 100ms during active streaming rather than near-continuous lag -- a further fix would need incremental content updates instead of a full rejoin, not done here |
+| M0.1 bash safe-list bypass, 2026-10-03 | `isSafeReadOnly` refuses the fast path on any shell operator; wrappers (`env`, `timeout`, `nohup`, `nice`, `time`, `kill`, `killall`, `set`, `unset`, `top`) and code-executing `go` subcommands removed; banned check runs on every word. `bash_safety_test.go`: 29 bypasses rejected, 7 read-only commands kept, `Run` prompts with the full command as fingerprint |
+| Audit, 2026-10-02 | Outside read of `278b9f1`: build, vet, `-race` suite, both gates, CLI in a scratch repo, agent loop and compiler traced end to end. Found: manifest never sent, memory renders keys, learning loop has no automatic producer, bash allowlist bypass, catalog 17 months stale, slash commands inert, no resume flag, beta OpenAI SDK. Confirmed every mechanical claim in the previous claims table except "commands ask before running" |
+| Task benchmark | `internal/evalsuite`, pinned revisions, command-decided success, exact two-sided rank test. Repetition enforced |
+| SQLite concurrency | Pragmas per connection, bounded pool, failures verified at startup |
+| Reachability audit | `scripts/deadcode.sh` ratchets against a baseline. 48 accepted entries |
+| Coverage gate | Ratchets against `.coverage-floor`, calibrated to CI |
+| Cached-token accounting | Streaming accumulator dropped `prompt_tokens_details`; cost was overstated several-fold |
+| Validation fail-closed | A dropped evidence write could report a failed criterion as validated |
+| Deterministic context order | Goroutine completion order was leaking into the cacheable prefix |
+| Panic teardown | A panic wedged the session permanently and silently |
+| Upgrade safety | Tested from every recorded version; newer database refused |
+| Silent failures | 137 sites triaged; three misreported state |
+| First run | `agent coder not found` replaced with a real message; `.aux/` self-ignoring |
+| pubsub race | `Publish` sent on closed channels; a 2026-07-04 crash log recorded it |
+| Module identity | `github.com/aux-ai/aux-cli` resolved to nothing; renamed |
+| Install instructions | Every method in the README was fictional; now says build from source |
+| Package attribution | Upstream author's personal address removed from shipped files |
+| Title/turn lost update | Title generation saved a stale session over the turn's totals |
+| Dashboard disclosure | Handoff note said "no server" while one started by default |
+| Terminal layout | Rendered more rows than the terminal had at nearly every size |
+| Model name | `friendlyModelName` ate the end of the ID |
+| Font coverage | 12 of 32 glyphs absent from SF Mono; `TestIconsAreFontSafe` |
+| Context meter | Summed lifetime spend against the window; auto-compaction fired on it |
+| User-defined hooks | Dropped: a config file naming commands turns cloning into executing |
+| Eval suite isolation | `.aux` survived `git clean`; tasks inherited each other's databases. Then the held connection read a deleted file; metrics reconnect per read |
+| Context pane budget | Relabelled "Pages"; divided by the call's real total, not the model window |
+| Trackpad scrolling | Streaming fought scroll-up back to the bottom; full re-render per delta. Debounced, bottom-sticky only when already there |
+| Release pipeline | No usable token, deprecated goreleaser keys, version stamping lost to build info. All three fixed and a snapshot proven; a real tag still has not run |
+| Permission grant ordering | `GrantPersistant` woke the waiter before recording; two parallel calls could prompt twice. Pinned deterministically |
+| `internal/diff` | 1,481 lines mutating files with no tests; PR #27 added them and fixed a panic on a chunk deleting past EOF |
