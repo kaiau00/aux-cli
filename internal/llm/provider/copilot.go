@@ -186,9 +186,9 @@ func newCopilotClient(opts providerClientOptions) CopilotClient {
 	}
 }
 
-func (c *copilotClient) convertMessages(messages []message.Message) (copilotMessages []openai.ChatCompletionMessageParamUnion) {
+func (c *copilotClient) convertMessages(ctx context.Context, messages []message.Message) (copilotMessages []openai.ChatCompletionMessageParamUnion) {
 	// Add system message first
-	copilotMessages = append(copilotMessages, openai.SystemMessage(c.providerOptions.systemMessage))
+	copilotMessages = append(copilotMessages, openai.SystemMessage(systemPrompt(ctx, c.providerOptions.systemMessage)))
 
 	for _, msg := range messages {
 		switch msg.Role {
@@ -307,7 +307,7 @@ func (c *copilotClient) preparedParams(messages []openai.ChatCompletionMessagePa
 }
 
 func (c *copilotClient) send(ctx context.Context, messages []message.Message, tools []toolsPkg.BaseTool) (response *ProviderResponse, err error) {
-	params := c.preparedParams(c.convertMessages(messages), c.convertTools(tools))
+	params := c.preparedParams(c.convertMessages(ctx, messages), c.convertTools(tools))
 	cfg := config.Get()
 	var sessionId string
 	requestSeqId := (len(messages) + 1) / 2
@@ -374,7 +374,7 @@ func (c *copilotClient) send(ctx context.Context, messages []message.Message, to
 }
 
 func (c *copilotClient) stream(ctx context.Context, messages []message.Message, tools []toolsPkg.BaseTool) <-chan ProviderEvent {
-	params := c.preparedParams(c.convertMessages(messages), c.convertTools(tools))
+	params := c.preparedParams(c.convertMessages(ctx, messages), c.convertTools(tools))
 	params.StreamOptions = openai.ChatCompletionStreamOptionsParam{
 		IncludeUsage: openai.Bool(true),
 	}

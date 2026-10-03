@@ -29,9 +29,10 @@ mechanical claim it tested (see [Claims](#claims-what-is-defensible-today)).
 What the audit also found is that **the product thesis is not wired in**:
 
 - The compiled project manifest, memory, related-project context, and task
-  spec are computed on every turn and **never sent to the model**. Both prompt
-  compilers mark them `available` and send the bare transcript
-  (`internal/promptcompiler/compiler.go:109-132`, `dedup.go:30-67`).
+  spec were computed on every turn and **never sent to the model**. Both prompt
+  compilers marked them `available` and sent the bare transcript. Since M1.1
+  they go out as a system addendum after the base prompt; M1.2 makes the page
+  states say so.
 - The learning loop only learns from validation evidence, and nothing in the
   agent loop produces validation evidence — only `aux validate <task-id>` does
   (`cmd/validate.go`). After a normal session: no procedural memory, no skill
@@ -148,6 +149,9 @@ section the provider adapters already support), mark those pages `resident`,
 and count them in `EstimatedTokens`. Keep it deterministic: this text goes into
 the cached prefix, so the order must be stable (the same lesson as
 `processContextPaths`).
+
+**M1.1 done 2026-10-03:** sent and counted (see the closed appendix). Left for
+M1.2: the two pages still say `available`.
 
 Caveat worth knowing before measuring: for a Go project the manifest is ~34
 tokens — `Languages: go`, `go build ./...`, `go test ./...`. The profile
@@ -437,6 +441,7 @@ model catalog is what makes Aux usable at all day to day.
 | Install instructions | Every method in the README was fictional; now says build from source |
 | Package attribution | Upstream author's personal address removed from shipped files |
 | Skill promotion path (PR #28), 2026-10-02 | Outside tests, `skill.Service.Evaluate` and `Promote` had no callers, so no skill could be promoted. The CLI now exposes the lifecycle it already implemented: `aux skill evaluate <id> --result pass\|fail\|inconclusive` (`--baseline`, `--eval-run`, `--metrics`), `aux skill promote`, `aux skill rollback`; `skill list` shows ids and which candidates are promotable. Found by exercising it: rolled-back skills appeared in no list (`Service.RolledBack` fixes it), and `--result Pass` would have been stored but never unlocked promotion (`ParseEvalResult` rejects it). The result still comes from a run done elsewhere; `deadcode.sh` could not have caught the gap, since a constructed-but-never-invoked service looks reachable |
+| M1.1 system addendum, 2026-10-03 | Both compilers render `# Project` (manifest + memory + related projects) then `# Task` into `CompiledPrompt.SystemAddendum`, counted in `EstimatedTokens`. The agent attaches it to the provider call's context only; Anthropic sends it as a second system block after the cached base, OpenAI/OpenRouter/local/Copilot/Gemini append it to the system message (Azure, Bedrock, Vertex inherit). Tests: wire requests captured by an `httptest` server for Anthropic and OpenAI, compiler order/estimate/determinism, and an agent turn through the mock provider that also proves tools do not inherit it |
 | M0.3 coverage floor, 2026-10-03 | `.coverage-floor` 30.8 → 33.8, the value `scripts/coverage.sh` reported on CI for `main` at `8707a1a` (after #28) |
 | M0.4 repo hygiene, 2026-10-03 | `.claude/settings.json` (a dev-session Claude Code bash allowlist) untracked; `.claude/` and `.kilo/` ignored (`.codebase-memory/` already was). `git ls-tree -r HEAD --name-only \| rg '^\.claude\|codebase-memory\|\.kilo'` empty; `git ls-files \| rg '\.log$'` empty |
 | Title/turn lost update | Title generation saved a stale session over the turn's totals |

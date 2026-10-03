@@ -250,9 +250,15 @@ func TestCompileDecomposesIntoPages(t *testing.T) {
 	if !haveToolDigest {
 		t.Fatalf("tool message should become a tool_digest page")
 	}
-	// Resident page tokens reconcile with the prompt token estimate within
+	// Resident page tokens reconcile with the transcript's token estimate within
 	// per-page rounding tolerance: each page rounds up independently.
-	delta := residentTokens - out.EstimatedTokens
+	var transcriptTokens int64
+	for _, s := range out.Manifest.Sections {
+		if s.Kind == "recent_conversation" {
+			transcriptTokens = s.TokenEstimate
+		}
+	}
+	delta := residentTokens - transcriptTokens
 	if delta < 0 {
 		delta = -delta
 	}

@@ -159,7 +159,7 @@ func (a *anthropicClient) finishReason(reason string) message.FinishReason {
 	}
 }
 
-func (a *anthropicClient) preparedMessages(messages []anthropic.MessageParam, tools []anthropic.ToolUnionParam) anthropic.MessageNewParams {
+func (a *anthropicClient) preparedMessages(ctx context.Context, messages []anthropic.MessageParam, tools []anthropic.ToolUnionParam) anthropic.MessageNewParams {
 	var thinkingParam anthropic.ThinkingConfigParamUnion
 	lastMessage := messages[len(messages)-1]
 	isUser := lastMessage.Role == anthropic.MessageParamRoleUser
@@ -177,6 +177,19 @@ func (a *anthropicClient) preparedMessages(messages []anthropic.MessageParam, to
 		}
 	}
 
+	system := []anthropic.TextBlockParam{
+		{
+			Text: a.providerOptions.systemMessage,
+			CacheControl: anthropic.CacheControlEphemeralParam{
+				Type: "ephemeral",
+			},
+		},
+	}
+	// A block of its own after the cached base, without a breakpoint: the
+	// request already uses all four (tools, base system, last two messages).
+	if addendum := SystemAddendumFromContext(ctx); addendum != "" {
+		system = append(system, anthropic.TextBlockParam{Text: addendum})
+	}
 	return anthropic.MessageNewParams{
 		Model:       anthropic.Model(a.providerOptions.model.APIModel),
 		MaxTokens:   a.providerOptions.maxTokens,
@@ -184,19 +197,12 @@ func (a *anthropicClient) preparedMessages(messages []anthropic.MessageParam, to
 		Messages:    messages,
 		Tools:       tools,
 		Thinking:    thinkingParam,
-		System: []anthropic.TextBlockParam{
-			{
-				Text: a.providerOptions.systemMessage,
-				CacheControl: anthropic.CacheControlEphemeralParam{
-					Type: "ephemeral",
-				},
-			},
-		},
+		System:      system,
 	}
 }
 
 func (a *anthropicClient) send(ctx context.Context, messages []message.Message, tools []toolsPkg.BaseTool) (resposne *ProviderResponse, err error) {
-	preparedMessages := a.preparedMessages(a.convertMessages(messages), a.convertTools(tools))
+	preparedMessages := a.preparedMessages(ctx, a.convertMessages(messages), a.convertTools(tools))
 	cfg := config.Get()
 	if cfg.Debug {
 		jsonData, _ := json.Marshal(preparedMessages)
@@ -245,7 +251,7 @@ func (a *anthropicClient) send(ctx context.Context, messages []message.Message, 
 }
 
 func (a *anthropicClient) stream(ctx context.Context, messages []message.Message, tools []toolsPkg.BaseTool) <-chan ProviderEvent {
-	preparedMessages := a.preparedMessages(a.convertMessages(messages), a.convertTools(tools))
+	preparedMessages := a.preparedMessages(ctx, a.convertMessages(messages), a.convertTools(tools))
 	cfg := config.Get()
 
 	var sessionId string

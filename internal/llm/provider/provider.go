@@ -215,6 +215,33 @@ func WithSystemMessage(systemMessage string) ProviderClientOption {
 	}
 }
 
+type systemAddendumContextKey struct{}
+
+// WithSystemAddendum attaches per-call system text (project knowledge, task
+// spec) for the next request made with ctx. Adapters send it after the base
+// system message, so the base stays the provider-cacheable stable prefix.
+func WithSystemAddendum(ctx context.Context, addendum string) context.Context {
+	return context.WithValue(ctx, systemAddendumContextKey{}, addendum)
+}
+
+// SystemAddendumFromContext returns the addendum attached by WithSystemAddendum.
+func SystemAddendumFromContext(ctx context.Context) string {
+	s, _ := ctx.Value(systemAddendumContextKey{}).(string)
+	return s
+}
+
+// systemPrompt is the full system text for one call: base, then addendum.
+func systemPrompt(ctx context.Context, base string) string {
+	addendum := SystemAddendumFromContext(ctx)
+	if addendum == "" {
+		return base
+	}
+	if base == "" {
+		return addendum
+	}
+	return base + "\n\n" + addendum
+}
+
 func WithAnthropicOptions(anthropicOptions ...AnthropicOption) ProviderClientOption {
 	return func(options *providerClientOptions) {
 		options.anthropicOptions = anthropicOptions

@@ -33,14 +33,16 @@ func (c *DedupCompiler) Compile(in Input) CompiledPrompt {
 
 	deduped := dedupRepeatedContent(original, in.PinnedToolCallIDs)
 	deduped = applyExclusions(deduped, in.ExcludedToolCallIDs, in.PinnedToolCallIDs)
-	est := EstimateMessages(deduped)
+	msgEst := EstimateMessages(deduped)
+	addendum := RenderSystemAddendum(in.ProjectManifest, in.TaskSpecText)
+	est := msgEst + estimateText(addendum)
 	prefix := stablePrefixID(in.Tools)
 
 	pagingInput := in
 	pagingInput.History = deduped
 	pages := decomposePages(pagingInput, deduped)
 
-	saved := fullEst - est
+	saved := fullEst - msgEst
 	if saved < 0 {
 		saved = 0
 	}
@@ -48,6 +50,7 @@ func (c *DedupCompiler) Compile(in Input) CompiledPrompt {
 	return CompiledPrompt{
 		Messages:        deduped,
 		ToolSet:         in.Tools,
+		SystemAddendum:  addendum,
 		StablePrefixID:  prefix,
 		EstimatedTokens: est,
 		SavedTokens:     saved,
@@ -59,9 +62,7 @@ func (c *DedupCompiler) Compile(in Input) CompiledPrompt {
 			SavedTokens:    saved,
 			StablePrefixID: prefix,
 			Pages:          pages,
-			Sections: []Section{
-				{Kind: "recent_conversation", MessageCount: len(deduped), TokenEstimate: est},
-			},
+			Sections:       sections(addendum, len(deduped), msgEst),
 		},
 	}
 }
