@@ -12,8 +12,8 @@ func usageWith(prompt, cached, completion int64) openai.CompletionUsage {
 	return u
 }
 
-// The bug this guards: openai-go v0.1.0-beta.2's streaming accumulator drops
-// prompt_tokens_details, so a response whose prefix was almost entirely cached
+// The bug this guards: openai-go's streaming accumulator drops
+// prompt_tokens_details through v1.12.0, so a response whose prefix was almost entirely cached
 // was recorded as entirely fresh input -- overstating cost and making the cost
 // governor stop work against a number that was too high.
 func TestStreamUsagePrefersTheChunkCarryingCacheDetails(t *testing.T) {
