@@ -1194,9 +1194,9 @@ func createAgentProvider(agentName config.AgentName) (provider.Provider, error) 
 	if !ok {
 		return nil, fmt.Errorf("agent %s not found", agentName)
 	}
-	model, ok := models.SupportedModels[agentConfig.Model]
+	model, ok := models.Resolve(agentConfig.Model)
 	if !ok {
-		return nil, fmt.Errorf("model %s not supported", agentConfig.Model)
+		return nil, models.UnsupportedError(agentConfig.Model)
 	}
 
 	providerCfg, ok := cfg.Providers[model.Provider]

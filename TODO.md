@@ -173,23 +173,9 @@ See the closed appendix.
 The things that decide whether you reach for Aux or for Claude Code when you
 sit down. In order of how often they bite.
 
-### P2.1 The model catalog
+### P2.1 The model catalog — closed (M2.1)
 
-Hardcoded; the newest Anthropic entry is `claude-sonnet-4-20250514`
-(`internal/llm/models/anthropic.go:88`), seventeen months old at the time of
-the audit. `models.SupportedModels[agentConfig.Model]` must match
-(`agent.go:1182`, `config.go:631`), so a newer model ID is unreachable except
-through `LOCAL_ENDPOINT`. For a product whose pitch is "pick one model" this is
-the most user-hostile gap in the tree.
-
-Fix, in order of leverage:
-
-1. Let `agents.<name>.model` accept any API model ID for a configured
-   provider, with limits looked up from models.dev (`catalog.go` already fetches
-   it for context limits) and a sane fallback when the lookup fails.
-2. Refresh the hardcoded entries for the five providers that matter.
-3. Drop or stop maintaining Groq, Azure, Bedrock, Vertex, Copilot, xAI, per
-   the decision above. If they stay, say "unmaintained" in the README.
+See the closed appendix. Hardcoded tables stay as the offline fallback.
 
 ### P2.2 Provider SDKs
 
@@ -404,6 +390,7 @@ model catalog is what makes Aux usable at all day to day.
 | Install instructions | Every method in the README was fictional; now says build from source |
 | Package attribution | Upstream author's personal address removed from shipped files |
 | Skill promotion path (PR #28), 2026-10-02 | Outside tests, `skill.Service.Evaluate` and `Promote` had no callers, so no skill could be promoted. The CLI now exposes the lifecycle it already implemented: `aux skill evaluate <id> --result pass\|fail\|inconclusive` (`--baseline`, `--eval-run`, `--metrics`), `aux skill promote`, `aux skill rollback`; `skill list` shows ids and which candidates are promotable. Found by exercising it: rolled-back skills appeared in no list (`Service.RolledBack` fixes it), and `--result Pass` would have been stored but never unlocked promotion (`ParseEvalResult` rejects it). The result still comes from a run done elsewhere; `deadcode.sh` could not have caught the gap, since a constructed-but-never-invoked service looks reachable |
+| M2.1 model catalog, 2026-10-03 | `agents.<name>.model` accepts a hardcoded id or `<provider>/<api-model-id>`. Resolution is hardcoded map, then the models.dev catalog (cached 24h at `$XDG_CACHE_HOME/aux/models.json`, 2s startup budget). No configured coder model: newest non-preview tool-calling catalog model is written to `~/.aux.json` and announced; title and summarizer get the cheapest priced tool-calling model. A catalog entry with no `cost` stays `CostUnknown` (zero rates already mean that, except local/mock). Groq, Azure, Bedrock, Vertex, Copilot, and xAI are marked unmaintained in the picker and README. Startup applies the theme in memory; a theme or model change patches that key instead of remarshaling `Config`, which had been replacing the file just written. Tests: `catalog_test.go` (fixture id resolves, default is newest-then-largest, offline fallback is `claude-4-sonnet`), `config/model_test.go` (`anthropic/fixture-sonnet` validates; a missing id lists catalog ids; a theme patch keeps the picked model). Temp home, only `ANTHROPIC_API_KEY=sk-test`: stderr `Using Claude Sonnet 5.5 (newest for anthropic). Change with Ctrl+O or agents.coder.model.`; `~/.aux.json` coder and task `anthropic/claude-sonnet-5-5`, title and summarizer `anthropic/claude-haiku-4-5-20251001`. Second run printed nothing and left the file byte-identical |
 | M1.6 context states, 2026-10-03 | `StateEvicted` and `StateFaulted` removed from `contextstore`, the view model, and the TUI's expanded context view; ADR 0006 amended. The golden fixture showed an "Evicted — demand paging" page and an `available` project manifest, both fiction; it now shows the manifest resident. `rg 'StateEvicted\|StateFaulted'` matches only the plan |
 | M1.5 `govpolicy` deleted, 2026-10-03 | No producer, no evaluator, no non-test caller. Removed the package, its app wiring, the dashboard "Governed-cost policies" panel and view-model fields, and policies from bundles (format version 2, so a version-1 bundle is refused by version rather than misreported as tampered). The two tables stay and are noted in ADR 0003. `rg govpolicy` matches only the plan, this file, and the ADR note |
 | M1.4 validation at task end, 2026-10-03 | `agent.validateTaskIfNeeded` runs before the deferred `Finish`: skips (with `validation.skipped{reason}`) when `validation.auto` is off, there are no criteria, no file version was recorded during the task, or the profile has no commands, and inside subagents. Otherwise plans as `aux validate` does, runs each command through `validation.ShellRunner` with the session's permission service, and appends the results to the final message. The pass cache is keyed on commit + edited-file content. A denied command is now a `skipped` run with no evidence (before, it was recorded `failed` and blocked every criterion, also via `aux validate` without `--yes`). `aux task show` reports proof of done from evidence instead of the compile-time state. Tests in `agent/validate_test.go` (changed → validated + memory + skill; no change → skipped; denied → skipped, no memory; subagent → not run) and `validation_test.go`. Scratch repo, real provider, `--yes`: both commands passed, both criteria `validated`, two procedural memories, one skill candidate |

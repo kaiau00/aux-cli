@@ -328,29 +328,15 @@ See [The dashboard](#the-dashboard) above.
 
 ## Supported AI models
 
-### OpenAI
-GPT-4.1 family · GPT-4.5 Preview · GPT-4o family · O1 family · O3 family · O4 Mini
+Maintained providers take any current model id from [models.dev](https://models.dev), as `agents.<name>.model` set to a known id or `<provider>/<api-model-id>` (for example `anthropic/claude-sonnet-4-5`). With no model configured, the first run picks the newest tool-calling model for the provider that has a key, writes it to `~/.aux.json`, and says so. It does not pick again after that.
 
-### Anthropic
-Claude 4 Sonnet · Claude 4 Opus · Claude 3.7 Sonnet · Claude 3.5 Sonnet · Claude 3.5 Haiku · Claude 3 Opus · Claude 3 Haiku
+### Maintained
 
-### GitHub Copilot
-GPT-3.5 Turbo · GPT-4 · GPT-4o · GPT-4o Mini · GPT-4.1 · Claude 3.5/3.7 Sonnet (+ Thinking) · Claude Sonnet 4 · O1 · O3 Mini · O4 Mini · Gemini 2.0 Flash · Gemini 2.5 Pro
+Anthropic · OpenAI · Gemini · OpenRouter · local / OpenAI-compatible
 
-### Google
-Gemini 2.5 · Gemini 2.5 Flash · Gemini 2.0 Flash · Gemini 2.0 Flash Lite
+### Unmaintained (may work, not tested)
 
-### AWS Bedrock
-Claude 3.7 Sonnet
-
-### Groq
-Llama 4 Maverick (17b-128e-instruct) · Llama 4 Scout (17b-16e-instruct) · Qwen QwQ-32b · DeepSeek R1 Distill Llama 70b · Llama 3.3 70B Versatile
-
-### Azure OpenAI
-GPT-4.1 family · GPT-4.5 Preview · GPT-4o family · O1 family · O3 family · O4 Mini
-
-### Google Cloud VertexAI
-Gemini 2.5 · Gemini 2.5 Flash
+GitHub Copilot · Groq · Azure OpenAI · AWS Bedrock · Google Cloud VertexAI · xAI
 
 Aux is a **one-key** tool by design: pick one preferred model for your provider of choice and Aux's efficiency systems (Context OS, Cost Governor) work for that model, rather than routing different actions to different models.
 

@@ -1,8 +1,6 @@
 package models
 
 import (
-	"encoding/json"
-	"net/http"
 	"net/url"
 	"strings"
 	"sync"
@@ -22,6 +20,7 @@ var (
 	catalogLoaded     bool
 	catalogByID       map[string]catalogLimits
 	catalogByProvider map[string]map[string]catalogLimits
+	catalogEntries    map[ModelProvider][]Model
 )
 
 func ensureModelsCatalog() {
@@ -40,62 +39,24 @@ func resetModelsCatalogForTest() {
 	catalogLoaded = false
 	catalogByID = nil
 	catalogByProvider = nil
+	catalogEntries = nil
 }
 
 func loadModelsCatalog() {
-	catalogByID = make(map[string]catalogLimits)
-	catalogByProvider = make(map[string]map[string]catalogLimits)
-
-	res, err := http.Get(modelsDevAPI)
-	if err != nil {
-		logging.Debug("Failed to fetch models.dev catalog", "error", err)
+	data := readCatalogWithinBudget()
+	if len(data) == 0 {
+		catalogByID = map[string]catalogLimits{}
+		catalogByProvider = map[string]map[string]catalogLimits{}
+		catalogEntries = map[ModelProvider][]Model{}
 		return
 	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		logging.Debug("Failed to fetch models.dev catalog", "status", res.StatusCode)
-		return
-	}
-
-	var raw map[string]json.RawMessage
-	if err := json.NewDecoder(res.Body).Decode(&raw); err != nil {
+	if err := ingestCatalog(data); err != nil {
 		logging.Debug("Failed to decode models.dev catalog", "error", err)
+		catalogByID = map[string]catalogLimits{}
+		catalogByProvider = map[string]map[string]catalogLimits{}
+		catalogEntries = map[ModelProvider][]Model{}
 		return
 	}
-
-	for providerID, providerRaw := range raw {
-		var provider struct {
-			Models map[string]struct {
-				Limit struct {
-					Context int64 `json:"context"`
-					Output  int64 `json:"output"`
-				} `json:"limit"`
-			} `json:"models"`
-		}
-		if err := json.Unmarshal(providerRaw, &provider); err != nil || len(provider.Models) == 0 {
-			continue
-		}
-
-		byModel := make(map[string]catalogLimits, len(provider.Models))
-		for modelID, model := range provider.Models {
-			if model.Limit.Context <= 0 && model.Limit.Output <= 0 {
-				continue
-			}
-			limits := catalogLimits{
-				Context: model.Limit.Context,
-				Output:  model.Limit.Output,
-			}
-			byModel[modelID] = limits
-			if _, exists := catalogByID[modelID]; !exists {
-				catalogByID[modelID] = limits
-			}
-		}
-		if len(byModel) > 0 {
-			catalogByProvider[providerID] = byModel
-		}
-	}
-
 	logging.Debug("Loaded models.dev catalog",
 		"models", len(catalogByID),
 		"providers", len(catalogByProvider),

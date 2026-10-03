@@ -317,12 +317,10 @@ func generateSchema() map[string]any {
 		},
 	}
 
-	// Add model enum
-	modelEnum := []string{}
-	for modelID := range models.SupportedModels {
-		modelEnum = append(modelEnum, string(modelID))
-	}
-	agentSchema["additionalProperties"].(map[string]any)["properties"].(map[string]any)["model"].(map[string]any)["enum"] = modelEnum
+	// Any current id is valid: a hardcoded id or "<provider>/<api-model-id>".
+	// An enum of the hardcoded table would reject catalog models.
+	modelProp := agentSchema["additionalProperties"].(map[string]any)["properties"].(map[string]any)["model"].(map[string]any)
+	modelProp["description"] = "Model ID: a known id, or <provider>/<api-model-id> for a model from the provider's catalog"
 
 	// Add specific agent properties
 	agentProperties := map[string]any{}

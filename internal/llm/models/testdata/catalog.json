@@ -1,0 +1,49 @@
+{
+  "anthropic": {
+    "models": {
+      "claude-old": {
+        "name": "Claude Old",
+        "tool_call": true,
+        "release_date": "2024-01-01",
+        "limit": {"context": 100000, "output": 4096},
+        "cost": {"input": 3, "output": 15, "cache_read": 0.3, "cache_write": 3.75}
+      },
+      "claude-new": {
+        "name": "Claude New",
+        "tool_call": true,
+        "reasoning": true,
+        "release_date": "2026-01-01",
+        "limit": {"context": 200000, "output": 64000},
+        "cost": {"input": 3, "output": 15}
+      },
+      "claude-new-big": {
+        "name": "Claude New Big",
+        "tool_call": true,
+        "release_date": "2026-01-01",
+        "limit": {"context": 500000, "output": 64000},
+        "cost": {"input": 15, "output": 75}
+      },
+      "claude-preview": {
+        "name": "Claude Preview",
+        "tool_call": true,
+        "release_date": "2026-06-01",
+        "limit": {"context": 999999, "output": 1},
+        "cost": {"input": 1, "output": 1}
+      },
+      "claude-cheap": {
+        "name": "Claude Cheap",
+        "tool_call": true,
+        "release_date": "2025-01-01",
+        "limit": {"context": 200000, "output": 4096},
+        "cost": {"input": 0.25, "output": 1.25}
+      },
+      "claude-notool": {
+        "name": "Claude No Tool",
+        "tool_call": false,
+        "release_date": "2026-08-01",
+        "limit": {"context": 200000, "output": 4096},
+        "cost": {"input": 0.01, "output": 0.01}
+      }
+    }
+  }
+}
