@@ -79,7 +79,7 @@ Aux should only say true things about itself. Verified 2026-10-02.
 | Builds and vets clean | `go build ./... && go vet ./...` at `278b9f1` |
 | Race-clean under `-race` | Full suite, 2m03s, exit 0, locally and on `main`'s own post-merge CI run |
 | No unreachable code outside a declared baseline | `scripts/deadcode.sh`, 48 accepted entries, unchanged |
-| Coverage cannot regress | `scripts/coverage.sh`: 33.8% against a 30.8% floor |
+| Coverage cannot regress | `scripts/coverage.sh`: 33.8% on CI against a 33.8% floor (raised from 30.8 in M0.3) |
 | Upgrades across schema versions work | Tested from every recorded version with a populated database |
 | A database from a newer build is refused | `ensureNotNewer`, tested |
 | Reads outside the project need approval | `RequireReadAccess` canonicalizes through symlinks and fails closed |
@@ -121,12 +121,6 @@ correct when you read it. The two newest were both machinery.
 ## P0 — Trust. Before anything ships to a stranger
 
 Small, mechanical, and each one is currently a false statement somewhere.
-
-### P0.3 Raise the coverage floor
-
-PR #28 is merged (see the closed appendix). What remains: set
-`.coverage-floor` to what `scripts/coverage.sh` reports on CI after it, in its
-own PR so the change is visible in history.
 
 ### P0.4 Repo name (plan M0.5 **[HUMAN]**)
 
@@ -443,6 +437,7 @@ model catalog is what makes Aux usable at all day to day.
 | Install instructions | Every method in the README was fictional; now says build from source |
 | Package attribution | Upstream author's personal address removed from shipped files |
 | Skill promotion path (PR #28), 2026-10-02 | Outside tests, `skill.Service.Evaluate` and `Promote` had no callers, so no skill could be promoted. The CLI now exposes the lifecycle it already implemented: `aux skill evaluate <id> --result pass\|fail\|inconclusive` (`--baseline`, `--eval-run`, `--metrics`), `aux skill promote`, `aux skill rollback`; `skill list` shows ids and which candidates are promotable. Found by exercising it: rolled-back skills appeared in no list (`Service.RolledBack` fixes it), and `--result Pass` would have been stored but never unlocked promotion (`ParseEvalResult` rejects it). The result still comes from a run done elsewhere; `deadcode.sh` could not have caught the gap, since a constructed-but-never-invoked service looks reachable |
+| M0.3 coverage floor, 2026-10-03 | `.coverage-floor` 30.8 → 33.8, the value `scripts/coverage.sh` reported on CI for `main` at `8707a1a` (after #28) |
 | M0.4 repo hygiene, 2026-10-03 | `.claude/settings.json` (a dev-session Claude Code bash allowlist) untracked; `.claude/` and `.kilo/` ignored (`.codebase-memory/` already was). `git ls-tree -r HEAD --name-only \| rg '^\.claude\|codebase-memory\|\.kilo'` empty; `git ls-files \| rg '\.log$'` empty |
 | Title/turn lost update | Title generation saved a stale session over the turn's totals |
 | Dashboard disclosure | Handoff note said "no server" while one started by default |
