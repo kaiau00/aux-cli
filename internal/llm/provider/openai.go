@@ -186,7 +186,7 @@ func (o *openaiClient) preparedParams(messages []openai.ChatCompletionMessagePar
 	// MiniMax and other OpenAI-compatible reasoning endpoints expose thinking
 	// in reasoning_content / reasoning_details when this flag is set.
 	if o.providerOptions.model.Provider == models.ProviderLocal && o.providerOptions.model.CanReason {
-		params.WithExtraFields(map[string]any{
+		params.SetExtraFields(map[string]any{
 			"reasoning_split": true,
 		})
 	}
@@ -405,8 +405,8 @@ func (o *openaiClient) toolCalls(completion openai.ChatCompletion) []message.Too
 
 // streamUsage picks the usage record that actually carries cache details.
 //
-// openai-go v0.1.0-beta.2's streaming accumulator drops
-// prompt_tokens_details: the wire reports cached_tokens for a repeated prefix,
+// openai-go's streaming accumulator still drops
+// prompt_tokens_details through v1.12.0: the wire reports cached_tokens for a repeated prefix,
 // and acc.ChatCompletion.Usage reports zero for the same response. Measured
 // against this provider, a request whose prefix was 99.95% cached was recorded
 // as entirely fresh input.
@@ -481,7 +481,7 @@ func reasoningDelta(delta openai.ChatCompletionChunkChoiceDelta, state *reasonin
 		}
 	}
 
-	if field, ok := delta.JSON.ExtraFields["reasoning_details"]; ok && field.IsPresent() && !field.IsExplicitNull() {
+	if field, ok := delta.JSON.ExtraFields["reasoning_details"]; ok && field.Valid() {
 		full := reasoningDetailsText(field.Raw())
 		if len(full) > len(state.detailsBuffer) {
 			out.WriteString(full[len(state.detailsBuffer):])
@@ -501,7 +501,7 @@ func reasoningFromMessage(msg openai.ChatCompletionMessage) string {
 		}
 	}
 
-	if field, ok := msg.JSON.ExtraFields["reasoning_details"]; ok && field.IsPresent() && !field.IsExplicitNull() {
+	if field, ok := msg.JSON.ExtraFields["reasoning_details"]; ok && field.Valid() {
 		if text := reasoningDetailsText(field.Raw()); text != "" {
 			parts = append(parts, text)
 		}
