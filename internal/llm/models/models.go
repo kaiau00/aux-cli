@@ -20,6 +20,10 @@ type Model struct {
 	DefaultMaxTokens    int64         `json:"default_max_tokens"`
 	CanReason           bool          `json:"can_reason"`
 	SupportsAttachments bool          `json:"supports_attachments"`
+	// ReleaseDate is YYYY-MM-DD from the catalog, empty for hardcoded entries.
+	ReleaseDate string `json:"release_date,omitempty"`
+	// Unmaintained marks providers kept only as a fallback (D4).
+	Unmaintained bool `json:"unmaintained,omitempty"`
 }
 
 // Model IDs
@@ -95,4 +99,10 @@ func init() {
 	maps.Copy(SupportedModels, XAIModels)
 	maps.Copy(SupportedModels, VertexAIGeminiModels)
 	maps.Copy(SupportedModels, CopilotModels)
+	for id, model := range SupportedModels {
+		if UnmaintainedProvider(model.Provider) {
+			model.Unmaintained = true
+			SupportedModels[id] = model
+		}
+	}
 }

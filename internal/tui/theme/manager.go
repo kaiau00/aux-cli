@@ -39,25 +39,34 @@ func RegisterTheme(name string, theme Theme) {
 	}
 }
 
-// SetTheme changes the active theme to the one with the specified name.
-// Returns an error if the theme doesn't exist.
-func SetTheme(name string) error {
+// ApplyTheme selects a theme for this process and leaves the config file
+// alone. Startup uses this: writing the theme on every launch remarshals the
+// whole config and drops settings that were just written, including a model
+// picked on first run.
+func ApplyTheme(name string) error {
 	globalManager.mu.Lock()
 	defer globalManager.mu.Unlock()
+	return selectTheme(name)
+}
 
+// SetTheme selects a theme and records that choice in the config file.
+// Returns an error if the theme doesn't exist.
+func SetTheme(name string) error {
+	if err := ApplyTheme(name); err != nil {
+		return err
+	}
+	if err := updateConfigTheme(name); err != nil {
+		logging.Warn("Warning: Failed to update config file with new theme", "err", err)
+	}
+	return nil
+}
+
+func selectTheme(name string) error {
 	delete(styles.Registry, "charm")
 	if _, exists := globalManager.themes[name]; !exists {
 		return fmt.Errorf("theme '%s' not found", name)
 	}
-
 	globalManager.currentName = name
-
-	// Update the config file using viper
-	if err := updateConfigTheme(name); err != nil {
-		// Log the error but don't fail the theme change
-		logging.Warn("Warning: Failed to update config file with new theme", "err", err)
-	}
-
 	return nil
 }
 

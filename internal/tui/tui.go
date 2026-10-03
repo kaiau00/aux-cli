@@ -692,8 +692,8 @@ func (a appModel) headerVM() viewmodel.TaskHeaderVM {
 	modelName := ""
 	var ctxLimit int64
 	if coder, ok := cfg.Agents[config.AgentCoder]; ok {
-		m := models.SupportedModels[coder.Model]
-		modelName = m.Name
+		m, _ := models.Resolve(coder.Model)
+		modelName = models.NameOf(coder.Model)
 		ctxLimit = m.ContextWindow
 	}
 

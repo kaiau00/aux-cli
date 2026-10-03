@@ -4,6 +4,7 @@ package config
 import (
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"log/slog"
 	"os"
@@ -194,6 +195,12 @@ var defaultContextPaths = []string{
 // Global configuration instance
 var cfg *Config
 
+// Set when setProviderDefaults picks a model because the user had none.
+var (
+	pendingModelLine  string
+	pendingModelPicks map[AgentName]models.ModelID
+)
+
 // Load initializes the configuration from environment variables and config files.
 // If debug is true, debug mode is enabled and log level is set to debug.
 // It returns an error if configuration loading fails.
@@ -291,6 +298,8 @@ func Load(workingDir string, debug bool) (*Config, error) {
 		return cfg, fmt.Errorf("config validation failed: %w", err)
 	}
 
+	announcePickedModel()
+
 	if cfg.Agents == nil {
 		cfg.Agents = make(map[AgentName]Agent)
 	}
@@ -366,6 +375,137 @@ func setDefaults(debug bool) {
 	}
 }
 
+// useMaintainedDefaults keeps a model the user already chose. Otherwise it
+// picks the newest tool-calling catalog model, writes that choice so the
+// next run does not pick again, and remembers a line to print at startup.
+func useMaintainedDefaults(provider models.ModelProvider, coder, summarizer, task, title models.ModelID) {
+	if viper.InConfig("agents.coder.model") {
+		viper.SetDefault("agents.coder.model", coder)
+		viper.SetDefault("agents.summarizer.model", summarizer)
+		viper.SetDefault("agents.task.model", task)
+		viper.SetDefault("agents.title.model", title)
+		return
+	}
+	chosen, ok := models.SelectDefault(provider)
+	if !ok {
+		viper.SetDefault("agents.coder.model", coder)
+		viper.SetDefault("agents.summarizer.model", summarizer)
+		viper.SetDefault("agents.task.model", task)
+		viper.SetDefault("agents.title.model", title)
+		return
+	}
+	cheap, cheapOK := models.SelectCheapest(provider)
+	if !cheapOK {
+		cheap = chosen
+	}
+	viper.Set("agents.coder.model", string(chosen.ID))
+	viper.Set("agents.task.model", string(chosen.ID))
+	viper.Set("agents.summarizer.model", string(cheap.ID))
+	viper.Set("agents.title.model", string(cheap.ID))
+	pendingModelLine = fmt.Sprintf("Using %s (newest for %s). Change with Ctrl+O or agents.coder.model.\n", chosen.Name, provider)
+	pendingModelPicks = map[AgentName]models.ModelID{
+		AgentCoder:      chosen.ID,
+		AgentTask:       chosen.ID,
+		AgentSummarizer: cheap.ID,
+		AgentTitle:      cheap.ID,
+	}
+}
+
+func announcePickedModel() {
+	if pendingModelLine == "" {
+		return
+	}
+	line := pendingModelLine
+	picks := pendingModelPicks
+	pendingModelLine = ""
+	pendingModelPicks = nil
+	if flag.Lookup("test.v") != nil {
+		return
+	}
+	fmt.Fprint(os.Stderr, line)
+	if err := persistPickedModels(picks); err != nil {
+		fmt.Fprintf(os.Stderr, "could not save the chosen model: %v\n", err)
+	}
+}
+
+// persistPickedModels fills empty agent model fields in the user's config
+// file and leaves every other key alone. A full Config round-trip would
+// rewrite zero values over settings the file never mentioned.
+func persistPickedModels(picks map[AgentName]models.ModelID) error {
+	if len(picks) == 0 {
+		return nil
+	}
+	path := configPathForPersist()
+	raw := map[string]any{}
+	data, err := os.ReadFile(path)
+	if err == nil {
+		if err := json.Unmarshal(data, &raw); err != nil {
+			return fmt.Errorf("parse config: %w", err)
+		}
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+	agents, _ := raw["agents"].(map[string]any)
+	if agents == nil {
+		agents = map[string]any{}
+	}
+	for name, id := range picks {
+		entry, _ := agents[string(name)].(map[string]any)
+		if entry == nil {
+			entry = map[string]any{}
+		}
+		if existing, _ := entry["model"].(string); existing != "" {
+			continue
+		}
+		entry["model"] = string(id)
+		if name == AgentTitle {
+			entry["maxTokens"] = 80
+		}
+		agents[string(name)] = entry
+	}
+	raw["agents"] = agents
+	out, err := json.MarshalIndent(raw, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, append(out, '\n'), 0o600)
+}
+
+// patchConfigFile sets nested keys, creating objects as needed, and rewrites
+// nothing else. Remarshaling Config would replace omitted settings with zero
+// values.
+func patchConfigFile(set func(raw map[string]any)) error {
+	path := configPathForPersist()
+	raw := map[string]any{}
+	data, err := os.ReadFile(path)
+	if err == nil {
+		if err := json.Unmarshal(data, &raw); err != nil {
+			return fmt.Errorf("parse config: %w", err)
+		}
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+	set(raw)
+	out, err := json.MarshalIndent(raw, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, append(out, '\n'), 0o600)
+}
+
+func configPathForPersist() string {
+	if path := viper.ConfigFileUsed(); path != "" {
+		if _, err := os.Stat(path); err == nil {
+			return path
+		}
+	}
+	home := os.Getenv("HOME")
+	if home == "" {
+		home, _ = os.UserHomeDir()
+	}
+	return filepath.Join(home, "."+appName+".json")
+}
+
 // setProviderDefaults configures LLM provider defaults based on provider provided by
 // environment variables and configuration file.
 func setProviderDefaults() {
@@ -422,28 +562,19 @@ func setProviderDefaults() {
 
 	// Anthropic configuration
 	if key := viper.GetString("providers.anthropic.apiKey"); strings.TrimSpace(key) != "" {
-		viper.SetDefault("agents.coder.model", models.Claude4Sonnet)
-		viper.SetDefault("agents.summarizer.model", models.Claude4Sonnet)
-		viper.SetDefault("agents.task.model", models.Claude4Sonnet)
-		viper.SetDefault("agents.title.model", models.Claude4Sonnet)
+		useMaintainedDefaults(models.ProviderAnthropic, models.Claude4Sonnet, models.Claude4Sonnet, models.Claude4Sonnet, models.Claude4Sonnet)
 		return
 	}
 
 	// OpenAI configuration
 	if key := viper.GetString("providers.openai.apiKey"); strings.TrimSpace(key) != "" {
-		viper.SetDefault("agents.coder.model", models.GPT41)
-		viper.SetDefault("agents.summarizer.model", models.GPT41)
-		viper.SetDefault("agents.task.model", models.GPT41Mini)
-		viper.SetDefault("agents.title.model", models.GPT41Mini)
+		useMaintainedDefaults(models.ProviderOpenAI, models.GPT41, models.GPT41, models.GPT41Mini, models.GPT41Mini)
 		return
 	}
 
 	// Google Gemini configuration
 	if key := viper.GetString("providers.gemini.apiKey"); strings.TrimSpace(key) != "" {
-		viper.SetDefault("agents.coder.model", models.Gemini25)
-		viper.SetDefault("agents.summarizer.model", models.Gemini25)
-		viper.SetDefault("agents.task.model", models.Gemini25Flash)
-		viper.SetDefault("agents.title.model", models.Gemini25Flash)
+		useMaintainedDefaults(models.ProviderGemini, models.Gemini25, models.Gemini25, models.Gemini25Flash, models.Gemini25Flash)
 		return
 	}
 
@@ -458,10 +589,7 @@ func setProviderDefaults() {
 
 	// OpenRouter configuration
 	if key := viper.GetString("providers.openrouter.apiKey"); strings.TrimSpace(key) != "" {
-		viper.SetDefault("agents.coder.model", models.OpenRouterClaude37Sonnet)
-		viper.SetDefault("agents.summarizer.model", models.OpenRouterClaude37Sonnet)
-		viper.SetDefault("agents.task.model", models.OpenRouterClaude37Sonnet)
-		viper.SetDefault("agents.title.model", models.OpenRouterClaude35Haiku)
+		useMaintainedDefaults(models.ProviderOpenRouter, models.OpenRouterClaude37Sonnet, models.OpenRouterClaude37Sonnet, models.OpenRouterClaude37Sonnet, models.OpenRouterClaude35Haiku)
 		return
 	}
 
@@ -637,19 +765,9 @@ func validateAgent(cfg *Config, name AgentName, agent Agent) error {
 	// TODO:	If a copilot model is specified, but model is not found,
 	// 		 	it might be new model. The https://api.githubcopilot.com/models
 	// 		 	endpoint should be queried to validate if the model is supported.
-	model, modelExists := models.SupportedModels[agent.Model]
+	model, modelExists := models.Resolve(agent.Model)
 	if !modelExists {
-		logging.Warn("unsupported model configured, reverting to default",
-			"agent", name,
-			"configured_model", agent.Model)
-
-		// Set default model based on available providers
-		if setDefaultModelForAgent(name) {
-			logging.Info("set default model for agent", "agent", name, "model", cfg.Agents[name].Model)
-		} else {
-			return fmt.Errorf("no valid provider available for agent %s", name)
-		}
-		return nil
+		return models.UnsupportedError(agent.Model)
 	}
 
 	// Check if provider for the model is configured
@@ -929,7 +1047,7 @@ func setDefaultModelForAgent(agent AgentName) bool {
 		}
 
 		// Check if model supports reasoning
-		if modelInfo, ok := models.SupportedModels[model]; ok && modelInfo.CanReason {
+		if modelInfo, ok := models.Resolve(model); ok && modelInfo.CanReason {
 			reasoningEffort = "medium"
 		}
 
@@ -957,7 +1075,7 @@ func setDefaultModelForAgent(agent AgentName) bool {
 		}
 
 		// Check if model supports reasoning
-		if modelInfo, ok := models.SupportedModels[model]; ok && modelInfo.CanReason {
+		if modelInfo, ok := models.Resolve(model); ok && modelInfo.CanReason {
 			reasoningEffort = "medium"
 		}
 
@@ -1035,54 +1153,6 @@ func setDefaultModelForAgent(agent AgentName) bool {
 	return false
 }
 
-func updateCfgFile(updateCfg func(config *Config)) error {
-	if cfg == nil {
-		return fmt.Errorf("config not loaded")
-	}
-
-	// Get the config file path
-	configFile := viper.ConfigFileUsed()
-	var configData []byte
-	if configFile == "" {
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			return fmt.Errorf("failed to get home directory: %w", err)
-		}
-		configFile = filepath.Join(homeDir, fmt.Sprintf(".%s.json", appName))
-		logging.Info("config file not found, creating new one", "path", configFile)
-		configData = []byte(`{}`)
-	} else {
-		// Read the existing config file
-		data, err := os.ReadFile(configFile)
-		if err != nil {
-			return fmt.Errorf("failed to read config file: %w", err)
-		}
-		configData = data
-	}
-
-	// Parse the JSON
-	var userCfg *Config
-	if err := json.Unmarshal(configData, &userCfg); err != nil {
-		return fmt.Errorf("failed to parse config file: %w", err)
-	}
-
-	updateCfg(userCfg)
-
-	// Write the updated config back to file
-	updatedData, err := json.MarshalIndent(userCfg, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal config: %w", err)
-	}
-
-	// 0600: this file holds provider API keys in plaintext, so it must not be
-	// readable by other users on the machine.
-	if err := os.WriteFile(configFile, updatedData, 0o600); err != nil {
-		return fmt.Errorf("failed to write config file: %w", err)
-	}
-
-	return nil
-}
-
 // Get returns the current configuration.
 // It's safe to call this function multiple times.
 func Get() *Config {
@@ -1104,9 +1174,9 @@ func UpdateAgentModel(agentName AgentName, modelID models.ModelID) error {
 
 	existingAgentCfg := cfg.Agents[agentName]
 
-	model, ok := models.SupportedModels[modelID]
+	model, ok := models.Resolve(modelID)
 	if !ok {
-		return fmt.Errorf("model %s not supported", modelID)
+		return models.UnsupportedError(modelID)
 	}
 
 	maxTokens := existingAgentCfg.MaxTokens
@@ -1127,11 +1197,22 @@ func UpdateAgentModel(agentName AgentName, modelID models.ModelID) error {
 		return fmt.Errorf("failed to update agent model: %w", err)
 	}
 
-	return updateCfgFile(func(config *Config) {
-		if config.Agents == nil {
-			config.Agents = make(map[AgentName]Agent)
+	return patchConfigFile(func(raw map[string]any) {
+		agents, _ := raw["agents"].(map[string]any)
+		if agents == nil {
+			agents = map[string]any{}
 		}
-		config.Agents[agentName] = newAgentCfg
+		entry, _ := agents[string(agentName)].(map[string]any)
+		if entry == nil {
+			entry = map[string]any{}
+		}
+		entry["model"] = string(newAgentCfg.Model)
+		entry["maxTokens"] = newAgentCfg.MaxTokens
+		if newAgentCfg.ReasoningEffort != "" {
+			entry["reasoningEffort"] = newAgentCfg.ReasoningEffort
+		}
+		agents[string(agentName)] = entry
+		raw["agents"] = agents
 	})
 }
 
@@ -1144,9 +1225,13 @@ func UpdateTheme(themeName string) error {
 	// Update the in-memory config
 	cfg.TUI.Theme = themeName
 
-	// Update the file config
-	return updateCfgFile(func(config *Config) {
-		config.TUI.Theme = themeName
+	return patchConfigFile(func(raw map[string]any) {
+		tui, _ := raw["tui"].(map[string]any)
+		if tui == nil {
+			tui = map[string]any{}
+		}
+		tui["theme"] = themeName
+		raw["tui"] = tui
 	})
 }
 

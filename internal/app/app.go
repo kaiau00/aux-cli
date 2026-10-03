@@ -363,7 +363,7 @@ func (app *App) initTheme() {
 	}
 
 	if cfg.TUI.Theme != "" {
-		if err := theme.SetTheme(cfg.TUI.Theme); err != nil {
+		if err := theme.ApplyTheme(cfg.TUI.Theme); err != nil {
 			logging.Warn("Failed to set theme from config, using default theme", "theme", cfg.TUI.Theme, "error", err)
 		} else {
 			logging.Debug("Set theme from config", "theme", cfg.TUI.Theme)

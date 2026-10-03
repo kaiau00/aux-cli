@@ -191,6 +191,9 @@ func (m *modelDialogCmp) View() string {
 
 	// Capitalize first letter of provider name
 	providerName := strings.ToUpper(string(m.provider)[:1]) + string(m.provider[1:])
+	if models.UnmaintainedProvider(m.provider) {
+		providerName += " (unmaintained)"
+	}
 	title := baseStyle.
 		Foreground(t.Primary()).
 		Bold(true).
@@ -284,7 +287,8 @@ func GetSelectedModel(cfg *config.Config) models.Model {
 
 	agentCfg := cfg.Agents[config.AgentCoder]
 	selectedModelId := agentCfg.Model
-	return models.SupportedModels[selectedModelId]
+	model, _ := models.Resolve(selectedModelId)
+	return model
 }
 
 func getEnabledProviders(cfg *config.Config) []models.ModelProvider {
@@ -295,19 +299,21 @@ func getEnabledProviders(cfg *config.Config) []models.ModelProvider {
 		}
 	}
 
-	// Sort by provider popularity
+	// Maintained providers first, then popularity. Unmaintained ones stay
+	// available but grouped last.
 	slices.SortFunc(providers, func(a, b models.ModelProvider) int {
-		rA := models.ProviderPopularity[a]
-		rB := models.ProviderPopularity[b]
-
-		// models not included in popularity ranking default to last
-		if rA == 0 {
-			rA = 999
+		rank := func(p models.ModelProvider) int {
+			group := 0
+			if models.UnmaintainedProvider(p) {
+				group = 1
+			}
+			r := models.ProviderPopularity[p]
+			if r == 0 {
+				r = 999
+			}
+			return group*1000 + r
 		}
-		if rB == 0 {
-			rB = 999
-		}
-		return rA - rB
+		return rank(a) - rank(b)
 	})
 	return providers
 }
@@ -333,7 +339,7 @@ func (m *modelDialogCmp) setupModelsForProvider(provider models.ModelProvider) {
 	m.scrollOffset = 0
 
 	// Try to select the current model if it belongs to this provider
-	if provider == models.SupportedModels[selectedModelId].Provider {
+	if selected, ok := models.Resolve(selectedModelId); ok && provider == selected.Provider {
 		for i, model := range m.models {
 			if model.ID == selectedModelId {
 				m.selectedIdx = i
@@ -348,6 +354,9 @@ func (m *modelDialogCmp) setupModelsForProvider(provider models.ModelProvider) {
 }
 
 func getModelsForProvider(provider models.ModelProvider) []models.Model {
+	if catalog := models.CatalogModels(provider); len(catalog) > 0 {
+		return catalog
+	}
 	var providerModels []models.Model
 	for _, model := range models.SupportedModels {
 		if model.Provider == provider {
