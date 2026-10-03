@@ -16,15 +16,13 @@ func TestContextPageListCoversEveryDeclaredState(t *testing.T) {
 		contextstore.StateResident,
 		contextstore.StateAvailable,
 		contextstore.StatePinned,
-		contextstore.StateEvicted,
-		contextstore.StateFaulted,
 	}
 
 	for _, state := range states {
 		vm := viewmodel.BuildContextPageList([]contextstore.BoundPage{
 			{Binding: contextstore.Binding{State: state, TokenCount: 100}, PageType: "file_region", StableKey: "file:main.go"},
 		})
-		total := len(vm.Resident) + len(vm.Available) + len(vm.Pinned) + len(vm.Evicted) + len(vm.Faulted)
+		total := len(vm.Resident) + len(vm.Available) + len(vm.Pinned)
 		if total != 1 {
 			t.Errorf("state %q produced %d grouped entries, want 1: the page vanished between the store and the view", state, total)
 		}
@@ -38,7 +36,7 @@ func TestContextPageListDropsUnknownStates(t *testing.T) {
 	vm := viewmodel.BuildContextPageList([]contextstore.BoundPage{
 		{Binding: contextstore.Binding{State: "invented", TokenCount: 100}, PageType: "file_region", StableKey: "file:main.go"},
 	})
-	total := len(vm.Resident) + len(vm.Available) + len(vm.Pinned) + len(vm.Evicted) + len(vm.Faulted)
+	total := len(vm.Resident) + len(vm.Available) + len(vm.Pinned)
 	if total != 0 {
 		t.Errorf("an undeclared state was grouped anyway (%d entries); add it to contextstore first", total)
 	}

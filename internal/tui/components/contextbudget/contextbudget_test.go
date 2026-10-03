@@ -35,12 +35,12 @@ func TestRenderExpandedEmptyHidden(t *testing.T) {
 
 func TestRenderExpandedGroupsAndOrder(t *testing.T) {
 	vm := viewmodel.ContextPageListVM{
-		Resident: []viewmodel.ContextPageEntryVM{{StableKey: "file:/a.go", Tokens: 100}},
-		Pinned:   []viewmodel.ContextPageEntryVM{{StableKey: "task_spec:1", Tokens: 20}},
-		Evicted:  []viewmodel.ContextPageEntryVM{{StableKey: "file:/b.go", Tokens: 10, Reason: "excluded by user"}},
+		Resident:  []viewmodel.ContextPageEntryVM{{StableKey: "file:/a.go", Tokens: 100}},
+		Pinned:    []viewmodel.ContextPageEntryVM{{StableKey: "task_spec:1", Tokens: 20}},
+		Available: []viewmodel.ContextPageEntryVM{{StableKey: "file:/b.go", Tokens: 10, Reason: "known, not sent"}},
 	}
 	out := RenderExpanded(vm, 60)
-	for _, want := range []string{"Pinned (1)", "Resident (1)", "Evicted (1)", "file:/a.go", "task_spec:1", "excluded by user"} {
+	for _, want := range []string{"Pinned (1)", "Resident (1)", "Available (1)", "file:/a.go", "task_spec:1", "known, not sent"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("expanded view missing %q:\n%s", want, out)
 		}
@@ -49,8 +49,8 @@ func TestRenderExpandedGroupsAndOrder(t *testing.T) {
 	if strings.Index(out, "Pinned") > strings.Index(out, "Resident") {
 		t.Fatalf("expected Pinned group before Resident:\n%s", out)
 	}
-	// Groups with no entries (Available, Faulted) must not appear.
-	for _, absent := range []string{"Available (", "Faulted ("} {
+	// Groups with no entries must not appear.
+	for _, absent := range []string{"Evicted (", "Faulted ("} {
 		if strings.Contains(out, absent) {
 			t.Fatalf("expanded view should omit empty groups, found %q:\n%s", absent, out)
 		}

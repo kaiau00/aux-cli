@@ -199,22 +199,13 @@ type ContextPageEntryVM struct {
 
 // ContextPageListVM groups a call's page bindings by state, for the expanded
 // context view that the compact budget summarizes. The groups are exactly the
-// five states contextstore declares, so a state can never be silently dropped
-// on the way to the screen -- TestContextPageListCoversEveryDeclaredState
-// holds that.
-//
-// Two of the five have no writer today. Nothing evicts, so StateEvicted is only
-// ever read; nothing faults a page in, so StateFaulted is too. That is a
-// statement about Aux, not about this projection: no page budget is enforced
-// anywhere (see TODO.md A4). The renderer skips empty groups, so neither
-// heading reaches the screen, and this comment exists so the switch below is
-// not mistaken for evidence that eviction ships.
+// states contextstore declares, so a state can never be silently dropped on
+// the way to the screen -- TestContextPageListCoversEveryDeclaredState holds
+// that.
 type ContextPageListVM struct {
 	Resident  []ContextPageEntryVM `json:"resident"`
 	Available []ContextPageEntryVM `json:"available"`
 	Pinned    []ContextPageEntryVM `json:"pinned"`
-	Evicted   []ContextPageEntryVM `json:"evicted"`
-	Faulted   []ContextPageEntryVM `json:"faulted"`
 }
 
 // BuildContextPageList projects per-call page bindings into the expanded,
@@ -230,10 +221,6 @@ func BuildContextPageList(bindings []contextstore.BoundPage) ContextPageListVM {
 			vm.Available = append(vm.Available, entry)
 		case contextstore.StatePinned:
 			vm.Pinned = append(vm.Pinned, entry)
-		case contextstore.StateEvicted:
-			vm.Evicted = append(vm.Evicted, entry)
-		case contextstore.StateFaulted:
-			vm.Faulted = append(vm.Faulted, entry)
 		}
 	}
 	return vm

@@ -151,8 +151,6 @@ func expandedGroups(vm viewmodel.ContextPageListVM) []struct {
 		{"Pinned", vm.Pinned},
 		{"Resident", vm.Resident},
 		{"Available", vm.Available},
-		{"Evicted", vm.Evicted},
-		{"Faulted", vm.Faulted},
 	}
 }
 
@@ -193,7 +191,7 @@ func RenderExpanded(vm viewmodel.ContextPageListVM, width int) string {
 }
 
 // pageEntryLabel shows the reason alongside the stable key when present
-// (e.g. why a page was evicted), so the expanded view explains itself.
+// (e.g. why a page is in the prompt), so the expanded view explains itself.
 func pageEntryLabel(e viewmodel.ContextPageEntryVM) string {
 	if e.Reason == "" {
 		return e.StableKey
