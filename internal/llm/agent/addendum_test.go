@@ -2,9 +2,11 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 
+	"github.com/kaiau00/aux-cli/internal/eventstore"
 	"github.com/kaiau00/aux-cli/internal/llm/provider"
 	"github.com/kaiau00/aux-cli/internal/llm/tools"
 	"github.com/kaiau00/aux-cli/internal/message"
@@ -45,5 +47,30 @@ func TestRunTurnSendsProjectContextAsSystemAddendum(t *testing.T) {
 	}
 	if len(spy.seen) != 1 || spy.seen[0] != "" {
 		t.Fatalf("tool context carried addendum %q; it must be scoped to the provider call", spy.seen)
+	}
+}
+
+func TestContextCompiledCountsAddendumPagesAsResident(t *testing.T) {
+	p := provider.NewMockProvider(mockModel(), provider.TextTurn("ok", provider.TokenUsage{InputTokens: 5, OutputTokens: 2}))
+	a, events, _, sessID := newTurnAgent(t, p)
+
+	ctx := context.WithValue(context.Background(), tools.TaskIDContextKey, "task-1")
+	ctx = promptcompiler.WithProjectContext(ctx, "Languages: go\n", "Task (implementation): add Sub")
+	history := []message.Message{{Role: message.User, Parts: []message.ContentPart{message.TextContent{Text: "add Sub"}}}}
+	if _, err := a.RunTurn(ctx, sessID, history); err != nil {
+		t.Fatalf("RunTurn: %v", err)
+	}
+
+	evs, err := events.List(context.Background(), eventstore.Filter{Types: []eventstore.Type{eventstore.ContextCompiled}})
+	if err != nil || len(evs) != 1 {
+		t.Fatalf("context.compiled events = %d, err %v; want 1", len(evs), err)
+	}
+	var payload eventstore.ContextPayload
+	if err := json.Unmarshal(evs[0].Payload, &payload); err != nil {
+		t.Fatalf("payload: %v", err)
+	}
+	// One transcript message, the project manifest, the task spec.
+	if payload.ResidentPages != 3 || payload.AvailablePages != 0 {
+		t.Fatalf("resident=%d available=%d; want 3 and 0", payload.ResidentPages, payload.AvailablePages)
 	}
 }

@@ -30,9 +30,8 @@ What the audit also found is that **the product thesis is not wired in**:
 
 - The compiled project manifest, memory, related-project context, and task
   spec were computed on every turn and **never sent to the model**. Both prompt
-  compilers marked them `available` and sent the bare transcript. Since M1.1
-  they go out as a system addendum after the base prompt; M1.2 makes the page
-  states say so.
+  compilers marked them `available` and sent the bare transcript. Closed by
+  M1.1 and M1.2: they go out as a system addendum and are counted resident.
 - The learning loop only learns from validation evidence, and nothing in the
   agent loop produces validation evidence — only `aux validate <task-id>` does
   (`cmd/validate.go`). After a normal session: no procedural memory, no skill
@@ -97,7 +96,7 @@ Aux should only say true things about itself. Verified 2026-10-02.
 
 | Claim | Why not |
 | --- | --- |
-| "Aux understands how your project works and gives the model only what it needs" | Nothing the profile, memory, or task compiler produces reaches the model. See [P1.1](#p11-send-the-project-manifest-and-task-spec) |
+| "Aux understands how your project works and gives the model only what it needs" | Project knowledge and the task spec reach the model since M1.1/M1.2, but memory still renders keys, not content (P1.2), the scanners are thin, and nothing trims the transcript, so "only what it needs" is not true |
 | "Improves every time you use it" / "the tenth task is cheaper" | No automatic evidence producer; see [P1.3](#p13-run-validation-at-task-end). Nothing has ever been promoted to a skill |
 | "The prompt is compiled, not just concatenated" | Both compilers send the full transcript. `DedupCompiler` stubs duplicate blobs and defaults to off |
 | "Cheaper than opencode" | Python n=5: gap grew 19%→63% as runs were added. TypeScript n=5: p=0.06 and Aux failed 4/25 task-attempts vs 0/25. Decided: dropped until P1 is done |
@@ -136,31 +135,12 @@ Small, mechanical, and each one is currently a false statement somewhere.
 The product claim is that Aux knows the project and the model benefits. Four
 changes make that mechanically true. Measuring whether it *helps* is P4.
 
-### P1.1 Send the project manifest and task spec
+### P1.1 Send the project manifest and task spec — closed (M1.1, M1.2)
 
-`task.Coordinator.beginWithParent` (`coordinator.go:214-215`) builds
-`eff.Manifest + memorySection + relatedSection` and the rendered task spec and
-puts them on the context. `agent.streamAndHandleEvents` (`agent.go:466`) reads
-them and passes them to `Compile`. `decomposePages` records them as `available`
-pages and `Compile` returns `Messages: msgs` — the transcript only.
-
-Fix: render manifest and task spec into the system prompt (or a leading system
-section the provider adapters already support), mark those pages `resident`,
-and count them in `EstimatedTokens`. Keep it deterministic: this text goes into
-the cached prefix, so the order must be stable (the same lesson as
-`processContextPaths`).
-
-**M1.1 done 2026-10-03:** sent and counted (see the closed appendix). Left for
-M1.2: the two pages still say `available`.
-
-Caveat worth knowing before measuring: for a Go project the manifest is ~34
-tokens — `Languages: go`, `go build ./...`, `go test ./...`. The profile
-scanners are thin. Sending it is necessary, not sufficient. What makes the
-manifest worth sending is P1.2 and P1.3.
-
-Done when: a test asserts the compiled messages contain the manifest text and
-the `project_manifest` page is `resident`; a real session's `ContextCompiled`
-event shows `ResidentPages` including it.
+See the closed appendix. The caveat stands: for a Go project the manifest is
+~36 tokens (`Languages: go`, `go build ./...`, `go test ./...`). The profile
+scanners are thin, so sending it is necessary, not sufficient. What makes it
+worth sending is P1.2 and P1.3.
 
 ### P1.2 Render memory content, not keys
 
@@ -441,6 +421,7 @@ model catalog is what makes Aux usable at all day to day.
 | Install instructions | Every method in the README was fictional; now says build from source |
 | Package attribution | Upstream author's personal address removed from shipped files |
 | Skill promotion path (PR #28), 2026-10-02 | Outside tests, `skill.Service.Evaluate` and `Promote` had no callers, so no skill could be promoted. The CLI now exposes the lifecycle it already implemented: `aux skill evaluate <id> --result pass\|fail\|inconclusive` (`--baseline`, `--eval-run`, `--metrics`), `aux skill promote`, `aux skill rollback`; `skill list` shows ids and which candidates are promotable. Found by exercising it: rolled-back skills appeared in no list (`Service.RolledBack` fixes it), and `--result Pass` would have been stored but never unlocked promotion (`ParseEvalResult` rejects it). The result still comes from a run done elsewhere; `deadcode.sh` could not have caught the gap, since a constructed-but-never-invoked service looks reachable |
+| M1.2 addendum pages resident, 2026-10-03 | `project_manifest` and `task_spec` pages are `resident` (reasons "project knowledge", "compiled task spec") and carry exactly the text sent, headings included, so resident page tokens reconcile with `EstimatedTokens` again. Scratch repo, real provider: `context.compiled` payload `residentPages: 3`, no available pages; bindings show `project_manifest` resident (36 tokens) and `task_spec` resident (85); the model answered "go build ./... / go test ./..." with tools forbidden |
 | M1.1 system addendum, 2026-10-03 | Both compilers render `# Project` (manifest + memory + related projects) then `# Task` into `CompiledPrompt.SystemAddendum`, counted in `EstimatedTokens`. The agent attaches it to the provider call's context only; Anthropic sends it as a second system block after the cached base, OpenAI/OpenRouter/local/Copilot/Gemini append it to the system message (Azure, Bedrock, Vertex inherit). Tests: wire requests captured by an `httptest` server for Anthropic and OpenAI, compiler order/estimate/determinism, and an agent turn through the mock provider that also proves tools do not inherit it |
 | M0.3 coverage floor, 2026-10-03 | `.coverage-floor` 30.8 → 33.8, the value `scripts/coverage.sh` reported on CI for `main` at `8707a1a` (after #28) |
 | M0.4 repo hygiene, 2026-10-03 | `.claude/settings.json` (a dev-session Claude Code bash allowlist) untracked; `.claude/` and `.kilo/` ignored (`.codebase-memory/` already was). `git ls-tree -r HEAD --name-only \| rg '^\.claude\|codebase-memory\|\.kilo'` empty; `git ls-files \| rg '\.log$'` empty |
