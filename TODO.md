@@ -33,9 +33,10 @@ What the audit also found is that **the product thesis is not wired in**:
   compilers marked them `available` and sent the bare transcript. Closed by
   M1.1 and M1.2: they go out as a system addendum and are counted resident.
 - The learning loop only learns from validation evidence, and nothing in the
-  agent loop produces validation evidence — only `aux validate <task-id>` does
-  (`cmd/validate.go`). After a normal session: no procedural memory, no skill
-  candidates, one episodic memory holding `{objective, mode, outcome}`.
+  agent loop produced validation evidence — only `aux validate <task-id>` did.
+  Closed by M1.4: a task that changed files runs the profile's validation
+  commands before it ends, and memory and a skill candidate follow from what
+  passed.
 - The bash "safe read-only" fast path was a prefix match with no shell-operator
   check, and its list included `kill`, `timeout`, `time`, `nice`, `nohup`,
   `env`, `go run`, `go test`. `echo hi; rm -rf .` ran without a prompt.
@@ -85,6 +86,7 @@ Aux should only say true things about itself. Verified 2026-10-02.
 | Reads outside the project need approval | `RequireReadAccess` canonicalizes through symlinks and fails closed |
 | Dashboard is loopback-only and token-gated | Random token, constant-time compare, every data route |
 | Sessions survive a panic | Deferred teardown, tested both directions |
+| A task that changed files is validated before it ends, and what passed is remembered | M1.4: `internal/llm/agent/validate_test.go` drives `processGeneration` with real coordinator, validation, memory, skill, and permission services; scratch repo with a real provider: one edit task ran `go build`/`go test`, both criteria `validated` in `aux task show`, two procedural memories, one skill candidate |
 | `aux -p` runs nothing that would prompt unless `--yes` is given | M0.2: `TestRunNonInteractiveDeniesWithoutYes` / `…ApprovesWithYes` (parent and subagent sessions); scratch repo: `touch created.txt` denied and listed on stderr without `--yes`, created with it |
 | The context meter reflects what the window holds | Latest call's occupancy from the ledger |
 | The TUI fits the terminal it was given | Height invariant asserted across a width×height grid |
@@ -97,7 +99,7 @@ Aux should only say true things about itself. Verified 2026-10-02.
 | Claim | Why not |
 | --- | --- |
 | "Aux understands how your project works and gives the model only what it needs" | Project knowledge, memory content, and the task spec reach the model since M1.1–M1.3, but the scanners are thin and nothing trims the transcript, so "only what it needs" is not true |
-| "Improves every time you use it" / "the tenth task is cheaper" | No automatic evidence producer; see [P1.3](#p13-run-validation-at-task-end). Nothing has ever been promoted to a skill |
+| "Improves every time you use it" / "the tenth task is cheaper" | Memory and skill candidates now accrue with no CLI step (M1.4), but whether that makes later tasks cheaper or better is unmeasured (P4.1). Nothing has ever been promoted to a skill |
 | "The prompt is compiled, not just concatenated" | Both compilers send the full transcript. `DedupCompiler` stubs duplicate blobs and defaults to off |
 | "Cheaper than opencode" | Python n=5: gap grew 19%→63% as runs were added. TypeScript n=5: p=0.06 and Aux failed 4/25 task-attempts vs 0/25. Decided: dropped until P1 is done |
 | "80% test coverage" | 33.8%. 15 packages have no test file |
@@ -146,26 +148,10 @@ worth sending is P1.2 and P1.3.
 
 See the closed appendix.
 
-### P1.3 Run validation at task end
+### P1.3 Run validation at task end — closed (M1.4)
 
-Decided: the agent runs validation itself. Today `validation.Service.RunIntent`
-is called only from `cmd/validate.go` and `cmd/eval.go`. `coordinator.Finish`
-reads `SuccessfulCommands`, which is therefore always empty in the TUI.
-
-Fix: in `Finish` (or a step the agent takes before yielding), plan intents from
-the effective profile's validation commands against the task's acceptance
-criteria (the same code `cmd/validate.go:77-90` already runs), execute them
-through the permission service with a fingerprint per command, record evidence,
-and only then extract memory and skills. Respect the impact graph's
-targeted-vs-broad decision. Make it skippable per task and configurable off.
-
-This is what turns "validated commands become procedural memory" from a
-sentence into a path that runs. It also closes A5 properly: skill candidates
-will exist without a human running three CLI commands.
-
-Done when: a scratch-repo session that edits a file ends with a
-`validation.run` event, a procedural memory, and a skill candidate, with no CLI
-step.
+See the closed appendix. Not done: the impact graph's targeted-vs-broad
+decision is not consulted; every profile command runs (see *Opportunistic*).
 
 ### P1.4 Wire or delete `govpolicy`
 
@@ -183,10 +169,9 @@ written nowhere. Both state models now say so in comments. Either implement
 A4-style eviction (after P4.1 can measure it) or remove the two states so the
 dashboard's "evicted" group stops implying a mechanism.
 
-### P1.6 Rewrite the README's "How it works" to match
+### P1.6 Rewrite the README's "How it works" to match — closed (M1.7)
 
-Once P1.1–P1.3 land, the section is true. Until then, it isn't — and it is the
-first thing a stranger reads. Do this in the same PR as P1.3, not after.
+See the closed appendix.
 
 ---
 
@@ -357,6 +342,14 @@ Real, small, or low-confidence. None of it blocks anything.
   provider API keys included, into the transcript. Nothing is written or
   sent anywhere new, but it sits awkwardly next to "Reads outside the project
   need approval", which is about the read tools, not bash
+- **End-of-task validation runs every profile command.** The impact graph's
+  targeted-vs-broad decision is not consulted (the agent has no `Impact`
+  dependency). Fine for small repos; slow for a large test suite
+- **`aux validate` keys its pass cache on HEAD only** (`cmd/validate.go`), so
+  a pass recorded before uncommitted edits can be reused after them. M1.4's
+  path uses commit + edited-file content; the CLI should do the same
+- The addendum nests the profile's own `# Project profile` heading under
+  `# Project`. Cosmetic
 - `bashDescription()` says commands time out after 30 minutes when no timeout
   is given; `DefaultTimeout` is 1 minute (`bash.go`)
 - The banned-command check now matches every word, so `grep -r curl .` or
@@ -414,6 +407,8 @@ model catalog is what makes Aux usable at all day to day.
 | Install instructions | Every method in the README was fictional; now says build from source |
 | Package attribution | Upstream author's personal address removed from shipped files |
 | Skill promotion path (PR #28), 2026-10-02 | Outside tests, `skill.Service.Evaluate` and `Promote` had no callers, so no skill could be promoted. The CLI now exposes the lifecycle it already implemented: `aux skill evaluate <id> --result pass\|fail\|inconclusive` (`--baseline`, `--eval-run`, `--metrics`), `aux skill promote`, `aux skill rollback`; `skill list` shows ids and which candidates are promotable. Found by exercising it: rolled-back skills appeared in no list (`Service.RolledBack` fixes it), and `--result Pass` would have been stored but never unlocked promotion (`ParseEvalResult` rejects it). The result still comes from a run done elsewhere; `deadcode.sh` could not have caught the gap, since a constructed-but-never-invoked service looks reachable |
+| M1.4 validation at task end, 2026-10-03 | `agent.validateTaskIfNeeded` runs before the deferred `Finish`: skips (with `validation.skipped{reason}`) when `validation.auto` is off, there are no criteria, no file version was recorded during the task, or the profile has no commands, and inside subagents. Otherwise plans as `aux validate` does, runs each command through `validation.ShellRunner` with the session's permission service, and appends the results to the final message. The pass cache is keyed on commit + edited-file content. A denied command is now a `skipped` run with no evidence (before, it was recorded `failed` and blocked every criterion, also via `aux validate` without `--yes`). `aux task show` reports proof of done from evidence instead of the compile-time state. Tests in `agent/validate_test.go` (changed → validated + memory + skill; no change → skipped; denied → skipped, no memory; subagent → not run) and `validation_test.go`. Scratch repo, real provider, `--yes`: both commands passed, both criteria `validated`, two procedural memories, one skill candidate |
+| M1.7 README "How it works", 2026-10-03 | Steps 3–6 rewritten to what M1.1–M1.4 do; tagline performance claim removed (D13); "demand paging" removed from README and `--paging` help |
 | M1.3 memory content, 2026-10-03 | `memorySection` rendered `[episodic] episode:<task-id>`, the stable key. It now loads each active memory's latest version (`Store.LatestVersion`, `Service.RetrieveWithContent`) and renders one line per type: the fact; `` `command` `` — validated in N task(s) since <rev>; "Earlier task: objective → outcome (changed …)". Newest first, bounded at 600 estimated tokens rather than 5 rows. Tests: one memory of each type renders content and no keys, a stale memory is left out, 50 memories stay under budget. "Since <rev>" not "last at": re-validation reuses the same version, so its revision is when the command was first recorded |
 | M1.2 addendum pages resident, 2026-10-03 | `project_manifest` and `task_spec` pages are `resident` (reasons "project knowledge", "compiled task spec") and carry exactly the text sent, headings included, so resident page tokens reconcile with `EstimatedTokens` again. Scratch repo, real provider: `context.compiled` payload `residentPages: 3`, no available pages; bindings show `project_manifest` resident (36 tokens) and `task_spec` resident (85); the model answered "go build ./... / go test ./..." with tools forbidden |
 | M1.1 system addendum, 2026-10-03 | Both compilers render `# Project` (manifest + memory + related projects) then `# Task` into `CompiledPrompt.SystemAddendum`, counted in `EstimatedTokens`. The agent attaches it to the provider call's context only; Anthropic sends it as a second system block after the cached base, OpenAI/OpenRouter/local/Copilot/Gemini append it to the system message (Azure, Bedrock, Vertex inherit). Tests: wire requests captured by an `httptest` server for Anthropic and OpenAI, compiler order/estimate/determinism, and an agent turn through the mock provider that also proves tools do not inherit it |

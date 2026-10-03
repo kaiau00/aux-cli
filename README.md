@@ -1,6 +1,6 @@
 # ⌬ Aux
 
-**The coding agent that gets cheaper, faster, and more capable the longer it works on your project.**
+**A terminal coding agent that learns how your project works and tells the model on every call.**
 
 Aux is a local-first terminal and browser coding agent built around one idea: instead of adding more model providers or another chat window, it builds a persistent, project-specific intelligence layer between you, your codebase, and the one model you already want to use. Add one API key, pick one preferred model, and Aux remembers how your project works so it stops paying to rediscover it on every task.
 
@@ -28,7 +28,7 @@ Aux is a local-first terminal and browser coding agent built around one idea: in
 Most coding agents win by adding more model providers or copying features. Aux's bet is different: build a **Project Brain** that compounds. Four systems work together on every task:
 
 1. **Project Brain** — a living, project-specific model of architecture, conventions, decisions, skills, and experience, built automatically from your repo (`go.mod`/`package.json`/`Makefile`/instruction files, layered by precedence).
-2. **Context OS** — a token-efficient memory hierarchy that pages in only what the current step needs, instead of resending the whole transcript every turn.
+2. **Context OS** — page-level accounting of what every model call contains, with exclude and pin controls that change what is sent, not just what is shown.
 3. **One-Key Cost Governor** — a single efficiency layer (budgets, waste detection, trajectory tracking) for the one model you've chosen, not per-action model routing.
 4. **Experience Compiler** — a learning loop that turns validated work and corrections into reusable memory, evaluation-gated skills, and cost policy — so the tenth similar task is cheaper and better than the first.
 
@@ -100,10 +100,10 @@ aux -p "Explain this repository" -q        # no spinner, good for scripts
 
 1. **Open a project.** Aux resolves a stable project identity (by normalized git remote, or root path for local-only repos — the same identity survives re-clones, forks, and worktrees), compiles the effective profile in the background, builds a deterministic AST-derived impact graph, and derives a related-project graph from your dependencies.
 2. **You give it an objective.** The Task Compiler infers a mode (implementation, bug diagnosis, refactor, test authoring, code review, research, maintenance), and compiles a versioned task spec — scope, acceptance criteria, validation intents, and a budget — from the objective plus the compiled profile.
-3. **The prompt is compiled, not just concatenated.** The Context OS builds a page-by-page manifest instead of resending everything: project manifest, task spec, prior memory, related-project context, transcript — deduplicated, and with real per-page exclude controls (crossing a file off in the TUI actually removes it from the next compile, not just the display). The Cost Governor watches budget mode and ceilings throughout.
+3. **Every model call carries what Aux knows.** After the base system prompt, each call gets a system addendum: the project profile (languages, build and test commands, instruction files), up to ~600 tokens of active memory rendered as content (facts, commands that validated, earlier tasks and their outcomes), related projects, and the task spec. The base prompt comes first and does not change, so the provider can keep caching it. The transcript is sent as it is, with two controls that change what is sent, not only what is shown: crossing a tool result off replaces it with a stub, and pinning keeps it in full. `--paging on` also replaces earlier copies of identical large tool output with a pointer to the latest one; it is off by default. Every compiled call is recorded page by page, and the context pane and dashboard show the same record.
 4. **The agent works.** It calls tools (`bash`, `edit`, `write`, `patch`, `grep`, `glob`, `view`, `fetch`, `sourcegraph`, `diagnostics`) and can spawn specialist **subagents** — repo mapper, impact analyst, validation runner, reviewer — each with its own task identity linked to the parent, reporting back through a structured contract instead of free text. The first file mutation auto-checkpoints a baseline; every tool call is recorded to a durable ledger and event log.
-5. **Validation is evidence-based.** The impact graph decides targeted vs. broad validation and always fails safe. A criterion is only "validated" once a real command actually ran and passed.
-6. **The task finishes.** A final checkpoint captures what changed. Validated commands become procedural memory; the task becomes an episodic summary — both available to future tasks automatically, without you re-explaining anything.
+5. **A task that changed files is validated before it ends.** If the task edited, wrote, or patched a file, Aux runs every validation command in the project profile (for a Go module, `go build ./...` and `go test ./...`), each behind the normal permission prompt, where "allow for session" covers repeats. The results are appended to the agent's final message. Tasks that change nothing (research, review, explanation) skip this, and so do subagents, because the parent validates. Turn it off with `validation.auto: false`. A criterion only becomes "validated" when a command actually ran and passed; a command you deny is recorded as not run, never as passed or failed. `aux -p` denies anything that would prompt unless you pass `--yes`.
+6. **The task finishes, and Aux learns from what passed.** A final checkpoint captures what changed. Each command that validated becomes procedural memory, together they become one `validate-project` skill candidate, and the task becomes an episodic memory. Memory reaches the next task's prompt automatically (step 3). Skills stay candidates until you evaluate and promote them with `aux skill`.
 7. **You watch it live**, in the TUI or the dashboard — both are projections of the same event-backed state, never a separate narrative.
 
 ## CLI reference
@@ -142,7 +142,7 @@ Beyond the interactive TUI (`aux`) and one-shot prompts (`aux -p "..."`), Aux sh
 | `--output-format` | `-f` | Output format for non-interactive mode (`text`, `json`) |
 | `--quiet` | `-q` | Hide spinner in non-interactive mode |
 | `--version` | `-v` | Print the version and exit |
-| `--paging` | | Prompt compiler for this run: `on` (demand paging) or `off` (compatibility) |
+| `--paging` | | For this run: `on` replaces earlier copies of identical large tool output with a pointer, `off` (default) sends the transcript as is |
 
 `--debug` and `--cwd` apply to the interactive `aux` command itself; subcommands
 resolve the project from the current directory.
@@ -317,7 +317,7 @@ Aux looks for configuration in, in order: `$HOME/.aux.json`, `$XDG_CONFIG_HOME/a
 }
 ```
 
-- **`context.paging`** (`off`/`on`) switches on the demand-paging prompt compiler (dedup of repeated tool output, real per-page exclusion). `context.virtualization` (`off`/`observe`/`on`) controls whether large tool output gets replaced with a compact digest plus an artifact reference.
+- **`context.paging`** (`off`/`on`, default `off`) dedups repeated identical tool output: earlier copies become a pointer to the latest one. Per-page exclusion works either way. `context.virtualization` (`off`/`observe`/`on`) controls whether large tool output gets replaced with a compact digest plus an artifact reference.
 - **`costGovernor.mode`** (`off`/`observe`/`on`) controls the one-key cost governor. `off` disables it; `observe` measures without changing behavior; `on` actively governs. Compare the effect with `aux eval ab` on a fixed task set run both ways.
 - **`autoCompact`** (default `true`) summarizes the conversation automatically at ~95% of the model's context window, starting a new session with the summary instead of hitting a hard context error.
 - **`semanticRetrieval`** tunes the AST-backed, PageRank-scored retrieval layer that narrows which files get read into context.

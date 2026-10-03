@@ -7,6 +7,7 @@ import (
 
 	"github.com/kaiau00/aux-cli/internal/db/dbtest"
 	"github.com/kaiau00/aux-cli/internal/eventstore"
+	"github.com/kaiau00/aux-cli/internal/permission"
 	"github.com/kaiau00/aux-cli/internal/validation"
 )
 
@@ -49,6 +50,33 @@ func TestRunIntentPassAdvancesCriterion(t *testing.T) {
 	}
 	if states["c1"] != validation.Validated {
 		t.Fatalf("criterion should be validated, got %q", states["c1"])
+	}
+}
+
+// The user saying no is not the code failing: a denied command must leave the
+// criterion uncovered, not blocked, and must never count as a success.
+func TestRunIntentDeniedIsSkippedWithoutEvidence(t *testing.T) {
+	svc, store := newService(t)
+	ctx := context.Background()
+	runner := &fakeRunner{err: permission.ErrorPermissionDenied}
+
+	intent := validation.Intent{ID: "i1", Command: "go test ./...", CriterionIDs: []string{"c1"}}
+	res, err := svc.RunIntent(ctx, "task1", intent, "fp-1", runner)
+	if !errors.Is(err, permission.ErrorPermissionDenied) {
+		t.Fatalf("RunIntent error = %v; want the denial passed through", err)
+	}
+	if res.Run.Status != validation.StatusSkipped {
+		t.Fatalf("status = %q, want skipped", res.Run.Status)
+	}
+	if ev, _ := store.EvidenceForTask(ctx, "task1"); len(ev) != 0 {
+		t.Fatalf("a denied run attached %d evidence rows", len(ev))
+	}
+	states, _ := svc.ProofOfDone(ctx, "task1", []string{"c1"})
+	if states["c1"] != validation.Uncovered {
+		t.Fatalf("criterion = %q, want uncovered", states["c1"])
+	}
+	if cmds, _ := svc.SuccessfulCommands(ctx, "task1"); len(cmds) != 0 {
+		t.Fatalf("a denied command counted as successful: %v", cmds)
 	}
 }
 

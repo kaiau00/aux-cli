@@ -54,6 +54,7 @@ const (
 	// Validation lifecycle.
 	ValidationStarted   Type = "validation.started"
 	ValidationCompleted Type = "validation.completed"
+	ValidationSkipped   Type = "validation.skipped"
 
 	// Checkpoint lifecycle.
 	CheckpointCreated Type = "checkpoint.created"
