@@ -134,13 +134,8 @@ Small, tested, CI green, description accurate. Closes the "no skill can ever be
 promoted" dead end by exposing `evaluate`/`promote`/`rollback`. Raise
 `.coverage-floor` to 33.8 in the same change or the next.
 
-### P0.4 Repo hygiene
+### P0.4 Repo name (plan M0.5 **[HUMAN]**)
 
-- `.claude/settings.json` is committed: a Claude Code bash allowlist from a
-  development session, including `Bash(go run *)` and `Bash(git commit *)`.
-  Remove it; add `.claude/` to `.gitignore`.
-- `.codebase-memory/` (from `codebase-memory-mcp`) sits untracked in the
-  working tree. Ignore it.
 - The remote is `kaiau00/Aux`; the module path and every README link say
   `kaiau00/aux-cli`. `gh` follows the redirect; `go install` and the install
   script's `releases/latest` URL may not. Pick one name. See [P3.2](#p32-install-paths-that-work).
@@ -453,6 +448,7 @@ model catalog is what makes Aux usable at all day to day.
 | Module identity | `github.com/aux-ai/aux-cli` resolved to nothing; renamed |
 | Install instructions | Every method in the README was fictional; now says build from source |
 | Package attribution | Upstream author's personal address removed from shipped files |
+| M0.4 repo hygiene, 2026-10-03 | `.claude/settings.json` (a dev-session Claude Code bash allowlist) untracked; `.claude/` and `.kilo/` ignored (`.codebase-memory/` already was). `git ls-tree -r HEAD --name-only \| rg '^\.claude\|codebase-memory\|\.kilo'` empty; `git ls-files \| rg '\.log$'` empty |
 | Title/turn lost update | Title generation saved a stale session over the turn's totals |
 | Dashboard disclosure | Handoff note said "no server" while one started by default |
 | Terminal layout | Rendered more rows than the terminal had at nearly every size |
