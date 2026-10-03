@@ -89,15 +89,10 @@ func fixtures() map[string]fixture {
 			pageList: &viewmodel.ContextPageListVM{
 				Resident: []viewmodel.ContextPageEntryVM{
 					{PageType: "file_region", StableKey: "file:internal/app/app.go", State: "resident", Tokens: 1200, Reason: "transcript"},
+					{PageType: "project_manifest", StableKey: "project_manifest", State: "resident", Tokens: 300, Reason: "project knowledge"},
 				},
 				Pinned: []viewmodel.ContextPageEntryVM{
 					{PageType: "file_region", StableKey: "file:internal/task/coordinator.go", State: "pinned", Tokens: 900, Reason: "pinned by user"},
-				},
-				Available: []viewmodel.ContextPageEntryVM{
-					{PageType: "project_manifest", StableKey: "project_manifest", State: "available", Tokens: 300},
-				},
-				Evicted: []viewmodel.ContextPageEntryVM{
-					{PageType: "tool_digest", StableKey: "msg:tool-7", State: "evicted", Tokens: 4200, Reason: "demand paging"},
 				},
 			},
 		},

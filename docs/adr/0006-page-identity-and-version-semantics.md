@@ -59,3 +59,11 @@ with "what a specific past call actually received."
 Revisit if per-call binding volume becomes a storage concern for long-running
 tasks with many turns — would need a retention policy analogous to ADR 0004's
 artifact retention, not a redesign of the identity model itself.
+
+## Amendment, 2026-10-03
+
+The `evicted` and `faulted` binding states were removed (plan M1.6): nothing
+ever wrote them, and the expanded context view's "Evicted" group implied a
+mechanism that does not exist. Bindings are now `resident`, `available`, or
+`pinned`. They return with tool-result eviction (plan M4.3), if it ships. The
+`evicted_at` column on `context_bindings` stays, since migrations only add.

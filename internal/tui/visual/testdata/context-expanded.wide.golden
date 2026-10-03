@@ -2,9 +2,6 @@ aux-cli  ● implementing  active  Opus  Context 0/64K (0%)
 
  Pinned (1)
   file:internal/task/coordinator.go — pinned by user                                             900
- Resident (1)
+ Resident (2)
   file:internal/app/app.go — transcript                                                         1.2k
- Available (1)
-  project_manifest                                                                               300
- Evicted (1)
-  msg:tool-7 — demand paging                                                                    4.2k
+  project_manifest — project knowledge                                                           300

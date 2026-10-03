@@ -1,6 +1,6 @@
 // Package contextstore stores typed context pages, their content-addressed
 // versions, and the bindings that record what a specific model call held
-// resident, available, or evicted. It makes
+// resident, available, or pinned. It makes
 // every compiled prompt explainable page by page.
 package contextstore
 
@@ -27,16 +27,12 @@ const (
 
 // Binding states.
 //
-// Resident, available and pinned are written by the agent as it binds each
-// call's pages. Evicted and faulted are declared but never written: nothing in
-// Aux evicts a page to fit a budget or faults one back in, because no context
-// budget is enforced anywhere. They are kept because they are part of the state
-// model the schema stores, not because the behaviour exists.
+// Written by the agent as it binds each call's pages. There is no evicted or
+// faulted state: nothing in Aux evicts a page to fit a budget or faults one
+// back in. Add them with the mechanism, not before (plan M4.3).
 const (
 	StateResident  = "resident"
 	StateAvailable = "available"
-	StateEvicted   = "evicted"
-	StateFaulted   = "faulted"
 	StatePinned    = "pinned"
 )
 

@@ -144,8 +144,6 @@ func TestBuildContextPageListGroupsByState(t *testing.T) {
 		{Binding: contextstore.Binding{State: contextstore.StateResident, TokenCount: 100, Reason: "current"}, PageType: contextstore.KindFileRegion, StableKey: "file:/a.go"},
 		{Binding: contextstore.Binding{State: contextstore.StateAvailable, TokenCount: 50}, PageType: contextstore.KindProjectManifest, StableKey: "project_manifest"},
 		{Binding: contextstore.Binding{State: contextstore.StatePinned, TokenCount: 20}, PageType: contextstore.KindTaskSpec, StableKey: "task_spec:1"},
-		{Binding: contextstore.Binding{State: contextstore.StateEvicted, TokenCount: 10, Reason: "excluded by user"}, PageType: contextstore.KindFileRegion, StableKey: "file:/b.go"},
-		{Binding: contextstore.Binding{State: contextstore.StateFaulted, TokenCount: 5}, PageType: contextstore.KindFileRegion, StableKey: "file:/c.go"},
 	}
 	vm := viewmodel.BuildContextPageList(bindings)
 	if len(vm.Resident) != 1 || vm.Resident[0].StableKey != "file:/a.go" {
@@ -156,11 +154,5 @@ func TestBuildContextPageListGroupsByState(t *testing.T) {
 	}
 	if len(vm.Pinned) != 1 || vm.Pinned[0].StableKey != "task_spec:1" {
 		t.Fatalf("pinned group wrong: %+v", vm.Pinned)
-	}
-	if len(vm.Evicted) != 1 || vm.Evicted[0].Reason != "excluded by user" {
-		t.Fatalf("evicted group wrong: %+v", vm.Evicted)
-	}
-	if len(vm.Faulted) != 1 || vm.Faulted[0].StableKey != "file:/c.go" {
-		t.Fatalf("faulted group wrong: %+v", vm.Faulted)
 	}
 }
