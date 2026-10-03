@@ -228,6 +228,23 @@ func (s *Store) getMemory(ctx context.Context, projectID, memType, stableKey str
 	return m, true, nil
 }
 
+// LatestVersion returns the newest content version of a memory.
+func (s *Store) LatestVersion(ctx context.Context, memoryID string) (Version, bool, error) {
+	return s.latestVersion(ctx, memoryID)
+}
+
+// TaskCount returns how many distinct tasks recorded feedback on any version
+// of a memory. Learn records feedback each time a task re-confirms a memory,
+// so for a procedure this is the number of tasks that validated it.
+func (s *Store) TaskCount(ctx context.Context, memoryID string) (int, error) {
+	var n int
+	err := s.db.QueryRowContext(ctx,
+		`SELECT COUNT(DISTINCT f.task_id) FROM memory_feedback f
+         JOIN memory_versions v ON v.memory_version_id = f.memory_version_id
+         WHERE v.memory_id = ? AND f.task_id IS NOT NULL`, memoryID).Scan(&n)
+	return n, err
+}
+
 func (s *Store) latestVersion(ctx context.Context, memoryID string) (Version, bool, error) {
 	row := s.db.QueryRowContext(ctx,
 		`SELECT memory_version_id, memory_id, content_json, content_hash, supporting_revision, created_at

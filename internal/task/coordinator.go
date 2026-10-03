@@ -2,6 +2,7 @@ package task
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -269,22 +270,104 @@ func (c *Coordinator) BeginMultiRepo(ctx context.Context, sessionID, objective s
 	return plan, children, errors.Join(errs...)
 }
 
-// memorySection renders a bounded set of active memories for the manifest, so
-// prior project knowledge is available without re-discovery.
+// memoryTokenBudget bounds the memory section in the system addendum, at the
+// same ~4 chars/token the prompt compiler estimates with.
+const memoryTokenBudget = 600
+
+// memoryRetrieveCap bounds how many memories are loaded to fill the budget.
+const memoryRetrieveCap = 200
+
+// memorySection renders active memories for the manifest, newest first, one
+// line each, until memoryTokenBudget is spent, so prior project knowledge is
+// available without re-discovery. It renders content, never stable keys.
 func (c *Coordinator) memorySection(ctx context.Context, projectID string) string {
 	if c.memories == nil {
 		return ""
 	}
-	mems, err := c.memories.Retrieve(ctx, projectID, nil, 5)
+	mems, err := c.memories.RetrieveWithContent(ctx, projectID, nil, memoryRetrieveCap)
 	if err != nil || len(mems) == 0 {
 		return ""
 	}
+	const header = "Prior knowledge (newest first):\n"
 	var b strings.Builder
-	b.WriteString("Prior knowledge:\n")
+	used := estimateTokens(header)
 	for _, m := range mems {
-		fmt.Fprintf(&b, "  - [%s] %s\n", m.Type, m.StableKey)
+		line := renderMemory(m)
+		if line == "" {
+			continue
+		}
+		line = "  - " + line + "\n"
+		if used+estimateTokens(line) > memoryTokenBudget {
+			break
+		}
+		if b.Len() == 0 {
+			b.WriteString(header)
+		}
+		b.WriteString(line)
+		used += estimateTokens(line)
 	}
 	return b.String()
+}
+
+func estimateTokens(s string) int { return (len(s) + 3) / 4 }
+
+// renderMemory is one line of memory content, or "" when the content has
+// nothing the model could use.
+func renderMemory(m memory.MemoryWithContent) string {
+	var content map[string]any
+	if json.Unmarshal([]byte(m.Version.ContentJSON), &content) != nil {
+		return ""
+	}
+	str := func(k string) string {
+		s, _ := content[k].(string)
+		return strings.TrimSpace(s)
+	}
+	switch m.Type {
+	case memory.Factual:
+		return str("fact")
+	case memory.Procedural:
+		cmd := str("command")
+		if cmd == "" {
+			return ""
+		}
+		line := fmt.Sprintf("`%s` — validated in %d task(s)", cmd, max(m.Tasks, 1))
+		if rev := m.Version.SupportingRevision; rev != "" {
+			line += " since " + shortRevision(rev)
+		}
+		return line
+	case memory.Episodic:
+		objective := str("objective")
+		if objective == "" {
+			return ""
+		}
+		line := "Earlier task: " + objective
+		if outcome := str("outcome"); outcome != "" {
+			line += " → " + outcome
+		}
+		if paths := stringList(content["changedPaths"]); len(paths) > 0 && len(paths) <= 3 {
+			line += " (changed " + strings.Join(paths, ", ") + ")"
+		}
+		return line
+	}
+	return ""
+}
+
+func stringList(v any) []string {
+	items, _ := v.([]any)
+	out := make([]string, 0, len(items))
+	for _, it := range items {
+		if s, ok := it.(string); ok && s != "" {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+func shortRevision(rev string) string {
+	if len(rev) > 7 {
+		return rev[:7]
+	}
+	return rev
 }
 
 // relatedSection renders the projects this project depends on (or is consumed
