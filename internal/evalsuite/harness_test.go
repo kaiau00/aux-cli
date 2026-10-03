@@ -53,6 +53,15 @@ func TestOpenCodeCommandPinsTheModel(t *testing.T) {
 	}
 }
 
+// Without --yes, `aux -p` denies every edit and command, and the suite would
+// measure that instead of the harness.
+func TestAuxHarnessApprovesActions(t *testing.T) {
+	cmd := AuxHarness{Binary: "aux"}.Command("do it")
+	if !strings.Contains(cmd, " --yes") {
+		t.Fatalf("aux harness command must pass --yes: %s", cmd)
+	}
+}
+
 func TestHarnessCommandsQuotePrompts(t *testing.T) {
 	prompt := `fix Bob's "thing"`
 	for _, h := range []Harness{

@@ -85,6 +85,7 @@ Aux should only say true things about itself. Verified 2026-10-02.
 | Reads outside the project need approval | `RequireReadAccess` canonicalizes through symlinks and fails closed |
 | Dashboard is loopback-only and token-gated | Random token, constant-time compare, every data route |
 | Sessions survive a panic | Deferred teardown, tested both directions |
+| `aux -p` runs nothing that would prompt unless `--yes` is given | M0.2: `TestRunNonInteractiveDeniesWithoutYes` / `…ApprovesWithYes` (parent and subagent sessions); scratch repo: `touch created.txt` denied and listed on stderr without `--yes`, created with it |
 | The context meter reflects what the window holds | Latest call's occupancy from the ledger |
 | The TUI fits the terminal it was given | Height invariant asserted across a width×height grid |
 | `.aux/` does not leak into commits | Self-ignoring `.gitignore`, verified in a scratch repo |
@@ -120,13 +121,6 @@ correct when you read it. The two newest were both machinery.
 ## P0 — Trust. Before anything ships to a stranger
 
 Small, mechanical, and each one is currently a false statement somewhere.
-
-### P0.2 Say what `-p` does, where it is seen
-
-`aux -p` calls `AutoApproveSession` (`internal/app/app.go:430`). The README
-mentions it once, `docs/trying-aux.md` leads with it — but `aux --help` and
-the `-p` flag text say nothing. Put it in the flag help and in the first line
-`-p` prints when not `--quiet`.
 
 ### P0.3 Merge PR #28
 
@@ -462,3 +456,4 @@ model catalog is what makes Aux usable at all day to day.
 | Release pipeline | No usable token, deprecated goreleaser keys, version stamping lost to build info. All three fixed and a snapshot proven; a real tag still has not run |
 | Permission grant ordering | `GrantPersistant` woke the waiter before recording; two parallel calls could prompt twice. Pinned deterministically |
 | `internal/diff` | 1,481 lines mutating files with no tests; PR #27 added them and fixed a panic on a chunk deleting past EOF |
+| M0.2 `-p` requires `--yes`, 2026-10-03 | `-p` auto-approved every request (`app.go:430`). Now `DenyAllSession` refuses without blocking and records each denial; `--yes` (hidden alias `--dangerously-skip-permissions`) restores approve-all. Subagent sessions follow the parent via `LinkSession` — before, a subagent prompt under `-p` had no one to answer it and waited forever. Eval harness passes `--yes`. Tests in `internal/app`, `internal/permission`, `internal/evalsuite`; scratch-repo run recorded in the claims table |

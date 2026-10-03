@@ -44,8 +44,9 @@ func (h AuxHarness) Name() string { return "aux" }
 
 func (h AuxHarness) Command(prompt string) string {
 	// JSON output is requested for the session id, which is the handle used to
-	// read what the run cost from the ledger.
-	return fmt.Sprintf("%s -p %s --quiet --output-format json", h.Binary, shellQuote(prompt))
+	// read what the run cost from the ledger. --yes because a benchmark task
+	// has to edit files and run commands, as `opencode run` does unprompted.
+	return fmt.Sprintf("%s -p %s --quiet --output-format json --yes", h.Binary, shellQuote(prompt))
 }
 
 func (h AuxHarness) Metrics(ctx context.Context, stdout string) (Usage, error) {

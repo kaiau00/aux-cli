@@ -137,7 +137,8 @@ Beyond the interactive TUI (`aux`) and one-shot prompts (`aux -p "..."`), Aux sh
 | `--help` | `-h` | Display help information |
 | `--debug` | `-d` | Enable debug mode |
 | `--cwd` | `-c` | Set current working directory |
-| `--prompt` | `-p` | Run a single prompt in non-interactive mode |
+| `--prompt` | `-p` | Run a single prompt in non-interactive mode. Anything that would ask permission is denied and listed on stderr |
+| `--yes` | | With `-p`, approve every permission request instead of denying it |
 | `--output-format` | `-f` | Output format for non-interactive mode (`text`, `json`) |
 | `--quiet` | `-q` | Hide spinner in non-interactive mode |
 | `--version` | `-v` | Print the version and exit |
