@@ -153,6 +153,11 @@ func (b *agentTool) Run(ctx context.Context, call tools.ToolCall) (tools.ToolRes
 	if err != nil {
 		return tools.ToolResponse{}, fmt.Errorf("error creating session: %s", err)
 	}
+	// In non-interactive mode nobody answers a prompt, so a subagent must
+	// inherit the parent's approve-all or deny-all mode rather than block.
+	if b.permissions != nil {
+		b.permissions.LinkSession(session.ID, sessionID)
+	}
 
 	prompt := params.Prompt
 	if fragment := params.Role.rolePrompt(); fragment != "" {

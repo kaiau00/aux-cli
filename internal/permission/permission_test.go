@@ -124,6 +124,56 @@ func TestAutoApproveSessionShortCircuits(t *testing.T) {
 	}
 }
 
+func TestDenyAllSessionDeniesWithoutPromptingAndRecords(t *testing.T) {
+	s := NewPermissionService()
+	s.DenyAllSession("s1")
+	granted, prompted := requestWithin(t, s, bashRequest("rm -rf ."), time.Second)
+	if prompted || granted {
+		t.Fatalf("deny-all session must refuse without prompting: granted=%v prompted=%v", granted, prompted)
+	}
+	denied := s.Denied("s1")
+	if len(denied) != 1 || denied[0].Fingerprint != "rm -rf ." || denied[0].ToolName != "bash" || denied[0].Path != "/" {
+		t.Fatalf("Denied = %+v; want the one bash request", denied)
+	}
+	if other := s.Denied("s2"); len(other) != 0 {
+		t.Fatalf("an unrelated session has no denials, got %+v", other)
+	}
+}
+
+// A subagent runs in its own session. In non-interactive mode nobody answers
+// its prompts, so it must follow the parent's mode instead of blocking.
+func TestLinkedSessionFollowsParentMode(t *testing.T) {
+	child := bashRequest("rm -rf .")
+	child.SessionID = "child"
+
+	deny := NewPermissionService()
+	deny.DenyAllSession("s1")
+	deny.LinkSession("child", "s1")
+	if granted, prompted := requestWithin(t, deny, child, time.Second); prompted || granted {
+		t.Fatalf("child of a deny-all session: granted=%v prompted=%v", granted, prompted)
+	}
+	if got := deny.Denied("s1"); len(got) != 1 || got[0].SessionID != "child" {
+		t.Fatalf("child denial should be reported under the parent: %+v", got)
+	}
+
+	approve := NewPermissionService()
+	approve.AutoApproveSession("s1")
+	approve.LinkSession("child", "s1")
+	if granted, prompted := requestWithin(t, approve, child, time.Second); prompted || !granted {
+		t.Fatalf("child of an auto-approved session: granted=%v prompted=%v", granted, prompted)
+	}
+}
+
+func TestUnlinkedSessionStillPrompts(t *testing.T) {
+	s := NewPermissionService()
+	s.DenyAllSession("s1")
+	other := bashRequest("ls")
+	other.SessionID = "s2"
+	if _, prompted := requestWithin(t, s, other, 200*time.Millisecond); !prompted {
+		t.Fatal("a session with no mode must still prompt")
+	}
+}
+
 func TestDenyIsNotCached(t *testing.T) {
 	// A denial must not be remembered as an approval, and must not suppress the
 	// next prompt for the same command.

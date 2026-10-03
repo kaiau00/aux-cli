@@ -12,8 +12,10 @@ should not be a surprise.
 
 - **Aux runs commands and edits files in the repository you point it at.** In
   interactive mode it asks permission first, per command, and you can deny.
-- **`aux -p "..."` (non-interactive) approves everything automatically.** There
-  is no prompt. Do not run it against a repository you care about.
+- **`aux -p "..."` (non-interactive) cannot ask you anything, so it denies
+  every action that would prompt** and lists them on stderr when it finishes.
+  Add `--yes` to approve them all instead: then there is no prompt for any
+  command or edit, so do not combine `--yes` with a repository you care about.
 - **Aux creates a `.aux/` directory in your working directory.** It holds a
   SQLite database with your full session transcript: your prompts, the model's
   replies, and the output of every tool it ran. Aux writes a `.gitignore` there

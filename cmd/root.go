@@ -46,6 +46,9 @@ to assist developers in writing, debugging, and understanding code directly from
 
   # Run a single non-interactive prompt with JSON output format
   aux -p "Explain the use of context in Go" -f json
+
+  # Let a non-interactive prompt edit files and run commands
+  aux -p "Add a test for Add" --yes
   `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Past flag parsing, so anything that fails from here is a runtime
@@ -69,6 +72,10 @@ to assist developers in writing, debugging, and understanding code directly from
 		prompt, _ := cmd.Flags().GetString("prompt")
 		outputFormat, _ := cmd.Flags().GetString("output-format")
 		quiet, _ := cmd.Flags().GetBool("quiet")
+		yes, _ := cmd.Flags().GetBool("yes")
+		if skip, _ := cmd.Flags().GetBool("dangerously-skip-permissions"); skip {
+			yes = true
+		}
 
 		// Validate format option
 		if !format.IsValid(outputFormat) {
@@ -135,7 +142,7 @@ to assist developers in writing, debugging, and understanding code directly from
 		// Non-interactive mode
 		if prompt != "" {
 			// Run non-interactive flow using the App method
-			return app.RunNonInteractive(ctx, prompt, outputFormat, quiet)
+			return app.RunNonInteractive(ctx, prompt, outputFormat, quiet, yes)
 		}
 
 		// Interactive mode.
@@ -326,7 +333,10 @@ func init() {
 	rootCmd.Flags().BoolP("version", "v", false, "Version")
 	rootCmd.Flags().BoolP("debug", "d", false, "Debug")
 	rootCmd.Flags().StringP("cwd", "c", "", "Current working directory")
-	rootCmd.Flags().StringP("prompt", "p", "", "Prompt to run in non-interactive mode")
+	rootCmd.Flags().StringP("prompt", "p", "", "Prompt to run in non-interactive mode. Anything that would ask permission is denied unless --yes is given")
+	rootCmd.Flags().Bool("yes", false, "Approve every permission request in non-interactive mode. Without it, actions that would prompt are denied and listed.")
+	rootCmd.Flags().Bool("dangerously-skip-permissions", false, "Alias for --yes")
+	_ = rootCmd.Flags().MarkHidden("dangerously-skip-permissions")
 
 	// Add format flag with validation logic
 	rootCmd.Flags().StringP("output-format", "f", format.Text.String(),

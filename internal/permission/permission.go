@@ -50,17 +50,31 @@ type Service interface {
 	Deny(permission PermissionRequest)
 	Request(opts CreatePermissionRequest) bool
 	AutoApproveSession(sessionID string)
+	// DenyAllSession makes every request in the session return false without
+	// prompting, and records it for Denied. For non-interactive runs, where
+	// nobody is there to answer a prompt.
+	DenyAllSession(sessionID string)
+	// LinkSession makes a subagent's session follow its parent's
+	// AutoApproveSession or DenyAllSession mode.
+	LinkSession(childID, parentID string)
+	// Denied returns, in order, the requests DenyAllSession refused in the
+	// session and every session linked beneath it.
+	Denied(sessionID string) []PermissionRequest
 }
 
 type permissionService struct {
 	*pubsub.Broker[PermissionRequest]
 
-	// mu guards sessionPermissions and autoApproveSessions: grants are appended
-	// from the TUI goroutine while Request reads them from the agent goroutine.
+	// mu guards sessionPermissions, the session modes, parents, and denied:
+	// grants are appended from the TUI goroutine while Request reads them from
+	// the agent goroutine.
 	mu                  sync.RWMutex
 	sessionPermissions  []PermissionRequest
 	pendingRequests     sync.Map
 	autoApproveSessions []string
+	denyAllSessions     []string
+	parents             map[string]string
+	denied              map[string][]PermissionRequest
 
 	// promptMu serializes the interactive part of Request: the grant check, the
 	// publish, and the wait for an answer. The UI can only present one approval
@@ -123,7 +137,7 @@ func (s *permissionService) Deny(permission PermissionRequest) {
 
 func (s *permissionService) Request(opts CreatePermissionRequest) bool {
 	s.mu.RLock()
-	autoApproved := slices.Contains(s.autoApproveSessions, opts.SessionID)
+	autoApproved, deniedRoot := s.sessionModeLocked(opts.SessionID)
 	s.mu.RUnlock()
 	if autoApproved {
 		return true
@@ -141,6 +155,12 @@ func (s *permissionService) Request(opts CreatePermissionRequest) bool {
 		Action:      opts.Action,
 		Params:      opts.Params,
 		Fingerprint: opts.Fingerprint,
+	}
+	if deniedRoot != "" {
+		s.mu.Lock()
+		s.denied[deniedRoot] = append(s.denied[deniedRoot], permission)
+		s.mu.Unlock()
+		return false
 	}
 
 	// One dialog at a time. See promptMu.
@@ -189,9 +209,49 @@ func (s *permissionService) AutoApproveSession(sessionID string) {
 	s.mu.Unlock()
 }
 
+func (s *permissionService) DenyAllSession(sessionID string) {
+	s.mu.Lock()
+	s.denyAllSessions = append(s.denyAllSessions, sessionID)
+	s.mu.Unlock()
+}
+
+func (s *permissionService) LinkSession(childID, parentID string) {
+	if childID == "" || parentID == "" || childID == parentID {
+		return
+	}
+	s.mu.Lock()
+	s.parents[childID] = parentID
+	s.mu.Unlock()
+}
+
+func (s *permissionService) Denied(sessionID string) []PermissionRequest {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return slices.Clone(s.denied[sessionID])
+}
+
+// sessionModeLocked walks from sessionID up through linked parents. It
+// reports whether the nearest session with a mode auto-approves, or else the
+// ID of the deny-all session that denials are recorded under. Caller holds mu.
+func (s *permissionService) sessionModeLocked(sessionID string) (autoApproved bool, deniedRoot string) {
+	seen := map[string]bool{}
+	for id := sessionID; id != "" && !seen[id]; id = s.parents[id] {
+		seen[id] = true
+		if slices.Contains(s.autoApproveSessions, id) {
+			return true, ""
+		}
+		if slices.Contains(s.denyAllSessions, id) {
+			return false, id
+		}
+	}
+	return false, ""
+}
+
 func NewPermissionService() Service {
 	return &permissionService{
 		Broker:             pubsub.NewBroker[PermissionRequest](),
 		sessionPermissions: make([]PermissionRequest, 0),
+		parents:            map[string]string{},
+		denied:             map[string][]PermissionRequest{},
 	}
 }

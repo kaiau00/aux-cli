@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"io"
 	"maps"
 	"os"
 	"path/filepath"
@@ -81,6 +82,8 @@ type App struct {
 	watcherCancelFuncs []context.CancelFunc
 	cancelFuncsMutex   sync.Mutex
 	watcherWG          sync.WaitGroup
+
+	stderr io.Writer // nil means os.Stderr
 }
 
 func New(ctx context.Context, conn *sql.DB) (*App, error) {
@@ -398,7 +401,12 @@ func backgroundOverride(pref string) (dark bool, ok bool) {
 }
 
 // RunNonInteractive handles the execution flow when a prompt is provided via CLI flag.
-func (a *App) RunNonInteractive(ctx context.Context, prompt string, outputFormat string, quiet bool) error {
+//
+// Nobody is present to answer a permission prompt, so yes decides every one:
+// true approves them all, false denies them all and lists them on stderr
+// afterwards. Denials are information, not failure; the model may still
+// produce a useful read-only answer.
+func (a *App) RunNonInteractive(ctx context.Context, prompt string, outputFormat string, quiet bool, yes bool) error {
 	logging.Info("Running in non-interactive mode")
 
 	// Start spinner if not in quiet mode
@@ -426,8 +434,11 @@ func (a *App) RunNonInteractive(ctx context.Context, prompt string, outputFormat
 	}
 	logging.Info("Created session for non-interactive run", "session_id", sess.ID)
 
-	// Automatically approve all permission requests for this non-interactive session
-	a.Permissions.AutoApproveSession(sess.ID)
+	if yes {
+		a.Permissions.AutoApproveSession(sess.ID)
+	} else {
+		a.Permissions.DenyAllSession(sess.ID)
+	}
 
 	done, err := a.CoderAgent.Run(ctx, sess.ID, prompt)
 	if err != nil {
@@ -435,17 +446,16 @@ func (a *App) RunNonInteractive(ctx context.Context, prompt string, outputFormat
 	}
 
 	result := <-done
+	if spinner != nil {
+		spinner.Stop()
+	}
+	a.reportDenied(sess.ID)
 	if result.Error != nil {
 		if errors.Is(result.Error, context.Canceled) || errors.Is(result.Error, agent.ErrRequestCancelled) {
 			logging.Info("Agent processing cancelled", "session_id", sess.ID)
 			return nil
 		}
 		return fmt.Errorf("agent processing failed: %w", result.Error)
-	}
-
-	// Stop spinner before printing output
-	if !quiet && spinner != nil {
-		spinner.Stop()
 	}
 
 	// Get the text content from the response
@@ -459,6 +469,27 @@ func (a *App) RunNonInteractive(ctx context.Context, prompt string, outputFormat
 	logging.Info("Non-interactive run completed", "session_id", sess.ID)
 
 	return nil
+}
+
+// reportDenied lists on stderr what a non-interactive run refused because
+// --yes was not given.
+func (a *App) reportDenied(sessionID string) {
+	denied := a.Permissions.Denied(sessionID)
+	if len(denied) == 0 {
+		return
+	}
+	w := a.stderr
+	if w == nil {
+		w = os.Stderr
+	}
+	fmt.Fprintf(w, "%d action(s) were denied because --yes was not given:\n", len(denied))
+	for _, d := range denied {
+		what := d.Fingerprint
+		if what == "" {
+			what = d.Path
+		}
+		fmt.Fprintf(w, "  %s %s: %s\n", d.ToolName, d.Action, what)
+	}
 }
 
 // Shutdown performs a clean shutdown of the application
