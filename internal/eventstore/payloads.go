@@ -87,6 +87,8 @@ type ValidationPayload struct {
 	Status          string `json:"status,omitempty"`
 	ExitCode        int    `json:"exitCode,omitempty"`
 	DurationMS      int64  `json:"durationMs,omitempty"`
+	// Reason says why validation.skipped did not run anything.
+	Reason string `json:"reason,omitempty"`
 }
 
 // MemoryPayload accompanies memory.* events.

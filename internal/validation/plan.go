@@ -13,6 +13,17 @@ type CommandSpec struct {
 	ValidatorType string
 }
 
+// TaskPlan is everything end-of-task validation needs to run for one task.
+type TaskPlan struct {
+	Intents      []Intent
+	CriterionIDs []string
+	// Fingerprint keys the pass cache. It covers the working tree the task
+	// left behind, not only the commit, so an earlier pass at the same HEAD
+	// cannot vouch for edits made since.
+	Fingerprint string
+	WorkDir     string
+}
+
 // PlanIntents turns the project's known validation commands into intents that
 // provide evidence for a task's acceptance criteria.
 //

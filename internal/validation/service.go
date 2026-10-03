@@ -2,11 +2,13 @@ package validation
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/kaiau00/aux-cli/internal/eventstore"
 	"github.com/kaiau00/aux-cli/internal/ids"
+	"github.com/kaiau00/aux-cli/internal/permission"
 )
 
 // CommandResult is the outcome of executing a validation command. Execution
@@ -69,6 +71,10 @@ func (s *Service) RunIntent(ctx context.Context, taskID string, intent Intent, i
 	run.ExitCode = cr.ExitCode
 	run.OutputArtifactID = cr.OutputArtifactID
 	switch {
+	case errors.Is(err, permission.ErrorPermissionDenied) || ctx.Err() != nil:
+		// Not run, so neither passing nor failing: the user said no, or the
+		// task was cancelled underneath it.
+		run.Status = StatusSkipped
 	case err != nil:
 		run.Status = StatusFailed
 	case cr.ExitCode == 0:
@@ -76,10 +82,14 @@ func (s *Service) RunIntent(ctx context.Context, taskID string, intent Intent, i
 	default:
 		run.Status = StatusFailed
 	}
-	if serr := s.store.InsertRun(ctx, run); serr != nil {
+	if serr := s.store.InsertRun(context.WithoutCancel(ctx), run); serr != nil {
 		return Result{}, serr
 	}
-	s.emit(ctx, taskID, eventstore.ValidationCompleted, run)
+	s.emit(context.WithoutCancel(ctx), taskID, eventstore.ValidationCompleted, run)
+	if run.Status == StatusSkipped {
+		// No evidence: a command that never ran says nothing about the criteria.
+		return Result{Run: run}, err
+	}
 
 	// Both outcomes are evidence: a pass validates the criterion, a fail blocks
 	// it. The agent cannot silently mark a criterion validated without this.

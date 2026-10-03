@@ -138,6 +138,14 @@ type Config struct {
 	Ponytail          PonytailConfig                    `json:"ponytail,omitempty"`
 	Context           ContextConfig                     `json:"context,omitempty"`
 	CostGovernor      CostGovernorConfig                `json:"costGovernor,omitempty"`
+	Validation        ValidationConfig                  `json:"validation,omitempty"`
+}
+
+// ValidationConfig controls validation the agent runs itself.
+type ValidationConfig struct {
+	// Auto runs the project's validation commands at the end of a task that
+	// changed files, each behind a permission prompt. Default true.
+	Auto bool `json:"auto"`
 }
 
 // ContextConfig controls Context OS behaviour. The
@@ -339,6 +347,7 @@ func setDefaults(debug bool) {
 	viper.SetDefault("context.artifactThresholdBytes", 0)
 	viper.SetDefault("context.paging", "off")
 	viper.SetDefault("costGovernor.mode", "off")
+	viper.SetDefault("validation.auto", true)
 
 	// Set default shell from environment or fallback to /bin/bash
 	shellPath := os.Getenv("SHELL")

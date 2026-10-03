@@ -107,7 +107,7 @@ to assist developers in writing, debugging, and understanding code directly from
 			return err
 		}
 
-		// The demand-paging prompt compiler was previously reachable only by
+		// The dedup prompt compiler was previously reachable only by
 		// hand-editing config JSON, so in practice compatibility mode always
 		// won. This makes it selectable per run.
 		if paging, _ := cmd.Flags().GetString("paging"); paging != "" {
@@ -346,7 +346,7 @@ func init() {
 	rootCmd.Flags().BoolP("quiet", "q", false, "Hide spinner in non-interactive mode")
 
 	// Prompt-compiler selection for this run; empty keeps the configured value.
-	rootCmd.Flags().String("paging", "", "Prompt compiler: on (demand paging) or off (compatibility)")
+	rootCmd.Flags().String("paging", "", "on: replace earlier copies of identical large tool output with a pointer; off (default): send the transcript as is")
 
 	// Register custom validation for the format flag
 	rootCmd.RegisterFlagCompletionFunc("output-format", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {

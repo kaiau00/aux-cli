@@ -26,6 +26,7 @@ import (
 	"github.com/kaiau00/aux-cli/internal/pubsub"
 	"github.com/kaiau00/aux-cli/internal/runtime"
 	"github.com/kaiau00/aux-cli/internal/session"
+	"github.com/kaiau00/aux-cli/internal/validation"
 )
 
 // agent implements the runtime.Runner turn seam.
@@ -110,6 +111,10 @@ type agent struct {
 
 	titleProvider     provider.Provider
 	summarizeProvider provider.Provider
+
+	// newValidationRunner overrides how end-of-task validation runs commands;
+	// nil means validation.ShellRunner.
+	newValidationRunner func(workDir, sessionID string, approver validation.Approver) validation.Runner
 
 	activeRequests sync.Map
 }
@@ -392,7 +397,7 @@ func (a *agent) processGeneration(ctx context.Context, sessionID, content string
 			}
 			return a.err(fmt.Errorf("failed to process events: %w", err))
 		}
-		if cfg.Debug {
+		if cfg != nil && cfg.Debug {
 			seqId := (len(msgHistory) + 1) / 2
 			toolResultFilepath := logging.WriteToolResultsJson(sessionID, seqId, toolResults)
 			logging.Info("Result", "message", agentMessage.FinishReason(), "toolResults", "{}", "filepath", toolResultFilepath)
@@ -403,6 +408,13 @@ func (a *agent) processGeneration(ctx context.Context, sessionID, content string
 			// We are not done, we need to respond with the tool response
 			msgHistory = append(msgHistory, agentMessage, *toolResults)
 			continue
+		}
+		// Before the deferred Finish, so it learns from what this validated.
+		if report := a.validateTaskIfNeeded(ctx, sessionID, taskID); report != "" {
+			agentMessage.AppendContent(report)
+			if err := a.messages.Update(context.Background(), agentMessage); err != nil {
+				logging.Warn("failed to record the validation report", "error", err)
+			}
 		}
 		return AgentEvent{
 			Type:    AgentEventTypeResponse,

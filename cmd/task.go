@@ -16,6 +16,7 @@ import (
 	"github.com/kaiau00/aux-cli/internal/project"
 	"github.com/kaiau00/aux-cli/internal/relatedproject"
 	"github.com/kaiau00/aux-cli/internal/task"
+	"github.com/kaiau00/aux-cli/internal/validation"
 	"github.com/spf13/cobra"
 )
 
@@ -53,11 +54,21 @@ var taskShowCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		// The spec freezes each criterion's state at compile time; what the
+		// task proved since is in the recorded validation evidence.
+		criterionIDs := make([]string, 0, len(spec.AcceptanceCriteria))
+		for _, c := range spec.AcceptanceCriteria {
+			criterionIDs = append(criterionIDs, c.ID)
+		}
+		proof, err := validation.NewService(validation.NewStore(conn), nil).ProofOfDone(ctx, tk.ID, criterionIDs)
+		if err != nil {
+			return fmt.Errorf("failed to compute proof of done: %w", err)
+		}
 
 		if jsonOut, _ := cmd.Flags().GetBool("json"); jsonOut {
 			enc := json.NewEncoder(os.Stdout)
 			enc.SetIndent("", "  ")
-			return enc.Encode(map[string]any{"task": tk, "spec": spec})
+			return enc.Encode(map[string]any{"task": tk, "spec": spec, "proofOfDone": proof})
 		}
 
 		fmt.Printf("Task:      %s\n", tk.ID)
@@ -73,7 +84,7 @@ var taskShowCmd = &cobra.Command{
 		if len(spec.AcceptanceCriteria) > 0 {
 			fmt.Println("Acceptance criteria:")
 			for _, c := range spec.AcceptanceCriteria {
-				fmt.Printf("  - [%s] %s\n", c.State, c.Description)
+				fmt.Printf("  - [%s] %s\n", proof[c.ID], c.Description)
 			}
 		}
 		if len(spec.ValidationIntents) > 0 {
