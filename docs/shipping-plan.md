@@ -989,11 +989,11 @@ in M1.6.
 
 ## 6. Release checklist for v0.1.0 (in order)
 
-- [ ] M0.1 bash safe-list — merged, test cited in `TODO.md`
-- [ ] M0.1b safe-list argument rules — merged
-- [ ] M0.2 `--yes` — merged
-- [ ] M0.3 PR #28 merged, floor raised
-- [ ] M0.4 hygiene — merged
+- [x] M0.1 bash safe-list — merged, test cited in `TODO.md` (#29)
+- [x] M0.1b safe-list argument rules — merged (#32)
+- [x] M0.2 `--yes` — merged (#30)
+- [x] M0.3 PR #28 merged, floor raised to 33.8
+- [x] M0.4 hygiene — merged (#31)
 - [ ] M0.5 repo renamed **[HUMAN]**, URLs verified
 - [ ] M1.1–M1.4 — merged in order, scratch-repo e2e in Appendix B passes
 - [ ] M1.5 govpolicy removed, M1.6 states removed
