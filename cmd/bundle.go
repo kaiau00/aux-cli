@@ -9,7 +9,6 @@ import (
 	"github.com/kaiau00/aux-cli/internal/bundle"
 	"github.com/kaiau00/aux-cli/internal/config"
 	"github.com/kaiau00/aux-cli/internal/db"
-	"github.com/kaiau00/aux-cli/internal/govpolicy"
 	"github.com/kaiau00/aux-cli/internal/skill"
 	"github.com/spf13/cobra"
 )
@@ -17,12 +16,12 @@ import (
 // bundleCmd exports/imports shareable optimization bundles.
 var bundleCmd = &cobra.Command{
 	Use:   "bundle",
-	Short: "Export or import shareable optimization bundles (active skills + policies)",
+	Short: "Export or import shareable bundles of active skills",
 }
 
 var bundleExportCmd = &cobra.Command{
 	Use:   "export <file>",
-	Short: "Export active skills and governor policies to a content-addressed bundle",
+	Short: "Export active skills to a content-addressed bundle",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		conn, err := openBundleDB()
@@ -31,7 +30,7 @@ var bundleExportCmd = &cobra.Command{
 		}
 		defer conn.Close()
 
-		b, err := bundle.Export(context.Background(), skill.NewStore(conn), govpolicy.NewStore(conn))
+		b, err := bundle.Export(context.Background(), skill.NewStore(conn))
 		if err != nil {
 			return err
 		}
@@ -42,8 +41,7 @@ var bundleExportCmd = &cobra.Command{
 		if err := os.WriteFile(args[0], data, 0o644); err != nil {
 			return err
 		}
-		fmt.Printf("Exported %d skill(s) and %d policy(ies) to %s (hash %s)\n",
-			len(b.Skills), len(b.Policies), args[0], b.Hash[:12])
+		fmt.Printf("Exported %d skill(s) to %s (hash %s)\n", len(b.Skills), args[0], b.Hash[:12])
 		return nil
 	},
 }
@@ -67,14 +65,11 @@ var bundleImportCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		res, err := bundle.Import(context.Background(), b,
-			skill.NewService(skill.NewStore(conn), nil),
-			govpolicy.NewService(govpolicy.NewStore(conn), nil))
+		res, err := bundle.Import(context.Background(), b, skill.NewService(skill.NewStore(conn), nil))
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Imported %d skill candidate(s) and %d policy candidate(s). "+
-			"They are inactive until evaluated locally.\n", res.SkillsImported, res.PoliciesImported)
+		fmt.Printf("Imported %d skill candidate(s). They are inactive until evaluated locally.\n", res.SkillsImported)
 		return nil
 	},
 }

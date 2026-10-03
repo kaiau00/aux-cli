@@ -1,5 +1,4 @@
-// Optimization view: evaluated experiments and
-// governed-cost policies. This is where "governed vs baseline" and "skill vs
+// Optimization view: evaluated experiments. This is where "governed vs baseline" and "skill vs
 // baseline" results computed by `aux eval ab` become visible once a user has
 // run them.
 (function () {
@@ -25,20 +24,8 @@
     }).join("");
   }
 
-  function policyRows(items, emptyText) {
-    if (!items || !items.length) return '<div class="empty">' + esc(emptyText) + "</div>";
-    return items.map(function (p) {
-      return '<div class="list-row"><span class="primary">' + esc(p.taskClass || p.id) + '</span>' +
-        '<span class="secondary"><span class="badge ' + stateClass(p.state) + '">' + esc(p.state) + "</span></span></div>";
-    }).join("");
-  }
-
   function render(view) {
-    var experimentsCard = card("Experiments", experimentRows(view.experiments));
-    var policiesCard = card("Governed-cost policies",
-      '<div class="section-title">Active</div>' + policyRows(view.activePolicies, "No active policies.") +
-      '<div class="section-title">Candidates</div>' + policyRows(view.candidatePolicies, "No candidates awaiting evaluation."));
-    content.innerHTML = experimentsCard + policiesCard;
+    content.innerHTML = card("Experiments", experimentRows(view.experiments));
   }
 
   if (window.AuxNav) window.AuxNav.mount("Optimization");
