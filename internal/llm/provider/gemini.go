@@ -180,7 +180,7 @@ func (g *geminiClient) send(ctx context.Context, messages []message.Message, too
 	config := &genai.GenerateContentConfig{
 		MaxOutputTokens: int32(g.providerOptions.maxTokens),
 		SystemInstruction: &genai.Content{
-			Parts: []*genai.Part{{Text: g.providerOptions.systemMessage}},
+			Parts: []*genai.Part{{Text: systemPrompt(ctx, g.providerOptions.systemMessage)}},
 		},
 	}
 	if len(tools) > 0 {
@@ -268,7 +268,7 @@ func (g *geminiClient) stream(ctx context.Context, messages []message.Message, t
 	config := &genai.GenerateContentConfig{
 		MaxOutputTokens: int32(g.providerOptions.maxTokens),
 		SystemInstruction: &genai.Content{
-			Parts: []*genai.Part{{Text: g.providerOptions.systemMessage}},
+			Parts: []*genai.Part{{Text: systemPrompt(ctx, g.providerOptions.systemMessage)}},
 		},
 	}
 	if len(tools) > 0 {

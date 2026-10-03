@@ -16,9 +16,18 @@ import (
 type MockProvider struct {
 	model models.Model
 
-	mu    sync.Mutex
-	turns [][]ProviderEvent
-	idx   int
+	mu      sync.Mutex
+	turns   [][]ProviderEvent
+	idx     int
+	addenda []string
+}
+
+// SystemAddenda returns the system addendum each StreamResponse call received,
+// in call order.
+func (m *MockProvider) SystemAddenda() []string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return append([]string(nil), m.addenda...)
 }
 
 // NewMockProvider returns a scripted provider. Each element of turns is the
@@ -43,6 +52,9 @@ func (m *MockProvider) Model() models.Model { return m.model }
 
 // StreamResponse replays the next scripted turn, honouring context cancellation.
 func (m *MockProvider) StreamResponse(ctx context.Context, _ []message.Message, _ []tools.BaseTool) <-chan ProviderEvent {
+	m.mu.Lock()
+	m.addenda = append(m.addenda, SystemAddendumFromContext(ctx))
+	m.mu.Unlock()
 	events := m.next()
 	ch := make(chan ProviderEvent)
 	go func() {

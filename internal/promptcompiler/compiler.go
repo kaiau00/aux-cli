@@ -57,8 +57,12 @@ type ContextManifest struct {
 // CompiledPrompt is the compiler's output: the messages and tool set to send,
 // plus the manifest and a stable-prefix identity for cache reasoning.
 type CompiledPrompt struct {
-	Messages        []message.Message
-	ToolSet         []tools.BaseTool
+	Messages []message.Message
+	ToolSet  []tools.BaseTool
+	// SystemAddendum is per-call system text sent after the base system
+	// prompt: the project manifest (with memory and related projects), then
+	// the task spec. See RenderSystemAddendum.
+	SystemAddendum  string
 	Manifest        ContextManifest
 	StablePrefixID  string
 	EstimatedTokens int64
@@ -109,12 +113,15 @@ func NewCompatibilityCompiler() *CompatibilityCompiler { return &CompatibilityCo
 func (c *CompatibilityCompiler) Compile(in Input) CompiledPrompt {
 	msgs := cleanMessages(in.History)
 	msgs = applyExclusions(msgs, in.ExcludedToolCallIDs, in.PinnedToolCallIDs)
-	est := EstimateMessages(msgs)
+	msgEst := EstimateMessages(msgs)
+	addendum := RenderSystemAddendum(in.ProjectManifest, in.TaskSpecText)
+	est := msgEst + estimateText(addendum)
 	prefix := stablePrefixID(in.Tools)
 	pages := decomposePages(in, msgs)
 	return CompiledPrompt{
 		Messages:       msgs,
 		ToolSet:        in.Tools,
+		SystemAddendum: addendum,
 		StablePrefixID: prefix,
 		Manifest: ContextManifest{
 			TaskID:         in.TaskID,
@@ -123,12 +130,33 @@ func (c *CompatibilityCompiler) Compile(in Input) CompiledPrompt {
 			TokenEstimate:  est,
 			StablePrefixID: prefix,
 			Pages:          pages,
-			Sections: []Section{
-				{Kind: "recent_conversation", MessageCount: len(msgs), TokenEstimate: est},
-			},
+			Sections:       sections(addendum, len(msgs), msgEst),
 		},
 		EstimatedTokens: est,
 	}
+}
+
+// RenderSystemAddendum renders project knowledge and the task spec under fixed
+// headings, project first: it changes least often, so a provider that caches
+// a prefix of the system text keeps more of it across tasks. Deterministic by
+// construction; empty inputs are omitted.
+func RenderSystemAddendum(projectManifest, taskSpec string) string {
+	var parts []string
+	if s := strings.TrimSpace(projectManifest); s != "" {
+		parts = append(parts, "# Project\n\n"+s)
+	}
+	if s := strings.TrimSpace(taskSpec); s != "" {
+		parts = append(parts, "# Task\n\n"+s)
+	}
+	return strings.Join(parts, "\n\n")
+}
+
+func sections(addendum string, messageCount int, messageTokens int64) []Section {
+	var out []Section
+	if addendum != "" {
+		out = append(out, Section{Kind: "system_addendum", TokenEstimate: estimateText(addendum)})
+	}
+	return append(out, Section{Kind: "recent_conversation", MessageCount: messageCount, TokenEstimate: messageTokens})
 }
 
 // decomposePages explains the compiled prompt page by page. Each transcript

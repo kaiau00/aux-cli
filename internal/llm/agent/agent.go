@@ -494,7 +494,10 @@ func (a *agent) streamAndHandleEvents(ctx context.Context, sessionID string, msg
 			SavedTokens:    compiled.SavedTokens,
 		},
 	})
-	eventChan := a.provider.StreamResponse(ctx, compiled.Messages, compiled.ToolSet)
+	// Scoped to this call only: ctx also flows into tool execution, and a
+	// subagent started from a tool compiles and sends its own addendum.
+	streamCtx := provider.WithSystemAddendum(ctx, compiled.SystemAddendum)
+	eventChan := a.provider.StreamResponse(streamCtx, compiled.Messages, compiled.ToolSet)
 
 	// Process each event in the stream.
 	for event := range eventChan {
