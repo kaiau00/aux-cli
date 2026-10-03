@@ -53,3 +53,7 @@ bench/*.json
 
 # Index artifact from an external tool; not part of this project.
 .codebase-memory/
+
+# Per-developer agent tool settings; never part of the project.
+.claude/
+.kilo/
