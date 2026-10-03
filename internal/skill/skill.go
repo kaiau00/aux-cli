@@ -5,6 +5,8 @@
 // is always retained as a rollback target.
 package skill
 
+import "fmt"
+
 // State is a skill's lifecycle state.
 type State string
 
@@ -24,6 +26,23 @@ const (
 	EvalFail         EvalResult = "fail"
 	EvalInconclusive EvalResult = "inconclusive"
 )
+
+// ParseEvalResult converts a caller-supplied string into an EvalResult, refusing
+// anything outside the known set.
+//
+// The promotion gate matches the stored result exactly against "pass", so an
+// unrecognised spelling would be recorded without complaint and then never
+// unlock promotion. That failure is invisible: the evaluation appears on record
+// and promotion keeps reporting missing evidence. Rejecting it at the boundary
+// is the difference between an error and a dead end.
+func ParseEvalResult(s string) (EvalResult, error) {
+	switch r := EvalResult(s); r {
+	case EvalPass, EvalFail, EvalInconclusive:
+		return r, nil
+	default:
+		return "", fmt.Errorf("unknown evaluation result %q: want %q, %q, or %q", s, EvalPass, EvalFail, EvalInconclusive)
+	}
+}
 
 // Step is one step of a skill procedure with an optional decision point.
 type Step struct {

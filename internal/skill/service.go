@@ -91,6 +91,27 @@ func (s *Service) Candidates(ctx context.Context) ([]Skill, error) {
 	return s.store.ListByState(ctx, StateCandidate)
 }
 
+// RolledBack returns skills demoted after a regression. They are listable
+// because Rollback preserves version history so a version can be re-promoted
+// with fresh evidence, and a skill nobody can see is a skill nobody can
+// re-promote.
+func (s *Service) RolledBack(ctx context.Context) ([]Skill, error) {
+	return s.store.ListByState(ctx, StateRolledBack)
+}
+
+// LatestVersion returns the newest version of a skill, so a caller can act on
+// "the current candidate" without tracking version IDs by hand.
+func (s *Service) LatestVersion(ctx context.Context, skillID string) (Version, bool, error) {
+	return s.store.LatestVersion(ctx, skillID)
+}
+
+// HasPassingEvaluation reports whether a version already carries the evidence
+// Promote requires, so callers can show what is promotable instead of finding
+// out by being refused.
+func (s *Service) HasPassingEvaluation(ctx context.Context, versionID string) (bool, error) {
+	return s.store.HasPassingEvaluation(ctx, versionID)
+}
+
 func (s *Service) emit(ctx context.Context, t eventstore.Type, sk Skill, versionID string) {
 	if s.events == nil {
 		return
