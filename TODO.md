@@ -179,9 +179,9 @@ See the closed appendix. Hardcoded tables stay as the offline fallback.
 
 ### P2.2 Provider SDKs
 
-`openai-go` is v1.12.0, `anthropic-sdk-go` is v1.78.0, and `mcp-go` is v1.1.1 (see the appendix). Still to bump:
-`google.golang.org/genai v1.3.0` (current: 1.72). New model parameters, tool-schema changes, and streaming fixes
-all live in the gap. One pull request per SDK; the suite is offline.
+Done: `openai-go` is v1.12.0, `anthropic-sdk-go` is v1.78.0, `mcp-go` is v1.1.1, and
+`google.golang.org/genai` is v1.72.0 (see the appendix). Each streaming adapter has an offline
+usage fixture. Live status-bar token checks per provider still need real keys.
 
 ### P2.3 Slash commands
 
@@ -369,6 +369,7 @@ model catalog is what makes Aux usable at all day to day.
 
 | | |
 | --- | --- |
+| M2.2 genai v1.72.0, 2026-10-03 | `go get google.golang.org/genai@v1.72.0`. Gemini and Vertex compiled unchanged. `TestGeminiStreamReportsCachedTokens` plays a recorded `streamGenerateContent` SSE response: text `ok`, then a final chunk with `promptTokenCount` 20, `candidatesTokenCount` 3, `cachedContentTokenCount` 15. The completion reports 20 input, 3 output, 15 cache read. Prompt tokens already include the cached content, so input is not reduced by the cache count |
 | M2.2 mcp-go v1.1.1, 2026-10-03 | `go get github.com/mark3labs/mcp-go@v1.1.1`. The stdio and SSE call sites compiled unchanged, including `InputSchema.Properties`/`Required` and `mcp.TextContent`. The module requires Go 1.25.5, so `go.mod`'s `go` line moved from 1.24.0; CI reads that line. `TestGetMcpToolsWithoutConfigDoesNotPanic`, `TestParseGraphResponse`, and `TestParseGraphResponseSupportsAlternateKeys` pass. MCP does not stream model tokens, so there is no usage fixture |
 | M2.2 anthropic-sdk-go v1.78.0, 2026-10-03 | `go get github.com/anthropics/anthropic-sdk-go@v1.78.0`. The adapter compiled unchanged. `TestAnthropicStreamReportsCacheTokens` plays a recorded Messages stream: message_start reports 10 input, 2 cache creation, 100 cache read; message_delta replaces output with 4. The completion reports those four counts, and the text delta is `ok` |
 | M2.2 openai-go v1.12.0, 2026-10-03 | `go get github.com/openai/openai-go@v1.12.0` (the `@latest` of this module path; v2 and v3 are different modules). Request extra fields moved from `WithExtraFields` to `SetExtraFields`; response extra fields use `Field.Valid` instead of `IsPresent`. The stream accumulator still copies only prompt and completion totals, not `prompt_tokens_details`. `TestOpenAIStreamReportsCachedTokensFromTheChunk` plays a recorded SSE fixture (2179 prompt, 2178 cached, 8 completion) and the completion reports 1 fresh input, 2178 cache read, 8 output. Copilot and Azure share this module and still build |
