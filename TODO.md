@@ -17,6 +17,48 @@ disagree, the plan wins and this file gets corrected.
 
 ---
 
+## Progress (as of 2026-10-05)
+
+Update this section and the plan's §6 checklist in every PR that moves an item.
+
+**Merged to `main`** (one item per PR, squash-merged, all five gates green):
+
+| Item | PR |
+| --- | --- |
+| M0.1 bash safe-list, M0.1b argument rules | #29, #32 |
+| M0.2 `-p` requires `--yes` | #30 |
+| M0.3 PR #28 merged, coverage floor 33.8 | #28, #33 |
+| M0.4 repository hygiene | #31 |
+| M1.1 manifest and task spec as a system addendum | #34 |
+| M1.2 manifest and task-spec pages resident | #35 |
+| M1.3 memory content in the addendum | #36 |
+| M1.4 validation at task end, M1.7 README "How it works" | #37 |
+| M1.5 `govpolicy` deleted | #38 |
+| M1.6 evicted and faulted states removed | #39 |
+| M2.1 model catalog | #40 |
+| M2.2 `openai-go` v1.12.0, `anthropic-sdk-go` v1.78.0, `mcp-go` v1.1.1, `genai` v1.72.0 | #41, #42, #43, #44 |
+
+**Open:** M2.3 slash commands, #45 (CI green, awaiting review).
+
+**Next:** M2.4 `--continue` and `--resume`, then M2.5–M2.8, then M3.
+
+**Not yet verified** (each is a done-when that has not been run):
+
+- M0.5 **[HUMAN]**: the repository is now `kaiau00/aux-cli`, matching the
+  module path. The check that every URL resolves without a redirect has not
+  been run.
+- Appendix B scratch-repo e2e as one run. M1.4's scratch run is recorded in
+  the claims table; the first-run model message and the `context.compiled`
+  resident-pages check have not been run against a real provider.
+- M2.2: the per-provider live check that cache tokens show in the status bar
+  needs real keys. The offline streaming fixtures pass for all four SDKs.
+
+**Gate numbers on `main`:** coverage 35.9% locally against a 33.8% floor. The
+floor stays at 33.8 until M3.7 raises it. Dead-code baseline: 48 entries (47
+once #45 merges, which deletes the unused `appModel.findCommand`).
+
+---
+
 ## Where this actually stands
 
 Aux is a fork of OpenCode's Go agent loop with a serious observability layer
@@ -88,6 +130,7 @@ Aux should only say true things about itself. Verified 2026-10-02.
 | Sessions survive a panic | Deferred teardown, tested both directions |
 | A task that changed files is validated before it ends, and what passed is remembered | M1.4: `internal/llm/agent/validate_test.go` drives `processGeneration` with real coordinator, validation, memory, skill, and permission services; scratch repo with a real provider: one edit task ran `go build`/`go test`, both criteria `validated` in `aux task show`, two procedural memories, one skill candidate |
 | `aux -p` runs nothing that would prompt unless `--yes` is given | M0.2: `TestRunNonInteractiveDeniesWithoutYes` / `…ApprovesWithYes` (parent and subagent sessions); scratch repo: `touch created.txt` denied and listed on stderr without `--yes`, created with it |
+| First run picks a current model and says which | M2.1: `catalog_test.go`, `config/model_test.go`; temp home with only `ANTHROPIC_API_KEY`: announced Claude Sonnet 5.5, wrote it to `~/.aux.json`, second run silent and the file unchanged |
 | The context meter reflects what the window holds | Latest call's occupancy from the ledger |
 | The TUI fits the terminal it was given | Height invariant asserted across a width×height grid |
 | `.aux/` does not leak into commits | Self-ignoring `.gitignore`, verified in a scratch repo |
@@ -102,7 +145,7 @@ Aux should only say true things about itself. Verified 2026-10-02.
 | "Improves every time you use it" / "the tenth task is cheaper" | Memory and skill candidates now accrue with no CLI step (M1.4), but whether that makes later tasks cheaper or better is unmeasured (P4.1). Nothing has ever been promoted to a skill |
 | "The prompt is compiled, not just concatenated" | Both compilers send the full transcript. `DedupCompiler` stubs duplicate blobs and defaults to off |
 | "Cheaper than opencode" | Python n=5: gap grew 19%→63% as runs were added. TypeScript n=5: p=0.06 and Aux failed 4/25 task-attempts vs 0/25. Decided: dropped until P1 is done |
-| "80% test coverage" | 33.8%. 15 packages have no test file |
+| "80% test coverage" | 35.9% locally, floor 33.8. 15 packages have no test file |
 | "Aux manages the agent's context" | `ContextWindow` appears only in display code. Nothing truncates, evicts, or budgets (the states that implied it were removed in M1.6) |
 | "Production ready" | See the definition above |
 
@@ -126,9 +169,10 @@ Small, mechanical, and each one is currently a false statement somewhere.
 
 ### P0.4 Repo name (plan M0.5 **[HUMAN]**)
 
-- The remote is `kaiau00/Aux`; the module path and every README link say
-  `kaiau00/aux-cli`. `gh` follows the redirect; `go install` and the install
-  script's `releases/latest` URL may not. Pick one name. See [P3.2](#p32-install-paths-that-work).
+- The repository is now `kaiau00/aux-cli` (`gh repo view`, 2026-10-05),
+  matching the module path and the README links. Still to do: confirm every
+  URL in the tree resolves without a redirect (plan M0.5 done-when). See
+  [P3.2](#p32-install-paths-that-work).
 
 ---
 
@@ -258,7 +302,8 @@ to match.
 
 ### P3.5 Coverage, deliberately
 
-33.8% against a stated 80%. The ratchet holds the floor; it does not climb.
+35.9% locally (2026-10-05; floor 33.8) against a stated 80%. The ratchet holds
+the floor; it does not climb.
 15 packages have no test file: `.` (root), `cmd`, `cmd/schema`,
 `internal/format`, `internal/history`, `internal/lsp` (+`protocol`, `util`,
 `watcher`), `internal/tui/{components/logs,components/util,image,util}`, and
@@ -358,6 +403,9 @@ is where the loop closes. P1.6 lands with P1.3.
 
 **P2.1 and P2.2 in parallel with P1** — they touch different code and the
 model catalog is what makes Aux usable at all day to day.
+
+P0 (except the M0.5 URL check), P1, P2.1, and P2.2 are done; P2.3 is in review.
+See [Progress](#progress-as-of-2026-10-05).
 
 **P3 after P1 is true.** Tag when the README is honest, not before.
 
