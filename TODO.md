@@ -185,11 +185,10 @@ usage fixture. Live status-bar token checks per provider still need real keys.
 
 ### P2.3 Slash commands
 
-`isSlashCommand` (`composer.go:73`) changes the placeholder to "Run a command…".
-On Enter, `editorCmp.send` forwards the text to the model unchanged. `/init`
-is sent as the literal string `/init`. Dispatch `/`-prefixed input to the
-command registry that Ctrl+K already uses (`tui.go:989-1021`), with completion.
-The placeholder is currently a lie; fixing the placeholder alone is not the fix.
+Done (see the appendix). `/init`, `/compact`, `/exclude <path>`, `/help`, `/model`,
+`/sessions`, and custom commands (`/user:foo`, `/project:bar`) run from the composer
+through the registry that Ctrl+K uses. Typing `/` into an empty composer opens a
+filtered command list. `/remember` arrives with M2.6.
 
 ### P2.4 `--continue` and `--resume`
 
@@ -369,6 +368,7 @@ model catalog is what makes Aux usable at all day to day.
 
 | | |
 | --- | --- |
+| M2.3 slash commands, 2026-10-04 | `editorCmp.send` turns `/id args` into `chat.RunCommandMsg` when `id` is registered, before the busy check, so `/help` works while the agent runs. A lone unregistered `/word` shows "unknown command /word; Ctrl+K lists commands" and stays in the composer. Text such as `see /etc/hosts` or `/etc/hosts is broken` still goes to the model. `dialog.CommandRegistry` replaces the TUI's command slice and is shared with the page and editor. `Command.ArgHandler` lets `/exclude main.go` skip the arguments dialog; other commands warn "/init takes no arguments". Typing `/` into an empty composer opens a second completion dialog over `completions.NewCommandsGroup`; Tab or Enter accepts through `dialog.CompletionSelectedMsg`. Tests: `TestSlashInitRunsTheCommandAndIsNotSent`, `TestSlashExcludeCarriesItsArgument`, `TestUnknownSlashCommandWarnsAndKeepsTheText`, `TestSlashInsideTextIsNotACommand` (components/chat), `TestSlashOpensCommandCompletionAndRunsTheCommand` (page), `TestRunCommand*` and `TestHelpAndModelCommandsOpenTheirOverlays` (tui), and `TestCommandPopupGolden` (`internal/completions/testdata/command-popup.*.golden`) |
 | M2.2 genai v1.72.0, 2026-10-03 | `go get google.golang.org/genai@v1.72.0`. Gemini and Vertex compiled unchanged. `TestGeminiStreamReportsCachedTokens` plays a recorded `streamGenerateContent` SSE response: text `ok`, then a final chunk with `promptTokenCount` 20, `candidatesTokenCount` 3, `cachedContentTokenCount` 15. The completion reports 20 input, 3 output, 15 cache read. Prompt tokens already include the cached content, so input is not reduced by the cache count |
 | M2.2 mcp-go v1.1.1, 2026-10-03 | `go get github.com/mark3labs/mcp-go@v1.1.1`. The stdio and SSE call sites compiled unchanged, including `InputSchema.Properties`/`Required` and `mcp.TextContent`. The module requires Go 1.25.5, so `go.mod`'s `go` line moved from 1.24.0; CI reads that line. `TestGetMcpToolsWithoutConfigDoesNotPanic`, `TestParseGraphResponse`, and `TestParseGraphResponseSupportsAlternateKeys` pass. MCP does not stream model tokens, so there is no usage fixture |
 | M2.2 anthropic-sdk-go v1.78.0, 2026-10-03 | `go get github.com/anthropics/anthropic-sdk-go@v1.78.0`. The adapter compiled unchanged. `TestAnthropicStreamReportsCacheTokens` plays a recorded Messages stream: message_start reports 10 input, 2 cache creation, 100 cache read; message_delta replaces output with 4. The completion reports those four counts, and the text delta is `ok` |

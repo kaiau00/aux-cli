@@ -31,6 +31,7 @@ type editorCmp struct {
 	textarea    textarea.Model
 	attachments []message.Attachment
 	deleteMode  bool
+	commands    *dialog.CommandRegistry
 }
 
 type EditorKeyMaps struct {
@@ -119,7 +120,34 @@ func (m *editorCmp) Init() tea.Cmd {
 	return textarea.Blink
 }
 
+// slashCommand parses a leading "/id args" into a RunCommandMsg when id is
+// registered. A lone unregistered "/word" is reported as unknown; anything else
+// (such as "/etc/hosts is broken") is ordinary text for the model.
+func (m *editorCmp) slashCommand(value string) (msg RunCommandMsg, isCommand bool, unknown bool) {
+	v := strings.TrimLeft(value, " ")
+	if !strings.HasPrefix(v, "/") {
+		return RunCommandMsg{}, false, false
+	}
+	rest := v[1:]
+	id, args := rest, ""
+	if i := strings.IndexFunc(rest, unicode.IsSpace); i >= 0 {
+		id, args = rest[:i], strings.TrimSpace(rest[i:])
+	}
+	if _, ok := m.commands.Find(id); ok {
+		return RunCommandMsg{ID: id, Args: args}, true, false
+	}
+	return RunCommandMsg{}, false, isSlashCommand(value)
+}
+
 func (m *editorCmp) send() tea.Cmd {
+	if run, ok, unknown := m.slashCommand(m.textarea.Value()); ok {
+		m.textarea.Reset()
+		return util.CmdHandler(run)
+	} else if unknown {
+		name := strings.TrimSpace(m.textarea.Value())
+		return util.ReportWarn(fmt.Sprintf("unknown command %s; Ctrl+K lists commands", name))
+	}
+
 	if m.app.CoderAgent.IsSessionBusy(m.session.ID) {
 		return util.ReportWarn("Agent is working, please wait...")
 	}
@@ -356,10 +384,17 @@ func CreateTextArea(existing *textarea.Model) textarea.Model {
 	return ta
 }
 
-func NewEditorCmp(app *app.App) tea.Model {
+// Value returns the composer text. The chat page uses it to open command
+// completion only when "/" starts the input.
+func (m *editorCmp) Value() string {
+	return m.textarea.Value()
+}
+
+func NewEditorCmp(app *app.App, commands *dialog.CommandRegistry) tea.Model {
 	ta := CreateTextArea(nil)
 	return &editorCmp{
 		app:      app,
 		textarea: ta,
+		commands: commands,
 	}
 }

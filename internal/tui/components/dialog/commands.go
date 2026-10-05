@@ -17,6 +17,37 @@ type Command struct {
 	Title       string
 	Description string
 	Handler     func(cmd Command) tea.Cmd
+	// ArgHandler runs the command with the text typed after its name in the
+	// composer. Commands without one take no arguments.
+	ArgHandler func(args string) tea.Cmd
+}
+
+// CommandRegistry holds the commands that Ctrl+K lists and the composer runs.
+// The TUI, the chat page, and the editor share one instance.
+type CommandRegistry struct {
+	commands []Command
+}
+
+func NewCommandRegistry() *CommandRegistry {
+	return &CommandRegistry{}
+}
+
+func (r *CommandRegistry) Register(cmd Command) {
+	r.commands = append(r.commands, cmd)
+}
+
+func (r *CommandRegistry) Find(id string) (Command, bool) {
+	for _, cmd := range r.commands {
+		if cmd.ID == id {
+			return cmd, true
+		}
+	}
+	return Command{}, false
+}
+
+// Commands returns the registered commands in registration order.
+func (r *CommandRegistry) Commands() []Command {
+	return r.commands
 }
 
 func (ci Command) Render(selected bool, width int) string {

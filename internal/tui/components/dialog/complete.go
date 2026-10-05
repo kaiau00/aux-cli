@@ -240,7 +240,7 @@ func (c *completionDialogCmp) BindingKeys() []key.Binding {
 	return layout.KeyMapToSlice(completionDialogKeys)
 }
 
-func NewCompletionDialogCmp(completionProvider CompletionProvider) CompletionDialog {
+func NewCompletionDialogCmp(completionProvider CompletionProvider, emptyMessage string) CompletionDialog {
 	ti := textarea.New()
 
 	items, err := completionProvider.GetChildEntries("")
@@ -251,7 +251,7 @@ func NewCompletionDialogCmp(completionProvider CompletionProvider) CompletionDia
 	li := utilComponents.NewSimpleList(
 		items,
 		7,
-		"No file matches found",
+		emptyMessage,
 		false,
 	)
 
