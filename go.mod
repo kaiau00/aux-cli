@@ -1,6 +1,6 @@
 module github.com/kaiau00/aux-cli
 
-go 1.24.0
+go 1.25.5
 
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.7.0
@@ -20,7 +20,7 @@ require (
 	github.com/go-logfmt/logfmt v0.6.0
 	github.com/google/uuid v1.6.0
 	github.com/lrstanley/bubblezone v0.0.0-20250315020633-c249a3fe1231
-	github.com/mark3labs/mcp-go v0.17.0
+	github.com/mark3labs/mcp-go v1.1.1
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6
 	github.com/muesli/reflow v0.3.0
 	github.com/muesli/termenv v0.16.0
@@ -36,8 +36,10 @@ require (
 require (
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/buger/jsonparser v1.1.2 // indirect
+	github.com/google/jsonschema-go v0.4.2 // indirect
 	github.com/invopop/jsonschema v0.14.0 // indirect
 	github.com/pb33f/ordered-map/v2 v2.3.1 // indirect
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
 	github.com/standard-webhooks/standard-webhooks/libraries v0.0.1 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.2 // indirect
 )
@@ -100,7 +102,6 @@ require (
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/sagikazarmark/locafero v0.7.0 // indirect
 	github.com/sethvargo/go-retry v0.3.0 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
