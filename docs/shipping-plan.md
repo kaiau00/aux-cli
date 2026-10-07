@@ -4,7 +4,8 @@
 `origin/main` at `278b9f1` and the product decisions recorded below.
 `TODO.md` is the short status list; this document is the detailed spec each
 item in it expands to. When they disagree, this document wins and `TODO.md`
-gets corrected.
+gets corrected. Progress is recorded in the §6 release checklist and in
+`TODO.md`'s *Progress* section; update both in the PR that changes it.
 
 ---
 
@@ -994,12 +995,22 @@ in M1.6.
 - [x] M0.2 `--yes` — merged (#30)
 - [x] M0.3 PR #28 merged, floor raised to 33.8
 - [x] M0.4 hygiene — merged (#31)
-- [ ] M0.5 repo renamed **[HUMAN]**, URLs verified
-- [ ] M1.1–M1.4 — merged in order, scratch-repo e2e in Appendix B passes
-- [ ] M1.5 govpolicy removed, M1.6 states removed
-- [ ] M1.7 README "How it works" true
-- [ ] M2.1 catalog, M2.2 SDKs ×4, M2.3 slash, M2.4 resume, M2.5 compaction,
-      M2.6 memory UX, M2.7 text, M2.8 trimming — merged
+- [ ] M0.5 repo renamed **[HUMAN]**, URLs verified — the repository is now
+      `kaiau00/aux-cli` (matches the module path); the no-redirect URL check
+      has not been run
+- [x] M1.1–M1.4 merged in order (#34, #35, #36, #37)
+- [ ] Appendix B scratch-repo e2e passes as one run — not yet run end to end.
+      M1.4's scratch run (validation, memories, skill candidate) is recorded
+      in `TODO.md`; steps 1 and 3 have not been run against a real provider
+- [x] M1.5 govpolicy removed (#38), M1.6 states removed (#39)
+- [x] M1.7 README "How it works" true (#37)
+- [x] M2.1 catalog (#40)
+- [x] M2.2 SDKs ×4: openai-go (#41), anthropic-sdk-go (#42), mcp-go (#43),
+      genai (#44). Offline usage fixtures pass; the live per-provider
+      status-bar token check needs real keys and has not been run
+- [x] M2.3 slash commands — merged (#45)
+- [ ] M2.4 resume, M2.5 compaction, M2.6 memory UX, M2.7 text,
+      M2.8 trimming — merged
 - [ ] M3.5 `--version` local builds
 - [ ] M3.7 coverage ≥ 45%, floor raised
 - [ ] M3.6 README rewrite, reviewed by a non-author against a scratch session
