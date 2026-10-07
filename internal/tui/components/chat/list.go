@@ -603,7 +603,10 @@ func (m *messagesCmp) BindingKeys() []key.Binding {
 
 func NewMessagesCmp(app *app.App) tea.Model {
 	s := spinner.New()
-	s.Spinner = spinner.Pulse
+	s.Spinner = spinner.Spinner{
+		Frames: styles.WorkingSpinnerFrames,
+		FPS:    styles.WorkingSpinnerFPS,
+	}
 	vp := viewport.New(0, 0)
 	attachmets := viewport.New(0, 0)
 	vp.KeyMap.PageUp = messageKeys.PageUp

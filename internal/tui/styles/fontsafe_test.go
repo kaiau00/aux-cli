@@ -22,7 +22,7 @@ import (
 // font.
 //
 // Adding a glyph here means checking it against both fonts first.
-const fontSafeGlyphs = "·»½×—•…←↑→↓≈─│┃└┼▀░■□▲▶▸○●✓✗"
+const fontSafeGlyphs = "·»½×—•…←↑→↓≈─│┃└┼▀░▖▗▘▝■□▲▶▸○●✓✗"
 
 var goStringLiteral = regexp.MustCompile(`"([^"\\\n]*)"`)
 
