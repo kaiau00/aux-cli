@@ -17,6 +17,7 @@ import (
 	"github.com/kaiau00/aux-cli/internal/pubsub"
 	"github.com/kaiau00/aux-cli/internal/session"
 	"github.com/kaiau00/aux-cli/internal/tui/components/chat"
+	"github.com/kaiau00/aux-cli/internal/tui/components/dialog"
 	"github.com/kaiau00/aux-cli/internal/tui/layout"
 )
 
@@ -95,7 +96,7 @@ func TestEnterSendsTypedComposerText(t *testing.T) {
 	fake := &fakeAgent{}
 	a := &app.App{Sessions: session.NewService(q), Messages: message.NewService(q), CoderAgent: fake}
 
-	m := NewChatPage(a)
+	m := NewChatPage(a, dialog.NewCommandRegistry())
 	m.Init()
 	m, _ = m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 
@@ -132,6 +133,94 @@ func TestEnterSendsTypedComposerText(t *testing.T) {
 	}
 	if text != "hello" {
 		t.Fatalf("expected the composed text %q to reach the agent, got %q", "hello", text)
+	}
+}
+
+// drain runs cmd and every message it produces back through the page, the way
+// the bubbletea runtime would, and returns the messages it saw.
+func drain(m tea.Model, cmd tea.Cmd) (tea.Model, []tea.Msg) {
+	var seen []tea.Msg
+	queue := []tea.Cmd{cmd}
+	for len(queue) > 0 {
+		c := queue[0]
+		queue = queue[1:]
+		if c == nil {
+			continue
+		}
+		msg := c()
+		if batch, ok := msg.(tea.BatchMsg); ok {
+			queue = append(queue, batch...)
+			continue
+		}
+		seen = append(seen, msg)
+		var next tea.Cmd
+		m, next = m.Update(msg)
+		queue = append(queue, next)
+	}
+	return m, seen
+}
+
+func TestSlashOpensCommandCompletionAndRunsTheCommand(t *testing.T) {
+	conn := dbtest.New(t)
+	q := db.New(conn)
+	fake := &fakeAgent{}
+	a := &app.App{Sessions: session.NewService(q), Messages: message.NewService(q), CoderAgent: fake}
+	commands := dialog.NewCommandRegistry()
+	commands.Register(dialog.Command{ID: "init"})
+	commands.Register(dialog.Command{ID: "compact"})
+
+	m := NewChatPage(a, commands)
+	m.Init()
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+
+	for _, r := range "/co" {
+		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+	}
+	if !m.(*chatPage).showCommandCompletion {
+		t.Fatal("typing / into an empty composer did not open command completion")
+	}
+	if !strings.Contains(m.(*chatPage).commandCompletion.View(), "/compact") {
+		t.Fatal("the popup does not list /compact")
+	}
+
+	m, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m, _ = drain(m, cmd)
+	p := m.(*chatPage)
+	if p.showCommandCompletion {
+		t.Fatal("accepting a completion left the popup open")
+	}
+	if got := p.composer.Value(); got != "/compact" {
+		t.Fatalf("composer is %q after completion, want /compact", got)
+	}
+
+	m, cmd = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	_, seen := drain(m, cmd)
+	var ran bool
+	for _, msg := range seen {
+		if run, ok := msg.(chat.RunCommandMsg); ok && run.ID == "compact" {
+			ran = true
+		}
+	}
+	if !ran {
+		t.Fatalf("Enter did not emit RunCommandMsg for compact; saw %#v", seen)
+	}
+	if count, _, _ := fake.calls(); count != 0 {
+		t.Fatalf("the command text reached the agent %d times", count)
+	}
+}
+
+func TestSlashMidTextDoesNotOpenCommandCompletion(t *testing.T) {
+	conn := dbtest.New(t)
+	q := db.New(conn)
+	a := &app.App{Sessions: session.NewService(q), Messages: message.NewService(q), CoderAgent: &fakeAgent{}}
+	m := NewChatPage(a, dialog.NewCommandRegistry())
+	m.Init()
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	for _, r := range "see /" {
+		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+	}
+	if m.(*chatPage).showCommandCompletion {
+		t.Fatal("a slash after other text opened command completion")
 	}
 }
 

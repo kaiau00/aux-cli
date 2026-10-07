@@ -22,6 +22,13 @@ type SendMsg struct {
 	Attachments []message.Attachment
 }
 
+// RunCommandMsg runs a registered command typed in the composer as /ID.
+// Args is the text after the command name, trimmed.
+type RunCommandMsg struct {
+	ID   string
+	Args string
+}
+
 type SessionSelectedMsg = session.Session
 
 type SessionClearedMsg struct{}

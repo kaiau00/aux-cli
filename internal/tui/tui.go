@@ -45,6 +45,14 @@ const excludeCommandID = "exclude"
 
 type startCompactSessionMsg struct{}
 
+// These open overlays from the /help, /model, and /sessions commands, whose
+// handlers cannot reach the model state directly.
+type (
+	toggleHelpMsg        struct{}
+	openModelDialogMsg   struct{}
+	openSessionDialogMsg struct{}
+)
+
 const (
 	quitKey = "q"
 )
@@ -128,7 +136,7 @@ type appModel struct {
 
 	showCommandDialog bool
 	commandDialog     dialog.CommandDialog
-	commands          []dialog.Command
+	commands          *dialog.CommandRegistry
 
 	showModelDialog bool
 	modelDialog     dialog.ModelDialog
@@ -388,14 +396,12 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.showInitDialog = false
 		if msg.Initialize {
 			// Run the initialization command
-			for _, cmd := range a.commands {
-				if cmd.ID == "init" {
-					// Mark the project as initialized
-					if err := config.MarkProjectInitialized(); err != nil {
-						return a, util.ReportError(err)
-					}
-					return a, cmd.Handler(cmd)
+			if cmd, ok := a.commands.Find("init"); ok {
+				// Mark the project as initialized
+				if err := config.MarkProjectInitialized(); err != nil {
+					return a, util.ReportError(err)
 				}
+				return a, cmd.Handler(cmd)
 			}
 		} else {
 			// Mark the project as initialized without running the command
@@ -419,6 +425,37 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, util.CmdHandler(chat.SessionSelectedMsg(msg.Session))
 		}
 		return a, nil
+
+	case chat.RunCommandMsg:
+		cmd, ok := a.commands.Find(msg.ID)
+		if !ok {
+			return a, util.ReportWarn(fmt.Sprintf("unknown command /%s; Ctrl+K lists commands", msg.ID))
+		}
+		if msg.Args != "" {
+			if cmd.ArgHandler == nil {
+				return a, util.ReportWarn(fmt.Sprintf("/%s takes no arguments", msg.ID))
+			}
+			return a, cmd.ArgHandler(msg.Args)
+		}
+		if cmd.Handler != nil {
+			return a, cmd.Handler(cmd)
+		}
+		return a, nil
+
+	case toggleHelpMsg:
+		if !a.showQuit {
+			a.showHelp = !a.showHelp
+		}
+		return a, nil
+
+	case openModelDialogMsg:
+		if a.currentPage == page.ChatPage && !a.showQuit && !a.showPermissions {
+			a.showModelDialog = true
+		}
+		return a, nil
+
+	case openSessionDialogMsg:
+		return a, a.openSessionDialog()
 
 	case dialog.CommandSelectedMsg:
 		a.showCommandDialog = false
@@ -495,27 +532,17 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return a, nil
 		case key.Matches(msg, keys.SwitchSession):
-			if a.currentPage == page.ChatPage && !a.showQuit && !a.showPermissions && !a.showCommandDialog {
-				// Load sessions and show the dialog
-				sessions, err := a.app.Sessions.List(context.Background())
-				if err != nil {
-					return a, util.ReportError(err)
-				}
-				if len(sessions) == 0 {
-					return a, util.ReportWarn("No sessions available")
-				}
-				a.sessionDialog.SetSessions(sessions)
-				a.showSessionDialog = true
-				return a, nil
+			if !a.showCommandDialog {
+				return a, a.openSessionDialog()
 			}
 			return a, nil
 		case key.Matches(msg, keys.Commands):
 			if a.currentPage == page.ChatPage && !a.showQuit && !a.showPermissions && !a.showSessionDialog && !a.showThemeDialog && !a.showFilepicker {
 				// Show commands dialog
-				if len(a.commands) == 0 {
+				if len(a.commands.Commands()) == 0 {
 					return a, util.ReportWarn("No commands available")
 				}
-				a.commandDialog.SetCommands(a.commands)
+				a.commandDialog.SetCommands(a.commands.Commands())
 				a.showCommandDialog = true
 				return a, nil
 			}
@@ -720,18 +747,27 @@ func (a appModel) headerVM() viewmodel.TaskHeaderVM {
 	return vm
 }
 
-// RegisterCommand adds a command to the command dialog
+// RegisterCommand adds a command to the command dialog and the composer.
 func (a *appModel) RegisterCommand(cmd dialog.Command) {
-	a.commands = append(a.commands, cmd)
+	a.commands.Register(cmd)
 }
 
-func (a *appModel) findCommand(id string) (dialog.Command, bool) {
-	for _, cmd := range a.commands {
-		if cmd.ID == id {
-			return cmd, true
-		}
+// openSessionDialog loads the sessions and shows the picker. Ctrl+S and
+// /sessions share it.
+func (a *appModel) openSessionDialog() tea.Cmd {
+	if a.currentPage != page.ChatPage || a.showQuit || a.showPermissions {
+		return nil
 	}
-	return dialog.Command{}, false
+	sessions, err := a.app.Sessions.List(context.Background())
+	if err != nil {
+		return util.ReportError(err)
+	}
+	if len(sessions) == 0 {
+		return util.ReportWarn("No sessions available")
+	}
+	a.sessionDialog.SetSessions(sessions)
+	a.showSessionDialog = true
+	return nil
 }
 
 func (a *appModel) moveToPage(pageID page.PageID) tea.Cmd {
@@ -963,6 +999,7 @@ func (a appModel) View() string {
 
 func New(app *app.App) tea.Model {
 	startPage := page.ChatPage
+	commands := dialog.NewCommandRegistry()
 	model := &appModel{
 		currentPage:   startPage,
 		loadedPages:   make(map[page.PageID]bool),
@@ -977,9 +1014,9 @@ func New(app *app.App) tea.Model {
 		initDialog:    dialog.NewInitDialogCmp(),
 		themeDialog:   dialog.NewThemeDialogCmp(),
 		app:           app,
-		commands:      []dialog.Command{},
+		commands:      commands,
 		pages: map[page.PageID]tea.Model{
-			page.ChatPage: page.NewChatPage(app),
+			page.ChatPage: page.NewChatPage(app, commands),
 			page.LogsPage: page.NewLogsPage(),
 		},
 		filepicker: dialog.NewFilepickerCmp(app),
@@ -1025,6 +1062,36 @@ If there are Cursor rules (in .cursor/rules/ or .cursorrules) or Copilot rules (
 				CommandID: excludeCommandID,
 				ArgNames:  []string{"path"},
 			})
+		},
+		ArgHandler: func(args string) tea.Cmd {
+			return util.CmdHandler(chat.ExcludePathMsg{Path: args})
+		},
+	})
+
+	model.RegisterCommand(dialog.Command{
+		ID:          "help",
+		Title:       "Toggle Help",
+		Description: "Show or hide the keyboard shortcuts",
+		Handler: func(cmd dialog.Command) tea.Cmd {
+			return util.CmdHandler(toggleHelpMsg{})
+		},
+	})
+
+	model.RegisterCommand(dialog.Command{
+		ID:          "model",
+		Title:       "Switch Model",
+		Description: "Choose the model for this project",
+		Handler: func(cmd dialog.Command) tea.Cmd {
+			return util.CmdHandler(openModelDialogMsg{})
+		},
+	})
+
+	model.RegisterCommand(dialog.Command{
+		ID:          "sessions",
+		Title:       "Switch Session",
+		Description: "Open a previous session",
+		Handler: func(cmd dialog.Command) tea.Cmd {
+			return util.CmdHandler(openSessionDialogMsg{})
 		},
 	})
 	// Load custom commands
