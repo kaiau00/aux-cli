@@ -44,9 +44,6 @@ type messagesCmp struct {
 	// lines; Tab toggles the focused message.
 	expandedThinking map[string]bool
 
-	// workingLabelIndex advances on spinner ticks to rotate status verbs.
-	workingLabelIndex int
-
 	// rerenderPending and rerenderTailActivity coalesce streaming message
 	// updates behind rerenderDebounce; see scheduleRerender.
 	rerenderPending      bool
@@ -79,22 +76,6 @@ func (m *messagesCmp) scheduleRerender() tea.Cmd {
 	return tea.Tick(rerenderDebounce, func(time.Time) tea.Msg {
 		return rerenderPendingMsg{}
 	})
-}
-
-// workingStatusLabels cycles in the footer while the agent is responding,
-// similar to Claude Code's rotating "Working / Searching / …" indicator.
-var workingStatusLabels = []string{
-	"Working",
-	"Thinking",
-	"Searching",
-	"Finding",
-	"Pondering",
-	"Considering",
-	"Exploring",
-	"Drafting",
-	"Planning",
-	"Reading",
-	"Analyzing",
 }
 
 type renderFinishedMsg struct{}
@@ -265,9 +246,6 @@ func (m *messagesCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	if _, ok := msg.(spinner.TickMsg); ok && m.IsAgentWorking() {
-		m.workingLabelIndex++
-	}
 	spinner, cmd := m.spinner.Update(msg)
 	m.spinner = spinner
 	cmds = append(cmds, cmd)
@@ -282,8 +260,11 @@ func (m *messagesCmp) reasoningToggleTargetID() string {
 			break
 		}
 	}
+	// The nearest assistant message carrying model thinking. It used to be the
+	// nearest turn anchor, because a whole turn's reasoning was collapsed into
+	// one message; now thinking belongs to the message that produced it.
 	for i := start; i >= 0; i-- {
-		if isPromptReasoningAnchor(m.messages, i) && hasAnyReasoningDetails(promptReasoningMessages(m.messages, i)) {
+		if m.messages[i].Role == message.Assistant && hasReasoningDetails(m.messages[i]) {
 			return m.messages[i].ID
 		}
 	}
@@ -334,15 +315,21 @@ func (m *messagesCmp) renderView() {
 			}
 			pos += userMsg.height + 1 // + 1 for spacing
 		case message.Assistant:
-			if !isPromptReasoningAnchor(m.messages, inx) {
-				continue
-			}
+			// Every assistant message renders. Only the last one of a turn used
+			// to, which folded the prose and tool calls of all the others into a
+			// single "reasoning hidden" line.
 			if cache, ok := m.cachedContent[msg.ID]; ok && cache.width == m.width {
 				m.uiMessages = append(m.uiMessages, cache.content...)
 				continue
 			}
 			isSummary := m.session.SummaryMessageID == msg.ID
-			reasoningMessages := promptReasoningMessages(m.messages, inx)
+			// A message's own thinking, if it has any. It used to be every
+			// assistant message in the turn, because the turn collapsed into
+			// one rendered message.
+			var reasoningMessages []message.Message
+			if hasReasoningDetails(msg) {
+				reasoningMessages = []message.Message{msg}
+			}
 
 			assistantMessages := renderAssistantMessage(
 				msg,
@@ -389,46 +376,6 @@ func (m *messagesCmp) renderView() {
 				),
 			),
 	)
-}
-
-func isPromptReasoningAnchor(messages []message.Message, index int) bool {
-	if index < 0 || index >= len(messages) {
-		return false
-	}
-	msg := messages[index]
-	if msg.Role != message.Assistant {
-		return false
-	}
-	for i := index + 1; i < len(messages); i++ {
-		switch messages[i].Role {
-		case message.User:
-			return true
-		case message.Assistant:
-			return false
-		}
-	}
-	return true
-}
-
-func promptReasoningMessages(messages []message.Message, anchorIndex int) []message.Message {
-	if anchorIndex < 0 || anchorIndex >= len(messages) {
-		return nil
-	}
-	start := anchorIndex
-	for start > 0 {
-		if messages[start-1].Role == message.User {
-			break
-		}
-		start--
-	}
-
-	reasoningMessages := make([]message.Message, 0, anchorIndex-start+1)
-	for i := start; i <= anchorIndex; i++ {
-		if messages[i].Role == message.Assistant && hasReasoningDetails(messages[i]) {
-			reasoningMessages = append(reasoningMessages, messages[i])
-		}
-	}
-	return reasoningMessages
 }
 
 func (m *messagesCmp) View() string {
@@ -524,8 +471,30 @@ func (m *messagesCmp) workingStatusLabel() string {
 		}
 		return "Building tool call..."
 	}
-	idx := (m.workingLabelIndex / 12) % len(workingStatusLabels)
-	return workingStatusLabels[idx] + "..."
+	if m.isWritingResponse() {
+		return "Responding..."
+	}
+	return "Thinking..."
+}
+
+// isWritingResponse reports whether the newest assistant message already holds
+// text and has not finished, which means the model is streaming prose rather
+// than still deciding what to do.
+//
+// This exists so the label says something observed. It replaces eleven verbs
+// ("Working", "Searching", "Reading", ...) that were cycled on a spinner tick:
+// the UI claimed to be searching when nothing was being searched, and reading
+// when nothing was being read. The two branches above this one were always
+// real; now all four are.
+func (m *messagesCmp) isWritingResponse() bool {
+	for i := len(m.messages) - 1; i >= 0; i-- {
+		msg := m.messages[i]
+		if msg.Role != message.Assistant {
+			continue
+		}
+		return !msg.IsFinished() && msg.Content().String() != ""
+	}
+	return false
 }
 
 func (m *messagesCmp) working() string {
