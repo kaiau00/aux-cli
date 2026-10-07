@@ -1008,7 +1008,7 @@ in M1.6.
 - [x] M2.2 SDKs ×4: openai-go (#41), anthropic-sdk-go (#42), mcp-go (#43),
       genai (#44). Offline usage fixtures pass; the live per-provider
       status-bar token check needs real keys and has not been run
-- [ ] M2.3 slash commands — open as #45, CI green, awaiting review
+- [x] M2.3 slash commands — merged (#45)
 - [ ] M2.4 resume, M2.5 compaction, M2.6 memory UX, M2.7 text,
       M2.8 trimming — merged
 - [ ] M3.5 `--version` local builds

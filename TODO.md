@@ -17,7 +17,7 @@ disagree, the plan wins and this file gets corrected.
 
 ---
 
-## Progress (as of 2026-10-05)
+## Progress (as of 2026-10-07)
 
 Update this section and the plan's §6 checklist in every PR that moves an item.
 
@@ -37,8 +37,10 @@ Update this section and the plan's §6 checklist in every PR that moves an item.
 | M1.6 evicted and faulted states removed | #39 |
 | M2.1 model catalog | #40 |
 | M2.2 `openai-go` v1.12.0, `anthropic-sdk-go` v1.78.0, `mcp-go` v1.1.1, `genai` v1.72.0 | #41, #42, #43, #44 |
+| M2.3 slash commands from the composer | #45 |
 
-**Open:** M2.3 slash commands, #45 (CI green, awaiting review).
+**Open:** nothing. M2.3 merged as #45 on 2026-10-07 after the five gates were
+re-run on its branch and every test named in its done-when was run by name.
 
 **Next:** M2.4 `--continue` and `--resume`, then M2.5–M2.8, then M3.
 
@@ -53,9 +55,10 @@ Update this section and the plan's §6 checklist in every PR that moves an item.
 - M2.2: the per-provider live check that cache tokens show in the status bar
   needs real keys. The offline streaming fixtures pass for all four SDKs.
 
-**Gate numbers on `main`:** coverage 35.9% locally against a 33.8% floor. The
-floor stays at 33.8 until M3.7 raises it. Dead-code baseline: 48 entries (47
-once #45 merges, which deletes the unused `appModel.findCommand`).
+**Gate numbers on `main`:** coverage 36.5% locally against a 33.8% floor
+(36.1% before #45; measured 2026-10-07). The floor stays at 33.8 until M3.7
+raises it. Dead-code baseline: 47 entries, down from 48 — #45 deleted the
+unused `appModel.findCommand`.
 
 ---
 
@@ -145,7 +148,7 @@ Aux should only say true things about itself. Verified 2026-10-02.
 | "Improves every time you use it" / "the tenth task is cheaper" | Memory and skill candidates now accrue with no CLI step (M1.4), but whether that makes later tasks cheaper or better is unmeasured (P4.1). Nothing has ever been promoted to a skill |
 | "The prompt is compiled, not just concatenated" | Both compilers send the full transcript. `DedupCompiler` stubs duplicate blobs and defaults to off |
 | "Cheaper than opencode" | Python n=5: gap grew 19%→63% as runs were added. TypeScript n=5: p=0.06 and Aux failed 4/25 task-attempts vs 0/25. Decided: dropped until P1 is done |
-| "80% test coverage" | 35.9% locally, floor 33.8. 15 packages have no test file |
+| "80% test coverage" | 36.5% locally, floor 33.8. 15 packages have no test file |
 | "Aux manages the agent's context" | `ContextWindow` appears only in display code. Nothing truncates, evicts, or budgets (the states that implied it were removed in M1.6) |
 | "Production ready" | See the definition above |
 
@@ -301,7 +304,7 @@ to match.
 
 ### P3.5 Coverage, deliberately
 
-35.9% locally (2026-10-05; floor 33.8) against a stated 80%. The ratchet holds
+36.5% locally (2026-10-07; floor 33.8) against a stated 80%. The ratchet holds
 the floor; it does not climb.
 15 packages have no test file: `.` (root), `cmd`, `cmd/schema`,
 `internal/format`, `internal/history`, `internal/lsp` (+`protocol`, `util`,
@@ -403,7 +406,7 @@ is where the loop closes. P1.6 lands with P1.3.
 **P2.1 and P2.2 in parallel with P1** — they touch different code and the
 model catalog is what makes Aux usable at all day to day.
 
-P0 (except the M0.5 URL check), P1, P2.1, and P2.2 are done; P2.3 is in review.
+P0 (except the M0.5 URL check), P1, P2.1, P2.2, and P2.3 are done.
 See [Progress](#progress-as-of-2026-10-05).
 
 **P3 after P1 is true.** Tag when the README is honest, not before.
