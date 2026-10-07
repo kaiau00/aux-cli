@@ -39,10 +39,26 @@ Update this section and the plan's §6 checklist in every PR that moves an item.
 | M2.2 `openai-go` v1.12.0, `anthropic-sdk-go` v1.78.0, `mcp-go` v1.1.1, `genai` v1.72.0 | #41, #42, #43, #44 |
 | M2.3 slash commands from the composer | #45 |
 | M2.4 `--continue` and `--resume` | #47 |
+| Working indicator: orbit spinner (UI pass, not a plan item) | #48 |
+| Transcript shows prose, tool calls and real durations (UI pass) | #49 |
 
 **Open:** M2.4 `--continue` and `--resume`, #47.
 
-**Next:** M2.5 compaction as a decision, then M2.6–M2.8, then M3.
+**Next:** a UI pass, requested 2026-10-07 and sequenced *before* M2.5, because
+M2.5 builds a dialog into the same transcript and would otherwise be built
+twice. Three parts: the working indicator (#48), the transcript's visibility
+defects (#49), and a palette -- the last still needs a direction, and
+`openai/codex` has not been read for one. Then M2.5, M2.6–M2.8, M3. The plan
+has no UI item; D3 ("do not tag until it feels like Claude Code") is the
+decision this answers to.
+
+Two UI findings are deliberately **not** fixed: the transcript is top-anchored
+(about 25 blank rows at 160x44) and the right pane is always present, spending
+28 of 100 columns at laptop width on two lines of text. Both are taste rather
+than defect and wait on the palette direction. A third is harmless: Ctrl+G
+overlays a duplicate of the context pane above 80 columns, because the split
+already shows it there -- verified working at 70 columns, which is what the
+drawer exists for.
 
 **Not yet verified** (each is a done-when that has not been run):
 
@@ -427,6 +443,7 @@ See [Progress](#progress-as-of-2026-10-05).
 
 | | |
 | --- | --- |
+| Transcript shows what the agent did, 2026-10-07 | Three fixes to one surface. **(1)** `isPromptReasoningAnchor` meant only the *last* assistant message of a turn rendered at all; every earlier one -- prose and tool calls alike -- was folded into a single `reasoning hidden · ↓ Tab to expand` line, so a turn that ran eight tools showed none of them. Every assistant message now renders, its tool calls inline, and only the model's own `ReasoningContent.Thinking` stays behind Tab. Measured before the fix against this repository's database: of 158 assistant messages carrying prose over 40 characters, **94 (59%)** had it replaced by that placeholder. **(2)** `formatTimestampDiff` divided by 1000 "to convert to seconds" while both operands already were seconds, so every duration read a thousand times too small -- real replies run 0-46s, median 2s, so a 46-second wait showed as `46ms`, and a malformed row showed `(-1791389564ms)`. Now `formatSecondsDiff`, clamped at zero, reporting `<1s` rather than inventing milliseconds it does not have. **(3)** The eleven working verbs (`Working`, `Searching`, `Reading`, ...) were cycled on a spinner tick, so the footer claimed to be searching when nothing was; replaced by four observed states -- waiting on a tool result, calling a named tool, responding (newest assistant message holds text and has not finished), thinking. Two things I had reported as defects were not, and were left alone: `\+enter newline` is the real binding (`editor.go:235` strips a trailing backslash), and the second hint row is the status bar, not a wrap. Tests: `visibility_test.go`, `duration_test.go`, `working_label_test.go` (including that the label is unchanged across 50 calls on identical state). The prose test was run against the old rule reinstated and fails there, so it is load-bearing |
 | M2.4 `--continue` and `--resume`, 2026-10-07 | `--continue`/`-C` opens the most recently updated session; `--resume`/`-r` takes an id, or opens the picker with none. Both work under `-p`. `GetMostRecentSession` filters `parent_session_id IS NULL`, so the task and title sessions a turn writes constantly are skipped, and breaks a tie on `rowid` because `updated_at` is whole seconds. Two defects found by running the binary rather than reading it: a NUL sentinel for pflag's `NoOptDefVal` printed into `--help` as `string[="\x00picker"]` and broke the column (now the typeable word `ask`), and `aux --resume abc` failed with `unknown command "abc"` because the root command has subcommands and cobra rejects every positional argument — `resumeAwareArgs` admits the one that `--resume <id>` leaves behind and still reports an unknown subcommand. Scratch repo, three seeded sessions and an invalid key: `-p "hello" --continue` left the count at 3 and put both messages in the intended session, skipping the subagent row whose `updated_at` was far newer; `--resume sess-old` put them in that one instead. Also corrected: five column comments in `20250424200609_initial.sql` claimed milliseconds for values `strftime('%s', 'now')` and `time.Now().Unix()` write in seconds (sessions, files, messages, and `messages.finished_at`). Checked each writer rather than the whole phrase -- `domain_events.occurred_at` and the call ledger's three really are `UnixMilli()` and were left alone. The floor moved 33.8 to 36.4, taken from CI's own measurement on this branch (run 37634992424), not the laptop's 37.0. Tests: `cmd/root_test.go`, the package's first — every flag spelling, the `--continue`/`--resume` conflict, task and title sessions skipped, an empty project is not an error, an unknown id is refused before the TUI starts |
 | M2.3 slash commands, 2026-10-04 | `editorCmp.send` turns `/id args` into `chat.RunCommandMsg` when `id` is registered, before the busy check, so `/help` works while the agent runs. A lone unregistered `/word` shows "unknown command /word; Ctrl+K lists commands" and stays in the composer. Text such as `see /etc/hosts` or `/etc/hosts is broken` still goes to the model. `dialog.CommandRegistry` replaces the TUI's command slice and is shared with the page and editor. `Command.ArgHandler` lets `/exclude main.go` skip the arguments dialog; other commands warn "/init takes no arguments". Typing `/` into an empty composer opens a second completion dialog over `completions.NewCommandsGroup`; Tab or Enter accepts through `dialog.CompletionSelectedMsg`. Tests: `TestSlashInitRunsTheCommandAndIsNotSent`, `TestSlashExcludeCarriesItsArgument`, `TestUnknownSlashCommandWarnsAndKeepsTheText`, `TestSlashInsideTextIsNotACommand` (components/chat), `TestSlashOpensCommandCompletionAndRunsTheCommand` (page), `TestRunCommand*` and `TestHelpAndModelCommandsOpenTheirOverlays` (tui), and `TestCommandPopupGolden` (`internal/completions/testdata/command-popup.*.golden`) |
 | M2.2 genai v1.72.0, 2026-10-03 | `go get google.golang.org/genai@v1.72.0`. Gemini and Vertex compiled unchanged. `TestGeminiStreamReportsCachedTokens` plays a recorded `streamGenerateContent` SSE response: text `ok`, then a final chunk with `promptTokenCount` 20, `candidatesTokenCount` 3, `cachedContentTokenCount` 15. The completion reports 20 input, 3 output, 15 cache read. Prompt tokens already include the cached content, so input is not reduced by the cache count |
