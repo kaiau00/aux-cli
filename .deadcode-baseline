@@ -84,4 +84,3 @@ internal/tui/styles/styles.go: TextEmphasizedColor
 internal/tui/styles/styles.go: TextMutedColor
 internal/tui/styles/styles.go: ThickBorder
 internal/tui/styles/styles.go: WarningColor
-internal/tui/tui.go: appModel.findCommand

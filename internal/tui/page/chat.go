@@ -30,17 +30,20 @@ const narrowWidthThreshold = 80
 const composerMinHeight = 3
 
 type chatPage struct {
-	app                  *app.App
-	editor               layout.Container
-	messages             layout.Container
-	contextPane          *chat.ContextPaneCmp
-	contextPaneContainer layout.Container
-	layout               layout.SplitPaneLayout
-	session              session.Session
-	completionDialog     dialog.CompletionDialog
-	showCompletionDialog bool
-	showContextDrawer    bool
-	width, height        int
+	app                   *app.App
+	editor                layout.Container
+	messages              layout.Container
+	contextPane           *chat.ContextPaneCmp
+	contextPaneContainer  layout.Container
+	layout                layout.SplitPaneLayout
+	session               session.Session
+	completionDialog      dialog.CompletionDialog
+	showCompletionDialog  bool
+	composer              interface{ Value() string }
+	commandCompletion     dialog.CompletionDialog
+	showCommandCompletion bool
+	showContextDrawer     bool
+	width, height         int
 }
 
 type ChatKeyMap struct {
@@ -86,6 +89,7 @@ func (p *chatPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, cmd)
 	case dialog.CompletionDialogCloseMsg:
 		p.showCompletionDialog = false
+		p.showCommandCompletion = false
 	case chat.SendMsg:
 		cmd := p.sendMessage(msg.Text, msg.Attachments)
 		if cmd != nil {
@@ -126,9 +130,11 @@ func (p *chatPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		p.session = msg
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(msg, keyMap.ShowCompletionDialog):
+		case key.Matches(msg, keyMap.ShowCompletionDialog) && !p.showCommandCompletion:
 			p.showCompletionDialog = true
 			// Continue sending keys to layout->chat
+		case msg.String() == "/" && !p.showCompletionDialog && p.editor.Focused() && p.composer.Value() == "":
+			p.showCommandCompletion = true
 		case key.Matches(msg, keyMap.NewSession):
 			p.session = session.Session{}
 			return p, tea.Batch(
@@ -154,14 +160,18 @@ func (p *chatPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return p, nil
 		}
 	}
-	if p.showCompletionDialog {
-		context, contextCmd := p.completionDialog.Update(msg)
-		p.completionDialog = context.(dialog.CompletionDialog)
+	if p.showCompletionDialog || p.showCommandCompletion {
+		active := &p.completionDialog
+		if p.showCommandCompletion {
+			active = &p.commandCompletion
+		}
+		context, contextCmd := (*active).Update(msg)
+		*active = context.(dialog.CompletionDialog)
 		cmds = append(cmds, contextCmd)
 
-		// Doesn't forward event if enter key is pressed
+		// Doesn't forward event if enter or tab is pressed
 		if keyMsg, ok := msg.(tea.KeyMsg); ok {
-			if keyMsg.String() == "enter" {
+			if keyMsg.String() == "enter" || keyMsg.String() == "tab" {
 				return p, tea.Batch(cmds...)
 			}
 		}
@@ -210,12 +220,16 @@ func (p *chatPage) GetSize() (int, int) {
 func (p *chatPage) View() string {
 	layoutView := p.layout.View()
 
-	if p.showCompletionDialog {
+	if p.showCompletionDialog || p.showCommandCompletion {
+		active := p.completionDialog
+		if p.showCommandCompletion {
+			active = p.commandCompletion
+		}
 		_, layoutHeight := p.layout.GetSize()
 		editorWidth, editorHeight := p.editor.GetSize()
 
-		p.completionDialog.SetWidth(editorWidth)
-		overlay := p.completionDialog.View()
+		active.SetWidth(editorWidth)
+		overlay := active.View()
 
 		layoutView = layout.PlaceOverlay(
 			0,
@@ -266,15 +280,16 @@ func (p *chatPage) BindingKeys() []key.Binding {
 	return bindings
 }
 
-func NewChatPage(app *app.App) tea.Model {
+func NewChatPage(app *app.App, commands *dialog.CommandRegistry) tea.Model {
 	cg := completions.NewFileAndFolderContextGroup()
-	completionDialog := dialog.NewCompletionDialogCmp(cg)
+	completionDialog := dialog.NewCompletionDialogCmp(cg, "No file matches found")
+	commandCompletion := dialog.NewCompletionDialogCmp(completions.NewCommandsGroup(commands), "No matching command")
 
 	messagesContainer := layout.NewContainer(
 		chat.NewMessagesCmp(app),
 		layout.WithPadding(1, 1, 0, 1),
 	)
-	editor := chat.NewEditorCmp(app)
+	editor := chat.NewEditorCmp(app, commands)
 	editorContainer := layout.NewContainer(
 		editor,
 		layout.WithBorder(true, false, false, false),
@@ -291,6 +306,8 @@ func NewChatPage(app *app.App) tea.Model {
 		contextPane:          contextPane,
 		contextPaneContainer: contextPaneContainer,
 		completionDialog:     completionDialog,
+		composer:             editor.(interface{ Value() string }),
+		commandCompletion:    commandCompletion,
 		layout: layout.NewSplitPane(
 			layout.WithLeftPanel(messagesContainer),
 			layout.WithRightPanel(contextPaneContainer),

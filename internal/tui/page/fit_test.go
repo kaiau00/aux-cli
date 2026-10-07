@@ -14,6 +14,7 @@ import (
 	"github.com/kaiau00/aux-cli/internal/message"
 	"github.com/kaiau00/aux-cli/internal/session"
 	"github.com/kaiau00/aux-cli/internal/tui/components/chat"
+	"github.com/kaiau00/aux-cli/internal/tui/components/dialog"
 )
 
 // The chat page must render exactly the number of rows it was given. One row
@@ -45,7 +46,7 @@ func TestChatPageRendersExactlyTheRowsItWasGiven(t *testing.T) {
 
 	for _, w := range widths {
 		for _, h := range heights {
-			m := NewChatPage(a)
+			m := NewChatPage(a, dialog.NewCommandRegistry())
 			m.Init()
 			m, _ = m.Update(tea.WindowSizeMsg{Width: w, Height: h})
 			got := strings.Count(m.View(), "\n") + 1
@@ -89,7 +90,7 @@ func TestChatPageRendersExactlyTheRowsItWasGivenWithAConversation(t *testing.T) 
 
 	for _, w := range []int{30, 40, 60, 80, 100, 120, 200} {
 		for _, h := range []int{12, 16, 20, 24, 30, 40} {
-			m := NewChatPage(a)
+			m := NewChatPage(a, dialog.NewCommandRegistry())
 			m.Init()
 			m, _ = m.Update(tea.WindowSizeMsg{Width: w, Height: h})
 			m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
@@ -132,7 +133,7 @@ func TestComposerHintSurvivesOnShortTerminals(t *testing.T) {
 	}
 
 	for _, h := range []int{12, 16, 20, 24, 40} {
-		m := NewChatPage(a)
+		m := NewChatPage(a, dialog.NewCommandRegistry())
 		m.Init()
 		m, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: h})
 		if view := m.View(); !strings.Contains(view, "enter send") {
