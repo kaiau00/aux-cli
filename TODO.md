@@ -38,11 +38,11 @@ Update this section and the plan's §6 checklist in every PR that moves an item.
 | M2.1 model catalog | #40 |
 | M2.2 `openai-go` v1.12.0, `anthropic-sdk-go` v1.78.0, `mcp-go` v1.1.1, `genai` v1.72.0 | #41, #42, #43, #44 |
 | M2.3 slash commands from the composer | #45 |
+| M2.4 `--continue` and `--resume` | #47 |
 
-**Open:** nothing. M2.3 merged as #45 on 2026-10-07 after the five gates were
-re-run on its branch and every test named in its done-when was run by name.
+**Open:** M2.4 `--continue` and `--resume`, #47.
 
-**Next:** M2.4 `--continue` and `--resume`, then M2.5–M2.8, then M3.
+**Next:** M2.5 compaction as a decision, then M2.6–M2.8, then M3.
 
 **Not yet verified** (each is a done-when that has not been run):
 
@@ -55,9 +55,10 @@ re-run on its branch and every test named in its done-when was run by name.
 - M2.2: the per-provider live check that cache tokens show in the status bar
   needs real keys. The offline streaming fixtures pass for all four SDKs.
 
-**Gate numbers on `main`:** coverage 36.5% locally against a 33.8% floor
-(36.1% before #45; measured 2026-10-07). The floor stays at 33.8 until M3.7
-raises it. Dead-code baseline: 47 entries, down from 48 — #45 deleted the
+**Gate numbers on `main`:** coverage 37.0% locally and 36.4% on CI, against a
+floor raised from 33.8 to **36.4** in #47. The floor tracks CI, which measures
+0.6 points under macOS here, so the laptop number is never the one to write.
+M3.7 still owns getting it to 45%. Dead-code baseline: 47 entries, down from 48 — #45 deleted the
 unused `appModel.findCommand`.
 
 ---
@@ -237,11 +238,7 @@ Done (see the appendix). `/init`, `/compact`, `/exclude <path>`, `/help`, `/mode
 through the registry that Ctrl+K uses. Typing `/` into an empty composer opens a
 filtered command list. `/remember` arrives with M2.6.
 
-### P2.4 `--continue` and `--resume`
-
-No flag resumes a session. `-c` is `--cwd`. Add `--continue` (most recent
-session in this project) and `--resume <id|picker>`, matching what people
-expect from the tool they are comparing Aux to.
+### P2.4 `--continue` and `--resume` — closed (M2.4)
 
 ### P2.5 Compaction as a decision, not an ambush
 
@@ -355,6 +352,17 @@ Real, small, or low-confidence. None of it blocks anything.
 - Trajectory waste detection — "you grepped this three times"
 - `--budget strict` preset wiring the existing governor
 - `grep` spawns `rg` per call — measure before optimizing
+- **`sqlc` is installable again, which trips ADR 0003's revisit trigger.**
+  The ADR chose hand-written raw-SQL stores for every domain after
+  `sessions`/`messages`/`files` because "`sqlc` is not available in this
+  environment". It builds now: `CGO_ENABLED=0 go install
+  github.com/sqlc-dev/sqlc/cmd/sqlc@v1.29.0` (the default cgo build still
+  fails on this macOS SDK, `strchrnul` in `pg_query_go`). Used in M2.4 to
+  generate `GetMostRecentSession` rather than hand-edit four generated files.
+  Note what regenerating does *not* mean: it also emits 481 lines of structs
+  for the tables those raw-SQL stores own, which is the arrangement ADR 0003
+  deliberately rejected, so `models.go` was left alone. Whether to adopt
+  generation per domain is the ADR's own question, not a cleanup
 - `renderView` is O(conversation) per call; debounced to 100ms, still a
   stutter on very long sessions. Incremental rendering would fix it
 - Local-build version string: shorten the pseudo-version on the splash
@@ -419,6 +427,7 @@ See [Progress](#progress-as-of-2026-10-05).
 
 | | |
 | --- | --- |
+| M2.4 `--continue` and `--resume`, 2026-10-07 | `--continue`/`-C` opens the most recently updated session; `--resume`/`-r` takes an id, or opens the picker with none. Both work under `-p`. `GetMostRecentSession` filters `parent_session_id IS NULL`, so the task and title sessions a turn writes constantly are skipped, and breaks a tie on `rowid` because `updated_at` is whole seconds. Two defects found by running the binary rather than reading it: a NUL sentinel for pflag's `NoOptDefVal` printed into `--help` as `string[="\x00picker"]` and broke the column (now the typeable word `ask`), and `aux --resume abc` failed with `unknown command "abc"` because the root command has subcommands and cobra rejects every positional argument — `resumeAwareArgs` admits the one that `--resume <id>` leaves behind and still reports an unknown subcommand. Scratch repo, three seeded sessions and an invalid key: `-p "hello" --continue` left the count at 3 and put both messages in the intended session, skipping the subagent row whose `updated_at` was far newer; `--resume sess-old` put them in that one instead. Also corrected: five column comments in `20250424200609_initial.sql` claimed milliseconds for values `strftime('%s', 'now')` and `time.Now().Unix()` write in seconds (sessions, files, messages, and `messages.finished_at`). Checked each writer rather than the whole phrase -- `domain_events.occurred_at` and the call ledger's three really are `UnixMilli()` and were left alone. The floor moved 33.8 to 36.4, taken from CI's own measurement on this branch (run 37634992424), not the laptop's 37.0. Tests: `cmd/root_test.go`, the package's first — every flag spelling, the `--continue`/`--resume` conflict, task and title sessions skipped, an empty project is not an error, an unknown id is refused before the TUI starts |
 | M2.3 slash commands, 2026-10-04 | `editorCmp.send` turns `/id args` into `chat.RunCommandMsg` when `id` is registered, before the busy check, so `/help` works while the agent runs. A lone unregistered `/word` shows "unknown command /word; Ctrl+K lists commands" and stays in the composer. Text such as `see /etc/hosts` or `/etc/hosts is broken` still goes to the model. `dialog.CommandRegistry` replaces the TUI's command slice and is shared with the page and editor. `Command.ArgHandler` lets `/exclude main.go` skip the arguments dialog; other commands warn "/init takes no arguments". Typing `/` into an empty composer opens a second completion dialog over `completions.NewCommandsGroup`; Tab or Enter accepts through `dialog.CompletionSelectedMsg`. Tests: `TestSlashInitRunsTheCommandAndIsNotSent`, `TestSlashExcludeCarriesItsArgument`, `TestUnknownSlashCommandWarnsAndKeepsTheText`, `TestSlashInsideTextIsNotACommand` (components/chat), `TestSlashOpensCommandCompletionAndRunsTheCommand` (page), `TestRunCommand*` and `TestHelpAndModelCommandsOpenTheirOverlays` (tui), and `TestCommandPopupGolden` (`internal/completions/testdata/command-popup.*.golden`) |
 | M2.2 genai v1.72.0, 2026-10-03 | `go get google.golang.org/genai@v1.72.0`. Gemini and Vertex compiled unchanged. `TestGeminiStreamReportsCachedTokens` plays a recorded `streamGenerateContent` SSE response: text `ok`, then a final chunk with `promptTokenCount` 20, `candidatesTokenCount` 3, `cachedContentTokenCount` 15. The completion reports 20 input, 3 output, 15 cache read. Prompt tokens already include the cached content, so input is not reduced by the cache count |
 | M2.2 mcp-go v1.1.1, 2026-10-03 | `go get github.com/mark3labs/mcp-go@v1.1.1`. The stdio and SSE call sites compiled unchanged, including `InputSchema.Properties`/`Required` and `mcp.TextContent`. The module requires Go 1.25.5, so `go.mod`'s `go` line moved from 1.24.0; CI reads that line. `TestGetMcpToolsWithoutConfigDoesNotPanic`, `TestParseGraphResponse`, and `TestParseGraphResponseSupportsAlternateKeys` pass. MCP does not stream model tokens, so there is no usage fixture |

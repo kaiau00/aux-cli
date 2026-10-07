@@ -36,6 +36,17 @@ FROM sessions
 WHERE parent_session_id is NULL
 ORDER BY created_at DESC;
 
+-- name: GetMostRecentSession :one
+-- updated_at and created_at are whole seconds, so two sessions touched in the
+-- same second tie. rowid breaks the tie by insertion order, which keeps the
+-- answer deterministic and picks the later session, rather than leaving it to
+-- whatever order the scan happens to return.
+SELECT *
+FROM sessions
+WHERE parent_session_id is NULL
+ORDER BY updated_at DESC, created_at DESC, rowid DESC
+LIMIT 1;
+
 -- name: UpdateSession :one
 UPDATE sessions
 SET

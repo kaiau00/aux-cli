@@ -3,6 +3,7 @@ package session
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	"github.com/google/uuid"
 	"github.com/kaiau00/aux-cli/internal/db"
@@ -35,6 +36,15 @@ type Service interface {
 	CreateTaskSession(ctx context.Context, toolCallID, parentSessionID, title string) (Session, error)
 	Get(ctx context.Context, id string) (Session, error)
 	List(ctx context.Context) ([]Session, error)
+	// MostRecent returns the top-level session touched last, which is what
+	// --continue resumes. Task and title sessions are excluded: a subagent or a
+	// title generator writes rows constantly, so they are almost always the
+	// newest thing in the table and are never what the user meant.
+	//
+	// A project with no sessions yet is not an error -- the zero Session comes
+	// back with a nil error, and IDs are UUIDs, so an empty ID cannot collide
+	// with a real one.
+	MostRecent(ctx context.Context) (Session, error)
 	Save(ctx context.Context, session Session) (Session, error)
 	// SetTitle writes only the title. Saving a whole Session read before a slow
 	// operation clobbers whatever the turn reconciled in the meantime, so a
@@ -151,6 +161,17 @@ func (s *service) List(ctx context.Context) ([]Session, error) {
 		sessions[i] = s.fromDBItem(dbSession)
 	}
 	return sessions, nil
+}
+
+func (s *service) MostRecent(ctx context.Context) (Session, error) {
+	dbSession, err := s.q.GetMostRecentSession(ctx)
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		return Session{}, nil
+	case err != nil:
+		return Session{}, err
+	}
+	return s.fromDBItem(dbSession), nil
 }
 
 func (s service) fromDBItem(item db.Session) Session {

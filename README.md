@@ -141,6 +141,8 @@ Beyond the interactive TUI (`aux`) and one-shot prompts (`aux -p "..."`), Aux sh
 | `--yes` | | With `-p`, approve every permission request instead of denying it |
 | `--output-format` | `-f` | Output format for non-interactive mode (`text`, `json`) |
 | `--quiet` | `-q` | Hide spinner in non-interactive mode |
+| `--continue` | `-C` | Resume the most recent session in this project. Sessions a subagent or the title generator created are skipped |
+| `--resume [id]` | `-r` | Resume the session with that id; with no id, pick one from a list when the TUI starts. Works with `-p`, where an id is required. Write `-rabc` as `-r abc` — the id has to be a separate word |
 | `--version` | `-v` | Print the version and exit |
 | `--paging` | | For this run: `on` replaces earlier copies of identical large tool output with a pointer, `off` (default) sends the transcript as is |
 
