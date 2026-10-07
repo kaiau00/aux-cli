@@ -57,6 +57,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getMessageStmt, err = db.PrepareContext(ctx, getMessage); err != nil {
 		return nil, fmt.Errorf("error preparing query GetMessage: %w", err)
 	}
+	if q.getMostRecentSessionStmt, err = db.PrepareContext(ctx, getMostRecentSession); err != nil {
+		return nil, fmt.Errorf("error preparing query GetMostRecentSession: %w", err)
+	}
 	if q.getSessionByIDStmt, err = db.PrepareContext(ctx, getSessionByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetSessionByID: %w", err)
 	}
@@ -84,11 +87,11 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.updateMessageStmt, err = db.PrepareContext(ctx, updateMessage); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateMessage: %w", err)
 	}
-	if q.updateSessionTitleStmt, err = db.PrepareContext(ctx, updateSessionTitle); err != nil {
-		return nil, fmt.Errorf("error preparing query UpdateSessionTitle: %w", err)
-	}
 	if q.updateSessionStmt, err = db.PrepareContext(ctx, updateSession); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateSession: %w", err)
+	}
+	if q.updateSessionTitleStmt, err = db.PrepareContext(ctx, updateSessionTitle); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateSessionTitle: %w", err)
 	}
 	return &q, nil
 }
@@ -150,6 +153,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getMessageStmt: %w", cerr)
 		}
 	}
+	if q.getMostRecentSessionStmt != nil {
+		if cerr := q.getMostRecentSessionStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getMostRecentSessionStmt: %w", cerr)
+		}
+	}
 	if q.getSessionByIDStmt != nil {
 		if cerr := q.getSessionByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getSessionByIDStmt: %w", cerr)
@@ -195,14 +203,14 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing updateMessageStmt: %w", cerr)
 		}
 	}
-	if q.updateSessionTitleStmt != nil {
-		if cerr := q.updateSessionTitleStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing updateSessionTitleStmt: %w", cerr)
-		}
-	}
 	if q.updateSessionStmt != nil {
 		if cerr := q.updateSessionStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing updateSessionStmt: %w", cerr)
+		}
+	}
+	if q.updateSessionTitleStmt != nil {
+		if cerr := q.updateSessionTitleStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateSessionTitleStmt: %w", cerr)
 		}
 	}
 	return err
@@ -255,6 +263,7 @@ type Queries struct {
 	getFileStmt                 *sql.Stmt
 	getFileByPathAndSessionStmt *sql.Stmt
 	getMessageStmt              *sql.Stmt
+	getMostRecentSessionStmt    *sql.Stmt
 	getSessionByIDStmt          *sql.Stmt
 	listFilesByPathStmt         *sql.Stmt
 	listFilesBySessionStmt      *sql.Stmt
@@ -283,6 +292,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getFileStmt:                 q.getFileStmt,
 		getFileByPathAndSessionStmt: q.getFileByPathAndSessionStmt,
 		getMessageStmt:              q.getMessageStmt,
+		getMostRecentSessionStmt:    q.getMostRecentSessionStmt,
 		getSessionByIDStmt:          q.getSessionByIDStmt,
 		listFilesByPathStmt:         q.listFilesByPathStmt,
 		listFilesBySessionStmt:      q.listFilesBySessionStmt,

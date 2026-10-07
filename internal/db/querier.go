@@ -20,6 +20,11 @@ type Querier interface {
 	GetFile(ctx context.Context, id string) (File, error)
 	GetFileByPathAndSession(ctx context.Context, arg GetFileByPathAndSessionParams) (File, error)
 	GetMessage(ctx context.Context, id string) (Message, error)
+	// updated_at and created_at are whole seconds, so two sessions touched in the
+	// same second tie. rowid breaks the tie by insertion order, which keeps the
+	// answer deterministic and picks the later session, rather than leaving it to
+	// whatever order the scan happens to return.
+	GetMostRecentSession(ctx context.Context) (Session, error)
 	GetSessionByID(ctx context.Context, id string) (Session, error)
 	ListFilesByPath(ctx context.Context, path string) ([]File, error)
 	ListFilesBySession(ctx context.Context, sessionID string) ([]File, error)

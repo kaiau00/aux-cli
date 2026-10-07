@@ -48,10 +48,14 @@ type startCompactSessionMsg struct{}
 // These open overlays from the /help, /model, and /sessions commands, whose
 // handlers cannot reach the model state directly.
 type (
-	toggleHelpMsg        struct{}
-	openModelDialogMsg   struct{}
-	openSessionDialogMsg struct{}
+	toggleHelpMsg      struct{}
+	openModelDialogMsg struct{}
 )
+
+// OpenSessionDialogMsg opens the session picker. Exported because `--resume`
+// with no id sends it from cmd/root.go once the program is running; inside the
+// TUI it is what /sessions and Ctrl+S both raise.
+type OpenSessionDialogMsg struct{}
 
 const (
 	quitKey = "q"
@@ -454,7 +458,7 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return a, nil
 
-	case openSessionDialogMsg:
+	case OpenSessionDialogMsg:
 		return a, a.openSessionDialog()
 
 	case dialog.CommandSelectedMsg:
@@ -1091,7 +1095,7 @@ If there are Cursor rules (in .cursor/rules/ or .cursorrules) or Copilot rules (
 		Title:       "Switch Session",
 		Description: "Open a previous session",
 		Handler: func(cmd dialog.Command) tea.Cmd {
-			return util.CmdHandler(openSessionDialogMsg{})
+			return util.CmdHandler(OpenSessionDialogMsg{})
 		},
 	})
 	// Load custom commands

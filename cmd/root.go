@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -49,7 +50,18 @@ to assist developers in writing, debugging, and understanding code directly from
 
   # Let a non-interactive prompt edit files and run commands
   aux -p "Add a test for Add" --yes
+
+  # Pick up where you left off
+  aux --continue
+
+  # Choose a session to reopen, or name one
+  aux --resume
+  aux --resume 0f8c1a2e-...
+
+  # Add a turn to the most recent session without the TUI
+  aux -p "and now add tests" --continue
   `,
+	Args: resumeAwareArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Past flag parsing, so anything that fails from here is a runtime
 		// problem, not a misuse of the command line. Dumping the usage text
@@ -77,6 +89,14 @@ to assist developers in writing, debugging, and understanding code directly from
 			yes = true
 		}
 
+		resume, err := parseResumeFlags(cmd, args)
+		if err != nil {
+			return err
+		}
+		if prompt != "" && resume.picker {
+			return errors.New("--resume needs a session id with -p: there is no list to pick from without the TUI")
+		}
+
 		// Validate format option
 		if !format.IsValid(outputFormat) {
 			return fmt.Errorf("invalid format option: %s\n%s", outputFormat, format.GetHelpText())
@@ -95,8 +115,7 @@ to assist developers in writing, debugging, and understanding code directly from
 			}
 			cwd = c
 		}
-		_, err := config.Load(cwd, debug)
-		if err != nil {
+		if _, err := config.Load(cwd, debug); err != nil {
 			return err
 		}
 
@@ -139,10 +158,18 @@ to assist developers in writing, debugging, and understanding code directly from
 		// Defer shutdown here so it runs for both interactive and non-interactive modes
 		defer app.Shutdown()
 
+		resumed, err := resolveResume(ctx, app.Sessions, resume)
+		if err != nil {
+			return err
+		}
+		if resume.wanted() && !resume.picker && resumed.ID == "" {
+			fmt.Fprintln(os.Stderr, "No previous session in this project; starting a new one.")
+		}
+
 		// Non-interactive mode
 		if prompt != "" {
 			// Run non-interactive flow using the App method
-			return app.RunNonInteractive(ctx, prompt, outputFormat, quiet, yes)
+			return app.RunNonInteractive(ctx, prompt, outputFormat, quiet, yes, resumed.ID)
 		}
 
 		// Interactive mode.
@@ -170,7 +197,20 @@ to assist developers in writing, debugging, and understanding code directly from
 		// Open the welcome session once the program is running. Sending before
 		// Run would race the model's initialisation, so this waits for the
 		// program to accept messages.
-		if intro.Shown {
+		//
+		// A resumed session wins over the intro: the intro only appears on a
+		// first boot, when there is nothing to resume, so the two can only
+		// collide if the flag named a session explicitly.
+		switch {
+		case resumed.ID != "":
+			go func() {
+				program.Send(chat.SessionSelectedMsg(resumed))
+			}()
+		case resume.picker:
+			go func() {
+				program.Send(tui.OpenSessionDialogMsg{})
+			}()
+		case intro.Shown:
 			go func() {
 				program.Send(chat.SessionSelectedMsg(intro.Session))
 			}()
@@ -334,6 +374,7 @@ func init() {
 	rootCmd.Flags().BoolP("debug", "d", false, "Debug")
 	rootCmd.Flags().StringP("cwd", "c", "", "Current working directory")
 	rootCmd.Flags().StringP("prompt", "p", "", "Prompt to run in non-interactive mode. Anything that would ask permission is denied unless --yes is given")
+	registerResumeFlags(rootCmd)
 	rootCmd.Flags().Bool("yes", false, "Approve every permission request in non-interactive mode. Without it, actions that would prompt are denied and listed.")
 	rootCmd.Flags().Bool("dangerously-skip-permissions", false, "Alias for --yes")
 	_ = rootCmd.Flags().MarkHidden("dangerously-skip-permissions")

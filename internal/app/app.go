@@ -401,7 +401,7 @@ func backgroundOverride(pref string) (dark bool, ok bool) {
 // true approves them all, false denies them all and lists them on stderr
 // afterwards. Denials are information, not failure; the model may still
 // produce a useful read-only answer.
-func (a *App) RunNonInteractive(ctx context.Context, prompt string, outputFormat string, quiet bool, yes bool) error {
+func (a *App) RunNonInteractive(ctx context.Context, prompt string, outputFormat string, quiet bool, yes bool, resumeSessionID string) error {
 	logging.Info("Running in non-interactive mode")
 
 	// Start spinner if not in quiet mode
@@ -412,22 +412,34 @@ func (a *App) RunNonInteractive(ctx context.Context, prompt string, outputFormat
 		defer spinner.Stop()
 	}
 
-	const maxPromptLengthForTitle = 100
-	titlePrefix := "Non-interactive: "
-	var titleSuffix string
-
-	if len(prompt) > maxPromptLengthForTitle {
-		titleSuffix = prompt[:maxPromptLengthForTitle] + "..."
+	// --continue and --resume append to an existing session instead of opening
+	// a new one, so the turn carries the earlier conversation.
+	var sess session.Session
+	var err error
+	if resumeSessionID != "" {
+		sess, err = a.Sessions.Get(ctx, resumeSessionID)
+		if err != nil {
+			return fmt.Errorf("failed to resume session %s: %w", resumeSessionID, err)
+		}
+		logging.Info("Resumed session for non-interactive run", "session_id", sess.ID)
 	} else {
-		titleSuffix = prompt
-	}
-	title := titlePrefix + titleSuffix
+		const maxPromptLengthForTitle = 100
+		titlePrefix := "Non-interactive: "
+		var titleSuffix string
 
-	sess, err := a.Sessions.Create(ctx, title)
-	if err != nil {
-		return fmt.Errorf("failed to create session for non-interactive mode: %w", err)
+		if len(prompt) > maxPromptLengthForTitle {
+			titleSuffix = prompt[:maxPromptLengthForTitle] + "..."
+		} else {
+			titleSuffix = prompt
+		}
+		title := titlePrefix + titleSuffix
+
+		sess, err = a.Sessions.Create(ctx, title)
+		if err != nil {
+			return fmt.Errorf("failed to create session for non-interactive mode: %w", err)
+		}
+		logging.Info("Created session for non-interactive run", "session_id", sess.ID)
 	}
-	logging.Info("Created session for non-interactive run", "session_id", sess.ID)
 
 	if yes {
 		a.Permissions.AutoApproveSession(sess.ID)

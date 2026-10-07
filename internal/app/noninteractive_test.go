@@ -55,7 +55,7 @@ func runNonInteractive(t *testing.T, yes bool) (*bashAgent, string) {
 	}
 
 	errCh := make(chan error, 1)
-	go func() { errCh <- a.RunNonInteractive(context.Background(), "run ls", "text", true, yes) }()
+	go func() { errCh <- a.RunNonInteractive(context.Background(), "run ls", "text", true, yes, "") }()
 	select {
 	case err := <-errCh:
 		if err != nil {

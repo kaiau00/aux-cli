@@ -87,6 +87,37 @@ func (q *Queries) DeleteSession(ctx context.Context, id string) error {
 	return err
 }
 
+const getMostRecentSession = `-- name: GetMostRecentSession :one
+SELECT id, parent_session_id, title, message_count, prompt_tokens, completion_tokens, cost, updated_at, created_at, summary_message_id, context_tokens
+FROM sessions
+WHERE parent_session_id is NULL
+ORDER BY updated_at DESC, created_at DESC, rowid DESC
+LIMIT 1
+`
+
+// updated_at and created_at are whole seconds, so two sessions touched in the
+// same second tie. rowid breaks the tie by insertion order, which keeps the
+// answer deterministic and picks the later session, rather than leaving it to
+// whatever order the scan happens to return.
+func (q *Queries) GetMostRecentSession(ctx context.Context) (Session, error) {
+	row := q.queryRow(ctx, q.getMostRecentSessionStmt, getMostRecentSession)
+	var i Session
+	err := row.Scan(
+		&i.ID,
+		&i.ParentSessionID,
+		&i.Title,
+		&i.MessageCount,
+		&i.PromptTokens,
+		&i.CompletionTokens,
+		&i.Cost,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+		&i.SummaryMessageID,
+		&i.ContextTokens,
+	)
+	return i, err
+}
+
 const getSessionByID = `-- name: GetSessionByID :one
 SELECT id, parent_session_id, title, message_count, prompt_tokens, completion_tokens, cost, updated_at, created_at, summary_message_id, context_tokens
 FROM sessions
@@ -154,37 +185,6 @@ func (q *Queries) ListSessions(ctx context.Context) ([]Session, error) {
 	return items, nil
 }
 
-const updateSessionTitle = `-- name: UpdateSessionTitle :one
-UPDATE sessions
-SET title = ?
-WHERE id = ?
-RETURNING id, parent_session_id, title, message_count, prompt_tokens, completion_tokens, cost, updated_at, created_at, summary_message_id, context_tokens
-`
-
-type UpdateSessionTitleParams struct {
-	Title string `json:"title"`
-	ID    string `json:"id"`
-}
-
-func (q *Queries) UpdateSessionTitle(ctx context.Context, arg UpdateSessionTitleParams) (Session, error) {
-	row := q.queryRow(ctx, q.updateSessionTitleStmt, updateSessionTitle, arg.Title, arg.ID)
-	var i Session
-	err := row.Scan(
-		&i.ID,
-		&i.ParentSessionID,
-		&i.Title,
-		&i.MessageCount,
-		&i.PromptTokens,
-		&i.CompletionTokens,
-		&i.Cost,
-		&i.UpdatedAt,
-		&i.CreatedAt,
-		&i.SummaryMessageID,
-		&i.ContextTokens,
-	)
-	return i, err
-}
-
 const updateSession = `-- name: UpdateSession :one
 UPDATE sessions
 SET
@@ -218,6 +218,37 @@ func (q *Queries) UpdateSession(ctx context.Context, arg UpdateSessionParams) (S
 		arg.Cost,
 		arg.ID,
 	)
+	var i Session
+	err := row.Scan(
+		&i.ID,
+		&i.ParentSessionID,
+		&i.Title,
+		&i.MessageCount,
+		&i.PromptTokens,
+		&i.CompletionTokens,
+		&i.Cost,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+		&i.SummaryMessageID,
+		&i.ContextTokens,
+	)
+	return i, err
+}
+
+const updateSessionTitle = `-- name: UpdateSessionTitle :one
+UPDATE sessions
+SET title = ?
+WHERE id = ?
+RETURNING id, parent_session_id, title, message_count, prompt_tokens, completion_tokens, cost, updated_at, created_at, summary_message_id, context_tokens
+`
+
+type UpdateSessionTitleParams struct {
+	Title string `json:"title"`
+	ID    string `json:"id"`
+}
+
+func (q *Queries) UpdateSessionTitle(ctx context.Context, arg UpdateSessionTitleParams) (Session, error) {
+	row := q.queryRow(ctx, q.updateSessionTitleStmt, updateSessionTitle, arg.Title, arg.ID)
 	var i Session
 	err := row.Scan(
 		&i.ID,

@@ -1009,8 +1009,8 @@ in M1.6.
       genai (#44). Offline usage fixtures pass; the live per-provider
       status-bar token check needs real keys and has not been run
 - [x] M2.3 slash commands — merged (#45)
-- [ ] M2.4 resume, M2.5 compaction, M2.6 memory UX, M2.7 text,
-      M2.8 trimming — merged
+- [x] M2.4 resume — merged (#47)
+- [ ] M2.5 compaction, M2.6 memory UX, M2.7 text, M2.8 trimming — merged
 - [ ] M3.5 `--version` local builds
 - [ ] M3.7 coverage ≥ 45%, floor raised
 - [ ] M3.6 README rewrite, reviewed by a non-author against a scratch session
