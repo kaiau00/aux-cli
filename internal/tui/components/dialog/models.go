@@ -189,6 +189,24 @@ func (m *modelDialogCmp) View() string {
 	t := theme.CurrentTheme()
 	baseStyle := styles.BaseStyle()
 
+	// With no configured provider there is nothing to pick from, and the
+	// capitalisation below would slice an empty string. Opening the picker
+	// before a key is set used to panic here, which is a crash a first-time
+	// user could reach with one keystroke.
+	if m.provider == "" || len(m.availableProviders) == 0 {
+		return baseStyle.
+			Padding(1, 2).
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(t.BorderFocused()).
+			Width(maxDialogWidth).
+			Render(lipgloss.JoinVertical(
+				lipgloss.Left,
+				baseStyle.Foreground(t.Primary()).Bold(true).Render("No providers configured"),
+				"",
+				baseStyle.Foreground(t.TextMuted()).Render("Set an API key, then reopen this with ctrl+o."),
+			))
+	}
+
 	// Capitalize first letter of provider name
 	providerName := strings.ToUpper(string(m.provider)[:1]) + string(m.provider[1:])
 	if models.UnmaintainedProvider(m.provider) {
