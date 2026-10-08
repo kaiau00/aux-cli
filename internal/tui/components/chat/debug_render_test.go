@@ -21,9 +21,16 @@ import (
 // while the foreground drops or misrenders, since the two were never
 // generated for the same profile.
 //
-// This asserts foreground and background are emitted in the *same* profile
-// (both ANSI256, neither one still 24-bit), which is what GetMarkdownRenderer
-// pinning to lipgloss.ColorProfile() is responsible for.
+// This asserts the foreground is emitted in the terminal's own profile
+// (ANSI256, not still 24-bit), which is what GetMarkdownRenderer pinning to
+// lipgloss.ColorProfile() is responsible for.
+//
+// Amended with the canvas rule: the transcript no longer paints a background
+// at all, so the original "both halves in the same profile" check becomes
+// "the foreground is in the right profile and there is no background to
+// diverge from". That is strictly stronger against the incident this test
+// exists for -- text cannot mismatch a background that was never emitted.
+// See styles.StripBackgrounds and TestBaseStyleLeavesTheBackgroundAlone.
 func TestRenderedMessageMatchesTerminalColorProfile(t *testing.T) {
 	origDark := lipgloss.HasDarkBackground()
 	defer lipgloss.SetHasDarkBackground(origDark)
@@ -44,13 +51,12 @@ func TestRenderedMessageMatchesTerminalColorProfile(t *testing.T) {
 	if strings.Contains(out, "38;2;") {
 		t.Fatalf("expected no 24-bit foreground codes at ANSI256 profile, got %q", out)
 	}
-	if strings.Contains(out, "48;2;") {
-		t.Fatalf("expected no 24-bit background codes at ANSI256 profile, got %q", out)
-	}
 	if !strings.Contains(out, "38;5;") {
 		t.Fatalf("expected an ANSI256 foreground code, got %q", out)
 	}
-	if !strings.Contains(out, "48;5;") {
-		t.Fatalf("expected an ANSI256 background code, got %q", out)
+	for _, bg := range []string{"48;2;", "48;5;"} {
+		if strings.Contains(out, bg) {
+			t.Fatalf("the transcript is canvas and must paint no background, found %q in %q", bg, out)
+		}
 	}
 }

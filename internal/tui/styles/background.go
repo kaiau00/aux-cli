@@ -34,8 +34,27 @@ func resolveAdaptiveColor(color lipgloss.AdaptiveColor) string {
 // selectable but visually unreadable against the wrong background.
 func ForceReplaceBackgroundWithLipgloss(input string, newBgColor lipgloss.AdaptiveColor) string {
 	hex := resolveAdaptiveColor(newBgColor)
-	newBg := lipgloss.ColorProfile().Color(hex).Sequence(true)
+	return rewriteBackground(input, lipgloss.ColorProfile().Color(hex).Sequence(true))
+}
 
+// StripBackgrounds removes every background colour code from input, leaving
+// whatever the terminal already paints showing through.
+//
+// This is the canvas case. ForceReplaceBackgroundWithLipgloss exists for the
+// opposite one -- a dialog or other surface that has to be opaque, because an
+// overlay you can see the transcript through is unreadable.
+//
+// It solves the Terminal.app problem in that function's comment more directly:
+// with no background code emitted at all, there is nothing for a terminal with
+// incomplete 24-bit support to drop, and so nothing that can fall through to an
+// adjacent accent.
+func StripBackgrounds(input string) string {
+	return rewriteBackground(input, "")
+}
+
+// rewriteBackground drops every background code in input and appends newBg,
+// which may be empty to mean "leave the terminal's own background".
+func rewriteBackground(input, newBg string) string {
 	return ansiEscape.ReplaceAllStringFunc(input, func(seq string) string {
 		const (
 			escPrefixLen = 2 // "\x1b["

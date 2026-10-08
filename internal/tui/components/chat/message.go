@@ -46,7 +46,6 @@ func toMarkdown(content string, focused bool, width int) string {
 
 func renderMessage(msg string, isUser bool, isFocused bool, width int, info ...string) string {
 	t := theme.CurrentTheme()
-	bg := t.Background()
 
 	// A single-width accent bar, not a filled block: user and assistant
 	// messages are told apart by BorderForeground hue alone (Info vs
@@ -65,9 +64,10 @@ func renderMessage(msg string, isUser bool, isFocused bool, width int, info ...s
 			Foreground(t.Text())
 	}
 
-	// Apply markdown formatting and handle background color
+	// Markdown, with glamour's own background codes stripped so the terminal's
+	// background shows through.
 	parts := []string{
-		styles.ForceReplaceBackgroundWithLipgloss(toMarkdown(msg, isFocused, width), bg),
+		styles.StripBackgrounds(toMarkdown(msg, isFocused, width)),
 	}
 
 	// Remove newline at the end
@@ -299,7 +299,6 @@ func renderReasoningDetails(
 ) string {
 	t := theme.CurrentTheme()
 	baseStyle := styles.BaseStyle()
-	bg := t.Background()
 
 	style := baseStyle.
 		Width(width - 1).
@@ -317,9 +316,8 @@ func renderReasoningDetails(
 				Width(width-1).
 				Foreground(t.TextMuted()).
 				Render("Thinking"))
-			parts = append(parts, styles.ForceReplaceBackgroundWithLipgloss(
+			parts = append(parts, styles.StripBackgrounds(
 				toMarkdown(thinkingContent, msgID == focusedUIMessageId, width),
-				bg,
 			))
 		}
 
@@ -590,15 +588,13 @@ func renderToolResponse(toolCall message.ToolCall, response message.ToolResult, 
 	resultContent := truncateHeight(response.Content, maxResultHeight)
 	switch toolCall.Name {
 	case agent.AgentToolName:
-		return styles.ForceReplaceBackgroundWithLipgloss(
+		return styles.StripBackgrounds(
 			toMarkdown(resultContent, false, width),
-			t.Background(),
 		)
 	case tools.BashToolName:
 		resultContent = fmt.Sprintf("```bash\n%s\n```", resultContent)
-		return styles.ForceReplaceBackgroundWithLipgloss(
+		return styles.StripBackgrounds(
 			toMarkdown(resultContent, true, width),
-			t.Background(),
 		)
 	case tools.EditToolName:
 		metadata := tools.EditResponseMetadata{}
@@ -617,9 +613,8 @@ func renderToolResponse(toolCall message.ToolCall, response message.ToolResult, 
 			mdFormat = "html"
 		}
 		resultContent = fmt.Sprintf("```%s\n%s\n```", mdFormat, resultContent)
-		return styles.ForceReplaceBackgroundWithLipgloss(
+		return styles.StripBackgrounds(
 			toMarkdown(resultContent, true, width),
-			t.Background(),
 		)
 	case tools.GlobToolName:
 		return baseStyle.Width(width).Foreground(t.TextMuted()).Render(resultContent)
@@ -639,9 +634,8 @@ func renderToolResponse(toolCall message.ToolCall, response message.ToolResult, 
 			ext = strings.ToLower(ext[1:])
 		}
 		resultContent = fmt.Sprintf("```%s\n%s\n```", ext, truncateHeight(metadata.Content, maxResultHeight))
-		return styles.ForceReplaceBackgroundWithLipgloss(
+		return styles.StripBackgrounds(
 			toMarkdown(resultContent, true, width),
-			t.Background(),
 		)
 	case tools.WriteToolName:
 		params := tools.WriteParams{}
@@ -655,15 +649,13 @@ func renderToolResponse(toolCall message.ToolCall, response message.ToolResult, 
 			ext = strings.ToLower(ext[1:])
 		}
 		resultContent = fmt.Sprintf("```%s\n%s\n```", ext, truncateHeight(params.Content, maxResultHeight))
-		return styles.ForceReplaceBackgroundWithLipgloss(
+		return styles.StripBackgrounds(
 			toMarkdown(resultContent, true, width),
-			t.Background(),
 		)
 	default:
 		resultContent = fmt.Sprintf("```text\n%s\n```", resultContent)
-		return styles.ForceReplaceBackgroundWithLipgloss(
+		return styles.StripBackgrounds(
 			toMarkdown(resultContent, true, width),
-			t.Background(),
 		)
 	}
 }
