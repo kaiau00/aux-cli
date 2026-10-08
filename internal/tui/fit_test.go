@@ -41,15 +41,25 @@ func (idleAgent) Update(config.AgentName, models.ModelID) (models.Model, error) 
 }
 func (idleAgent) Summarize(context.Context, string) error { return nil }
 
-// The whole app -- task header, page, status bar -- has to occupy exactly the
-// rows the terminal reported. The alternate screen cannot scroll, so one row
-// too many silently pushes the task header off the top, taking the model name
-// and the context budget with it.
+// liveRegionCeiling is the largest live region the chat page will ask for, plus
+// the header and status rows the app wraps around it. Above this terminal
+// height the app must leave rows for the terminal's own scrollback.
+const liveRegionCeiling = 14
+
+// The whole app -- task header, page, status bar -- must fit in the rows the
+// terminal reported, and on any terminal taller than the live region it must
+// leave the rest to the terminal.
 //
-// The chat page has its own version of this test; this one guards the two rows
-// the app reserves for the header and status bar around it, which is where a
-// long session title or a long model name would otherwise wrap.
-func TestAppRendersExactlyTheRowsTheTerminalReported(t *testing.T) {
+// The invariant used to be "exactly the rows reported", because the alternate
+// screen cannot scroll and one row too many pushed the task header off the top.
+// Inline rendering inverts it: history is written into the terminal's
+// scrollback, so filling the window would mean there was nothing above the
+// live region to scroll back to.
+//
+// The chat page has its own version of this; this one guards the two rows the
+// app reserves for the header and status bar, which is where a long session
+// title or model name would otherwise wrap.
+func TestAppFitsWithinTheTerminalAndLeavesScrollback(t *testing.T) {
 	dir := t.TempDir()
 	if _, err := config.Load(dir, false); err != nil {
 		t.Fatalf("config.Load: %v", err)
@@ -83,9 +93,17 @@ func TestAppRendersExactlyTheRowsTheTerminalReported(t *testing.T) {
 					m, _ = m.Update(chat.SessionSelectedMsg(sess))
 				}
 				got := strings.Count(m.View(), "\n") + 1
-				if got != h {
-					t.Errorf("session=%v at %dx%d the app rendered %d rows, want %d",
-						withSession, w, h, got, h)
+				if got > h {
+					t.Errorf("session=%v at %dx%d the app rendered %d rows, more than the terminal has",
+						withSession, w, h, got)
+				}
+				// Inline rendering: Aux manages a live region at the bottom and
+				// the rest of the screen belongs to the terminal's scrollback.
+				// Filling the window would leave the terminal nothing to
+				// scroll, which is the whole point of printing history to it.
+				if h > liveRegionCeiling && got >= h {
+					t.Errorf("session=%v at %dx%d the app filled the window (%d rows); the live region must leave room for scrollback",
+						withSession, w, h, got)
 				}
 			}
 		}

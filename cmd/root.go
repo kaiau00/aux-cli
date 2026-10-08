@@ -183,16 +183,16 @@ to assist developers in writing, debugging, and understanding code directly from
 
 		// Set up the TUI
 		zone.NewGlobal()
-		program := tea.NewProgram(
-			tui.New(app),
-			tea.WithAltScreen(),
-			// Without mouse reporting the terminal keeps the wheel and scrolls
-			// its own scrollback, so scrolling up in a conversation showed the
-			// shell history from before Aux started. The cost is that dragging
-			// to select text now needs Shift held down, which is the usual
-			// bargain for a full-screen program that scrolls its own content.
-			tea.WithMouseCellMotion(),
-		)
+		// No alternate screen and no mouse capture: the conversation is written
+		// into the terminal's own scrollback, and only the live region -- the
+		// composer, the in-flight reply and the status line -- is managed by
+		// Aux. The terminal's wheel, its scrollback search and its text
+		// selection all work normally again, and what you did survives Aux
+		// exiting.
+		//
+		// tea.Println is a no-op while the alternate screen is active, so this
+		// is a precondition rather than a preference.
+		program := tea.NewProgram(tui.New(app))
 
 		// Open the welcome session once the program is running. Sending before
 		// Run would race the model's initialisation, so this waits for the
