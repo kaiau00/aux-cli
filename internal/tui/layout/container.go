@@ -59,8 +59,6 @@ func (c *container) View() string {
 	width := c.width
 	height := c.height
 
-	style = style.Background(t.Background())
-
 	// Apply border if any side is enabled
 	if c.borderTop || c.borderRight || c.borderBottom || c.borderLeft {
 		// Adjust width and height for borders

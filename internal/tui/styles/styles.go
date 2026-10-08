@@ -12,10 +12,22 @@ var (
 // Style generation functions that use the current theme
 
 // BaseStyle returns the base style with background and foreground colors
+// BaseStyle is the style every widget starts from. It sets a foreground and
+// deliberately leaves the background alone, so the canvas is whatever the
+// user's terminal already paints.
+//
+// Aux used to paint its own: at 160x44 a conversation emitted 4,557 background
+// colour sequences against 2,203 foreground ones, two background changes for
+// every foreground one, which is what made it read as a themed application
+// sitting in a terminal rather than as a terminal program.
+//
+// Surfaces that must be opaque -- dialogs, selection fills, status badges --
+// still set one explicitly. The theme keeps a Background() role for them, and
+// for the contrast tests, which check legibility against a reference
+// background rather than against nothing.
 func BaseStyle() lipgloss.Style {
 	t := theme.CurrentTheme()
 	return lipgloss.NewStyle().
-		Background(t.Background()).
 		Foreground(t.Text())
 }
 

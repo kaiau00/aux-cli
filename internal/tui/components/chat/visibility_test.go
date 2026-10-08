@@ -132,3 +132,32 @@ func TestPlainReplyOffersNoReasoningToggle(t *testing.T) {
 		t.Errorf("a plain reply should advertise no Tab affordance.\nGot:\n%s", got)
 	}
 }
+
+// The transcript is canvas, not surface: it must not paint over the terminal's
+// own background. Glamour emits its own background codes, so this is a live
+// regression risk every time a render path is added.
+func TestRenderedMessageEmitsNoBackgroundCodes(t *testing.T) {
+	msg := message.Message{
+		ID:   "a1",
+		Role: message.Assistant,
+		Parts: []message.ContentPart{
+			message.TextContent{Text: "A reply with `inline code`, a list:\n\n- one\n- two\n\nand a block:\n\n```go\nfunc main() {}\n```\n"},
+			message.ToolCall{ID: "t1", Name: "view", Input: `{"file_path":"alpha.go"}`, Finished: true},
+			message.Finish{Reason: message.FinishReasonEndTurn, Time: 10},
+		},
+	}
+	if _, err := config.Load(t.TempDir(), false); err != nil {
+		t.Fatalf("config.Load: %v", err)
+	}
+	var reasoning []message.Message
+	parts := renderAssistantMessage(msg, 0, []message.Message{msg}, reasoning, nil, "", false, false, "*", 100, 0)
+	for i, p := range parts {
+		if backgroundCode.MatchString(p.content) {
+			t.Errorf("part %d painted a background:\n%s", i,
+				strings.ReplaceAll(p.content, "\x1b", "ESC"))
+		}
+	}
+}
+
+// Any SGR run that sets a background, in every form glamour and lipgloss emit.
+var backgroundCode = regexp.MustCompile(`\x1b\[[0-9;]*?(?:48;|\b(?:4[0-7]|49|10[0-7])\b)[0-9;]*m`)
