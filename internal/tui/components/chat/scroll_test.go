@@ -38,6 +38,41 @@ func longConversation(sessionID string, n int) []message.Message {
 	return msgs
 }
 
+// runCmd executes cmd and feeds every message it produces back into the model,
+// unwrapping batches the way the Bubble Tea runtime does. Update now returns a
+// batch -- the debounce timer alongside the lines being handed to the
+// terminal's scrollback -- so a test that feeds the batch back as one message
+// delivers nothing.
+func runCmd(m *messagesCmp, cmd tea.Cmd) *messagesCmp {
+	if cmd == nil {
+		return m
+	}
+	switch msg := cmd().(type) {
+	case nil:
+		return m
+	case tea.BatchMsg:
+		for _, c := range msg {
+			m = runCmd(m, c)
+		}
+		return m
+	default:
+		updated, next := m.Update(msg)
+		return runCmd(updated.(*messagesCmp), next)
+	}
+}
+
+// streamingTail appends the thing a real stream looks like: an assistant
+// message with no finish part, which messageIsSettled refuses to hand to the
+// terminal because more of it is still coming.
+func streamingTail(msgs []message.Message, sessionID, text string) []message.Message {
+	return append(msgs, message.Message{
+		ID:        "streaming",
+		Role:      message.Assistant,
+		SessionID: sessionID,
+		Parts:     []message.ContentPart{message.TextContent{Text: text}},
+	})
+}
+
 // idleAgent is the smallest agent.Service the render path will accept: the
 // messages pane asks only whether it is busy.
 type idleAgent struct{ agent.Service }
@@ -110,40 +145,53 @@ func TestWheelScrollsBackDown(t *testing.T) {
 	}
 }
 
-// A user scrolled up to read earlier history while a response is actively
-// streaming must not be yanked back to the bottom by the next content delta.
-// Streaming fires a pubsub update for the last message many times a second;
-// this used to call GotoBottom unconditionally on every one of them.
-func TestStreamingUpdateDoesNotStealScrollPosition(t *testing.T) {
+// A message still streaming must not reach the terminal's scrollback. Once a
+// line is printed it belongs to the terminal and cannot be taken back, so
+// printing a half-finished reply would leave the partial text above the live
+// region for good and print the finished version again underneath it.
+//
+// This replaces TestStreamingUpdateDoesNotStealScrollPosition. That test
+// guarded a real bug -- streaming called GotoBottom on every delta and yanked
+// a scrolled-up reader back down -- which inline rendering removes by
+// construction: history is the terminal's scrollback, and Aux no longer has a
+// scroll position to steal. The risk that replaces it is this one.
+func TestStreamingMessageIsNotPrintedUntilItSettles(t *testing.T) {
 	loadConfig(t)
 	m := NewMessagesCmp(&app.App{CoderAgent: idleAgent{}}).(*messagesCmp)
 	m.SetSize(80, 10)
 	m.session.ID = "s1"
-	m.messages = longConversation("s1", 30)
-	m.rerender()
-	if m.viewport.AtBottom() {
-		t.Fatal("test setup: conversation is not tall enough to scroll")
-	}
-	m.viewport.GotoTop()
+	m.messages = streamingTail(longConversation("s1", 4), "s1", "partial repl")
 
-	last := m.messages[len(m.messages)-1]
-	last.Parts = []message.ContentPart{message.TextContent{Text: "growing streamed content"}}
-	updated, cmd := m.Update(pubsub.Event[message.Message]{Type: pubsub.UpdatedEvent, Payload: last})
-	m = updated.(*messagesCmp)
-	if cmd == nil {
-		t.Fatal("expected a debounced re-render to be scheduled")
+	// The settled history is handed over; the streaming tail is not.
+	if lines := m.takeScrollback(); len(lines) == 0 {
+		t.Fatal("the settled history should have been handed to the terminal")
 	}
-	if got := m.viewport.YOffset; got != 0 {
-		t.Fatalf("the streaming event rendered synchronously (offset moved to %d); it must be debounced", got)
+	if m.printed["streaming"] {
+		t.Fatal("a message with no finish part was printed; a partial reply cannot be unprinted")
 	}
 
-	// The debounce tick firing.
-	fired := cmd()
-	updated, _ = m.Update(fired)
-	m = updated.(*messagesCmp)
+	// It grows, and still is not printed.
+	m.messages[len(m.messages)-1].Parts = []message.ContentPart{
+		message.TextContent{Text: "partial reply, now longer"},
+	}
+	if lines := m.takeScrollback(); len(lines) != 0 {
+		t.Fatalf("a growing message was handed over: %q", lines)
+	}
 
-	if m.viewport.AtBottom() {
-		t.Fatal("a streaming update while scrolled up jumped back to the bottom")
+	// Finishing it is what releases it.
+	m.messages[len(m.messages)-1].Parts = append(
+		m.messages[len(m.messages)-1].Parts,
+		message.Finish{Reason: message.FinishReasonEndTurn, Time: 10},
+	)
+	lines := m.takeScrollback()
+	if len(lines) == 0 {
+		t.Fatal("a finished message was not handed over")
+	}
+	if !m.printed["streaming"] {
+		t.Fatal("the finished message was not marked as printed, so it would print twice")
+	}
+	if !strings.Contains(strings.Join(lines, "\n"), "now longer") {
+		t.Fatalf("the printed text is not the final content: %q", lines)
 	}
 }
 
@@ -183,7 +231,10 @@ func TestStreamingUpdatesCoalesceIntoOneRender(t *testing.T) {
 	m := NewMessagesCmp(&app.App{CoderAgent: idleAgent{}}).(*messagesCmp)
 	m.SetSize(80, 10)
 	m.session.ID = "s1"
-	m.messages = longConversation("s1", 5)
+	// The tail has to be an unfinished assistant message. A user message is
+	// settled the moment it exists, so it would be handed to the terminal and
+	// leave the live region -- which is not what streaming looks like.
+	m.messages = streamingTail(longConversation("s1", 4), "s1", "")
 
 	last := m.messages[len(m.messages)-1]
 
@@ -209,10 +260,9 @@ func TestStreamingUpdatesCoalesceIntoOneRender(t *testing.T) {
 	// content -- coalescing must not drop the tail of what streamed in. The
 	// changed message is last in the conversation, so it may be scrolled out
 	// of the default view; look at the bottom, where it actually is.
-	updated, _ = m.Update(cmd1())
-	m = updated.(*messagesCmp)
+	m = runCmd(m, cmd1)
 	m.viewport.GotoBottom()
-	if !strings.Contains(m.viewport.View(), "abc") {
+	if !strings.Contains(m.View(), "abc") {
 		t.Fatal("the coalesced render did not reflect the latest streamed content")
 	}
 }

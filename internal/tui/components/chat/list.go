@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -48,6 +49,85 @@ type messagesCmp struct {
 	// updates behind rerenderDebounce; see scheduleRerender.
 	rerenderPending      bool
 	rerenderTailActivity bool
+
+	// printed records the messages already handed to the terminal's own
+	// scrollback. Aux renders only what is still in flight; a finished message
+	// is printed once, above the live region, and belongs to the terminal from
+	// then on -- so it can be scrolled to, selected and copied with the
+	// terminal's own tools, and it survives Aux exiting.
+	//
+	// The consequence is that a printed line cannot be re-wrapped. Resizing the
+	// window re-wraps the live region and leaves history as it was written,
+	// which is the same bargain every program that writes to scrollback makes.
+	printed map[string]bool
+}
+
+// messageIsSettled reports whether the message at index i will not change
+// again, and so can be handed to the terminal.
+//
+// A user message is settled as soon as it exists. An assistant message is
+// settled when it carries a finish part -- or when a later message exists,
+// because the model has moved on and nothing will be appended to this one.
+// Getting this wrong in the optimistic direction prints a half-streamed reply
+// and then has no way to take it back.
+func messageIsSettled(messages []message.Message, i int) bool {
+	if i < 0 || i >= len(messages) {
+		return false
+	}
+	msg := messages[i]
+	if msg.Role == message.User {
+		return true
+	}
+	if msg.IsFinished() {
+		return true
+	}
+	return i < len(messages)-1
+}
+
+// takeScrollback renders every settled message not yet handed over, marks them
+// handed over, and returns the lines to print. Separated from Update so the
+// decision of what reaches the terminal is testable without a terminal.
+func (m *messagesCmp) takeScrollback() []string {
+	if m.width == 0 {
+		return nil
+	}
+	var out []string
+	for i, msg := range m.messages {
+		if m.printed[msg.ID] || !messageIsSettled(m.messages, i) {
+			continue
+		}
+		rendered := m.renderOne(i, msg)
+		m.printed[msg.ID] = true
+		if rendered == "" {
+			continue
+		}
+		out = append(out, rendered, "")
+	}
+	return out
+}
+
+// renderOne renders a single message exactly as the transcript would.
+func (m *messagesCmp) renderOne(index int, msg message.Message) string {
+	switch msg.Role {
+	case message.User:
+		return renderUserMessage(msg, false, m.width, 0).content
+	case message.Assistant:
+		var reasoning []message.Message
+		if hasReasoningDetails(msg) {
+			reasoning = []message.Message{msg}
+		}
+		parts := renderAssistantMessage(
+			msg, index, m.messages, reasoning, m.app.Messages,
+			m.currentMsgID, m.session.SummaryMessageID == msg.ID,
+			m.expandedThinking[msg.ID], m.spinner.View(), m.width, 0,
+		)
+		rendered := make([]string, 0, len(parts))
+		for _, p := range parts {
+			rendered = append(rendered, p.content)
+		}
+		return strings.Join(rendered, "\n")
+	}
+	return ""
 }
 
 // rerenderDebounce caps how often a streaming response forces a full
@@ -115,7 +195,25 @@ func (m *messagesCmp) Init() tea.Cmd {
 	return tea.Batch(m.viewport.Init(), m.spinner.Tick)
 }
 
+// Update handles the message, then hands over anything that settled as a
+// result. Wrapping rather than draining at each return keeps it impossible for
+// a path to settle a message and not print it -- a created message, a finished
+// stream and a session being opened all arrive differently.
 func (m *messagesCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	model, cmd := m.updateInner(msg)
+	if lines := m.takeScrollback(); len(lines) > 0 {
+		for len(lines) > 0 && lines[len(lines)-1] == "" {
+			lines = lines[:len(lines)-1]
+		}
+		// The printed messages have to leave the live region, or they show
+		// twice until the next render.
+		m.renderView()
+		cmd = tea.Batch(cmd, tea.Println(strings.Join(lines, "\n")))
+	}
+	return model, cmd
+}
+
+func (m *messagesCmp) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	switch msg := msg.(type) {
 	case dialog.ThemeChangedMsg:
@@ -132,6 +230,7 @@ func (m *messagesCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.messages = make([]message.Message, 0)
 		m.currentMsgID = ""
 		m.rendering = false
+		m.printed = make(map[string]bool)
 		return m, nil
 
 	case tea.MouseMsg:
@@ -296,6 +395,11 @@ func (m *messagesCmp) renderView() {
 		return
 	}
 	for inx, msg := range m.messages {
+		// Settled messages live in the terminal's scrollback; rendering them
+		// here too would show everything twice.
+		if m.printed[msg.ID] {
+			continue
+		}
 		switch msg.Role {
 		case message.User:
 			if cache, ok := m.cachedContent[msg.ID]; ok && cache.width == m.width {
@@ -348,9 +452,15 @@ func (m *messagesCmp) renderView() {
 				m.uiMessages = append(m.uiMessages, msg)
 				pos += msg.height + 1 // + 1 for spacing
 			}
-			m.cachedContent[msg.ID] = cacheItem{
-				width:   m.width,
-				content: assistantMessages,
+			// Only cache a message that will not change again. An in-flight
+			// reply grows on every delta, and a cached copy of an earlier
+			// delta is what the debounced re-render would then show: the
+			// stream appeared to stop at whatever arrived first.
+			if messageIsSettled(m.messages, inx) {
+				m.cachedContent[msg.ID] = cacheItem{
+					width:   m.width,
+					content: assistantMessages,
+				}
 			}
 		}
 	}
@@ -575,6 +685,10 @@ func (m *messagesCmp) SetSession(session session.Session) tea.Cmd {
 		return nil
 	}
 	m.session = session
+	// A different session has a different history, so nothing carries over.
+	// Opening a session prints it into scrollback, which is how --continue and
+	// the picker hand you back what you were doing.
+	m.printed = make(map[string]bool)
 	messages, err := m.app.Messages.List(context.Background(), session.ID)
 	if err != nil {
 		return util.ReportError(err)
@@ -615,6 +729,7 @@ func NewMessagesCmp(app *app.App) tea.Model {
 	vp.KeyMap.HalfPageDown = messageKeys.HalfPageDown
 	return &messagesCmp{
 		app:              app,
+		printed:          make(map[string]bool),
 		cachedContent:    make(map[string]cacheItem),
 		viewport:         vp,
 		spinner:          s,

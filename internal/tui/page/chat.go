@@ -3,6 +3,7 @@ package page
 import (
 	"context"
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -43,7 +44,10 @@ type chatPage struct {
 	commandCompletion     dialog.CompletionDialog
 	showCommandCompletion bool
 	showContextDrawer     bool
+	// width/height are the live region Aux manages; termWidth/termHeight are
+	// the terminal itself, which overlays may use in full.
 	width, height         int
+	termWidth, termHeight int
 }
 
 type ChatKeyMap struct {
@@ -82,11 +86,20 @@ func (p *chatPage) Init() tea.Cmd {
 
 func (p *chatPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
+	// The page is the only authority on how tall the live region is. The split
+	// layout sizes itself from any WindowSizeMsg it receives, so it has to be
+	// handed the capped height rather than the terminal's -- otherwise it
+	// reclaims the whole screen and there is nothing left for the terminal to
+	// scroll.
+	if ws, ok := msg.(tea.WindowSizeMsg); ok {
+		p.termWidth, p.termHeight = ws.Width, ws.Height
+		ws.Height = liveRegionHeight(ws.Height)
+		msg = ws
+	}
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		p.width, p.height = msg.Width, msg.Height
-		cmd := p.layout.SetSize(msg.Width, msg.Height)
-		cmds = append(cmds, cmd)
+		cmds = append(cmds, p.layout.SetSize(msg.Width, msg.Height))
 	case dialog.CompletionDialogCloseMsg:
 		p.showCompletionDialog = false
 		p.showCommandCompletion = false
@@ -210,7 +223,24 @@ func (p *chatPage) sendMessage(text string, attachments []message.Attachment) te
 }
 
 func (p *chatPage) SetSize(width, height int) tea.Cmd {
-	return p.layout.SetSize(width, height)
+	p.termWidth, p.termHeight = width, height
+	p.width, p.height = width, liveRegionHeight(height)
+	return p.layout.SetSize(p.width, p.height)
+}
+
+// liveRegionHeight is how many rows Aux manages at the bottom of the screen.
+// Everything above belongs to the terminal.
+//
+// The cap is what makes the conversation visible: without it the live region
+// fills the window, the terminal has nothing to scroll, and printing to
+// scrollback buys nothing. Below the cap a small terminal gets everything it
+// has, because a composer that does not fit is worse than a short history.
+func liveRegionHeight(terminalHeight int) int {
+	const maxLiveRows = 12
+	if terminalHeight <= 0 {
+		return 0
+	}
+	return min(maxLiveRows, terminalHeight)
 }
 
 func (p *chatPage) GetSize() (int, int) {
@@ -253,7 +283,9 @@ func (p *chatPage) View() string {
 		if drawerWidth < minUsableDrawerWidth {
 			drawerWidth = p.width
 		}
-		p.contextPaneContainer.SetSize(drawerWidth, p.height)
+		// The drawer is an overlay, so it may be as tall as the terminal even
+		// though the live region is not; opening it grows the managed region.
+		p.contextPaneContainer.SetSize(drawerWidth, max(p.height, p.termHeight))
 		overlay := p.contextPaneContainer.View()
 		layoutView = layout.PlaceOverlay(
 			p.width-lipgloss.Width(overlay),
@@ -316,10 +348,11 @@ func NewChatPage(app *app.App, commands *dialog.CommandRegistry) tea.Model {
 			// and the shortcut hint. Below that the vertical ratio alone would
 			// under-allocate and the composer would overflow its panel.
 			layout.WithMinBottomHeight(composerMinHeight),
-			// Narrow terminals drop to a single conversation column so core task
-			// operation stays usable at every breakpoint; the context
-			// drawer (ctrl+g) is what makes the dropped panel reachable again.
-			layout.WithCollapseRightBelow(narrowWidthThreshold),
+			// The context pane is never a column now. The live region is a few
+			// rows at the bottom of the screen, which cannot host a full-height
+			// panel, so ctrl+g opens it as an overlay instead -- which is what
+			// the drawer was built for when narrow terminals dropped it.
+			layout.WithCollapseRightBelow(math.MaxInt32),
 		),
 	}
 }

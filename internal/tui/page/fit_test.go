@@ -26,7 +26,7 @@ import (
 // The failure is width-dependent, because the hint lines are rendered with a
 // fixed width and wrap instead of truncating, so this sweeps a grid rather
 // than checking one size.
-func TestChatPageRendersExactlyTheRowsItWasGiven(t *testing.T) {
+func TestChatPageFillsOnlyTheLiveRegion(t *testing.T) {
 	dir := t.TempDir()
 	if _, err := config.Load(dir, false); err != nil {
 		t.Fatalf("config.Load: %v", err)
@@ -50,8 +50,13 @@ func TestChatPageRendersExactlyTheRowsItWasGiven(t *testing.T) {
 			m.Init()
 			m, _ = m.Update(tea.WindowSizeMsg{Width: w, Height: h})
 			got := strings.Count(m.View(), "\n") + 1
-			if got != h {
-				t.Errorf("at %dx%d the chat page rendered %d rows, want %d", w, h, got, h)
+			if got > h {
+				t.Errorf("at %dx%d the chat page rendered %d rows, more than the terminal has",
+					w, h, got)
+			}
+			if want := liveRegionHeight(h); got != want {
+				t.Errorf("at %dx%d the chat page rendered %d rows, want the live region's %d",
+					w, h, got, want)
 			}
 		}
 	}
@@ -61,7 +66,7 @@ func TestChatPageRendersExactlyTheRowsItWasGiven(t *testing.T) {
 // running. The same invariant has to hold once a conversation exists and the
 // agent is mid-turn, which is when the working line and a long tool label are
 // competing for the row the composer needs.
-func TestChatPageRendersExactlyTheRowsItWasGivenWithAConversation(t *testing.T) {
+func TestChatPageFillsOnlyTheLiveRegionWithAConversation(t *testing.T) {
 	dir := t.TempDir()
 	if _, err := config.Load(dir, false); err != nil {
 		t.Fatalf("config.Load: %v", err)
@@ -95,19 +100,27 @@ func TestChatPageRendersExactlyTheRowsItWasGivenWithAConversation(t *testing.T) 
 			m, _ = m.Update(tea.WindowSizeMsg{Width: w, Height: h})
 			m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
 			m, cmd := m.Update(chat.SessionSelectedMsg(sess))
-			// Selecting a session renders the transcript in a command. Without
-			// draining it the page stays on its "Loading..." branch and this
-			// test would never see the conversation it means to measure.
-			for i := 0; cmd != nil && i < 20; i++ {
-				m, cmd = m.Update(cmd())
-			}
+			m, _ = drain(m, cmd)
 			view := m.View()
-			if !strings.Contains(view, "wrap me") {
-				t.Fatalf("at %dx%d the transcript never rendered; the test is measuring the wrong screen", w, h)
+
+			// Guard against measuring a screen that never finished rendering:
+			// the assertion below is an absence, and an unfinished render would
+			// satisfy it for the wrong reason.
+			if strings.Contains(view, "Loading") {
+				t.Fatalf("at %dx%d the transcript never finished rendering; the test is measuring the wrong screen", w, h)
+			}
+			// Settled history belongs to the terminal's scrollback now, so it
+			// must not also be in the region Aux repaints -- otherwise every
+			// message appears twice, once printed and once drawn.
+			if strings.Contains(view, "wrap me") {
+				t.Errorf("at %dx%d the live region still holds settled history", w, h)
 			}
 			got := strings.Count(view, "\n") + 1
-			if got != h {
-				t.Errorf("at %dx%d with a conversation the chat page rendered %d rows, want %d", w, h, got, h)
+			if got > h {
+				t.Errorf("at %dx%d the chat page rendered %d rows, more than the terminal has", w, h, got)
+			}
+			if want := liveRegionHeight(h); got != want {
+				t.Errorf("at %dx%d the chat page rendered %d rows, want the live region's %d", w, h, got, want)
 			}
 		}
 	}

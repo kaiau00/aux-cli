@@ -4,7 +4,6 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/kaiau00/aux-cli/internal/tui/theme"
 )
 
 type SplitPaneLayout interface {
@@ -138,12 +137,12 @@ func (s *splitPaneLayout) View() string {
 	}
 
 	if finalView != "" {
-		t := theme.CurrentTheme()
-
+		// No background: the canvas belongs to the terminal (see
+		// styles.BaseStyle). This was the last place still painting it, and
+		// the one row-per-line residue the canvas change could not account for.
 		style := lipgloss.NewStyle().
 			Width(s.width).
-			Height(s.height).
-			Background(t.Background())
+			Height(s.height)
 
 		return style.Render(finalView)
 	}
