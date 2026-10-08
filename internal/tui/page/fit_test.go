@@ -54,9 +54,9 @@ func TestChatPageFillsOnlyTheLiveRegion(t *testing.T) {
 				t.Errorf("at %dx%d the chat page rendered %d rows, more than the terminal has",
 					w, h, got)
 			}
-			if want := liveRegionHeight(h); got != want {
-				t.Errorf("at %dx%d the chat page rendered %d rows, want the live region's %d",
-					w, h, got, want)
+			if ceiling := liveRegionHeight(h); got > ceiling {
+				t.Errorf("at %dx%d the chat page rendered %d rows, over the live region's ceiling of %d",
+					w, h, got, ceiling)
 			}
 		}
 	}
@@ -119,8 +119,18 @@ func TestChatPageFillsOnlyTheLiveRegionWithAConversation(t *testing.T) {
 			if got > h {
 				t.Errorf("at %dx%d the chat page rendered %d rows, more than the terminal has", w, h, got)
 			}
-			if want := liveRegionHeight(h); got != want {
-				t.Errorf("at %dx%d the chat page rendered %d rows, want the live region's %d", w, h, got, want)
+			if ceiling := liveRegionHeight(h); got > ceiling {
+				t.Errorf("at %dx%d the chat page rendered %d rows, over the live region's ceiling of %d",
+					w, h, got, ceiling)
+			}
+			// With the conversation settled into scrollback there is nothing in
+			// flight, so the region should be the composer and its chrome --
+			// not the ceiling padded out with blank rows, which is what the
+			// first cut of the scrollback change shipped.
+			const idleRegionRows = 6
+			if got > idleRegionRows {
+				t.Errorf("at %dx%d the idle live region is %d rows; it should collapse to about %d",
+					w, h, got, idleRegionRows)
 			}
 		}
 	}
@@ -152,5 +162,45 @@ func TestComposerHintSurvivesOnShortTerminals(t *testing.T) {
 		if view := m.View(); !strings.Contains(view, "enter send") {
 			t.Errorf("at 100x%d the composer hint is not on screen", h)
 		}
+	}
+}
+
+// The context drawer is placed onto the page's view and bounded by it, so the
+// live region has to grow to the screen while it is open. Collapsing the
+// region without this rendered the drawer as a two-row sliver.
+func TestTheDrawerGrowsTheLiveRegion(t *testing.T) {
+	dir := t.TempDir()
+	if _, err := config.Load(dir, false); err != nil {
+		t.Fatalf("config.Load: %v", err)
+	}
+	lipgloss.SetColorProfile(0)
+
+	conn := dbtest.New(t)
+	q := db.New(conn)
+	a := &app.App{
+		Sessions:   session.NewService(q),
+		Messages:   message.NewService(q),
+		CoderAgent: &fakeAgent{},
+	}
+
+	const h = 30
+	m := NewChatPage(a, dialog.NewCommandRegistry())
+	m.Init()
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: h})
+
+	closed := strings.Count(m.View(), "\n") + 1
+	if closed >= h {
+		t.Fatalf("test setup: the live region is already %d of %d rows", closed, h)
+	}
+
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlG})
+	open := strings.Count(m.View(), "\n") + 1
+	if open != h {
+		t.Errorf("with the drawer open the page is %d rows, want the terminal's %d; the drawer is clipped", open, h)
+	}
+
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlG})
+	if again := strings.Count(m.View(), "\n") + 1; again != closed {
+		t.Errorf("closing the drawer left the region at %d rows, want it back to %d", again, closed)
 	}
 }
