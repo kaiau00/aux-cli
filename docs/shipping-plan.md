@@ -113,6 +113,8 @@ seems wrong.
 | D13 | Performance claim | Removed from the README until M1 is done and M4 measures it |
 | D14 | Attribution | Credit OpenCode plainly in the README's first screen |
 | D15 | Executor | Mostly agents, human reviews PRs. Every item has an explicit done-when |
+| D16 | Rendering model | **Added 2026-10-08.** History is written to the terminal's own scrollback and Aux repaints only a live region at the bottom, the way Codex does. No alternate screen, no mouse capture, no full-height viewport. The terminal's wheel, scrollback search and text selection are the user's again, and a session survives Aux exiting |
+| D17 | Palette | **Added 2026-10-08.** The canvas belongs to the terminal: Aux sets a foreground and leaves the background alone, and surfaces that must be opaque (dialogs, selection fills, badges) opt in. The accent stays amber -- the complaint was the painted background, not the hue, which only became clear once the background was gone |
 
 ---
 
@@ -125,8 +127,14 @@ floor 30.8%), `scripts/deadcode.sh` (48 entries) all pass. CI is green on
 Confirmed good, leave alone unless an item says otherwise: read confinement
 (`internal/llm/tools/readaccess.go`), dashboard token handling
 (`internal/dashboard/server.go`), `.aux/` self-ignore, panic teardown,
-upgrade/downgrade safety, the missing-API-key message, the context meter, the
-TUI height invariant.
+upgrade/downgrade safety, the missing-API-key message, the context meter.
+
+**Amended 2026-10-08.** The TUI height invariant was on that list and no longer
+means what it did. It asserted the app rendered *exactly* the rows the terminal
+reported, because the alternate screen cannot scroll. Under D16 it asserts the
+app fits *within* the terminal and leaves rows for the terminal's own
+scrollback -- filling the window would leave nothing above the live region to
+scroll back to. Same guarantee against overflow, opposite shape.
 
 Confirmed broken, each owned by exactly one item below:
 
@@ -222,6 +230,12 @@ M2.1 Catalog, M2.2 SDKs (parallel)┘            │
   README is worse than no tag.
 - **M4 only after M1.** Benchmarks of the current build measure the wrong
   product.
+- **The UI pass went before M2.5**, by request on 2026-10-07 and for a
+  sequencing reason worth keeping: M2.5 builds a dialog into the transcript, so
+  changing the transcript's rendering model afterwards would have meant
+  building that dialog twice. It is not a plan item -- the audit was focused on
+  the brain being disconnected and never gave the UI one -- but D3 ("do not tag
+  until it feels like Claude Code") is the decision it answers to. See §6.
 
 Size key: **S** < half a day, **M** one to two days, **L** several days.
 Agent-safe unless marked **[HUMAN]**.
@@ -1010,6 +1024,14 @@ in M1.6.
       status-bar token check needs real keys and has not been run
 - [x] M2.3 slash commands — merged (#45)
 - [x] M2.4 resume — merged (#47)
+- [x] UI pass (not a plan item; requested 2026-10-07, before M2.5 — see §5):
+      orbit working indicator (#48), the transcript shows the agent's prose,
+      its tool calls and real durations (#49), the canvas belongs to the
+      terminal (#50), history goes to the terminal's scrollback (#51).
+      **One done-when outstanding:** none of it has been exercised in a real
+      terminal. The tests measure what leaves the managed region and how tall
+      it is, not what the scrollback looks like, what a resize does to it, or
+      whether selection and surviving exit behave. Close this before the rc
 - [ ] M2.5 compaction, M2.6 memory UX, M2.7 text, M2.8 trimming — merged
 - [ ] M3.5 `--version` local builds
 - [ ] M3.7 coverage ≥ 45%, floor raised

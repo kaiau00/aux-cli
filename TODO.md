@@ -17,7 +17,7 @@ disagree, the plan wins and this file gets corrected.
 
 ---
 
-## Progress (as of 2026-10-07)
+## Progress (as of 2026-10-08)
 
 Update this section and the plan's §6 checklist in every PR that moves an item.
 
@@ -44,17 +44,14 @@ Update this section and the plan's §6 checklist in every PR that moves an item.
 | Canvas belongs to the terminal (UI pass) | #50 |
 | History goes to the terminal's scrollback (UI pass) | #51 |
 
-**Open:** nothing. M2.4 merged as #47; `main`'s own post-merge run is green.
+**Open:** nothing. The UI pass merged as #48, #49, #50 and #51; `main`'s own
+post-merge run is green on each.
 
-**Next:** a UI pass, requested 2026-10-07 and sequenced *before* M2.5, because
-M2.5 builds a dialog into the same transcript and would otherwise be built
-twice. Three parts: the working indicator (#48), the transcript's visibility
-defects (#49), the canvas (#50) and the scrollback (#51). The palette is
-**closed**: the accent stays amber, decided 2026-10-08 once the painted canvas
-was gone and it was clear the background, not the hue, was the complaint. Then M2.5,
-M2.6–M2.8, M3. The plan has no UI item; D3 ("do not tag until it feels like
-Claude Code") is the decision this answers to. What remains of the pass is
-under *Opportunistic*.
+**Next:** **M2.5 compaction as a decision**, then M2.6-M2.8, then M3. The UI
+pass is finished and the palette is closed (the accent stays amber -- see the
+plan's D17). M2.5 was deliberately sequenced after it: it builds a dialog into
+the transcript, and the transcript's rendering model is now settled, so it will
+not be built twice.
 
 **Not yet verified** (each is a done-when that has not been run):
 
@@ -66,12 +63,20 @@ under *Opportunistic*.
   resident-pages check have not been run against a real provider.
 - M2.2: the per-provider live check that cache tokens show in the status bar
   needs real keys. The offline streaming fixtures pass for all four SDKs.
+- **The UI pass has never run in a real terminal.** Four PRs changed how Aux
+  draws, the rendering model among them. The tests measure what leaves the
+  managed region, how tall it is, and that nothing prints twice; they cannot
+  measure what the scrollback looks like, what a resize does to it, whether
+  text selection works without Shift, or whether a session survives Aux
+  exiting. Six defects in August and three more on 2026-10-07 appeared only
+  when something was run rather than read, so this is the shape of claim this
+  file has been wrong about before.
 
-**Gate numbers on `main`:** coverage 37.0% locally and 36.4% on CI, against a
-floor raised from 33.8 to **36.4** in #47. The floor tracks CI, which measures
-0.6 points under macOS here, so the laptop number is never the one to write.
-M3.7 still owns getting it to 45%. Dead-code baseline: 47 entries, down from 48 — #45 deleted the
-unused `appModel.findCommand`.
+**Gate numbers on `main`** (`ac43a18`, measured 2026-10-08): coverage 37.7%
+locally and **37.1% on CI**, against a 36.4% floor raised in #47. The floor
+tracks CI, which measures ~0.6 points under macOS here, so the laptop number is
+never the one to write. Dead-code baseline: 47 entries. M3.7 still owns getting
+coverage to 45%.
 
 ---
 
@@ -148,7 +153,10 @@ Aux should only say true things about itself. Verified 2026-10-02.
 | `aux -p` runs nothing that would prompt unless `--yes` is given | M0.2: `TestRunNonInteractiveDeniesWithoutYes` / `…ApprovesWithYes` (parent and subagent sessions); scratch repo: `touch created.txt` denied and listed on stderr without `--yes`, created with it |
 | First run picks a current model and says which | M2.1: `catalog_test.go`, `config/model_test.go`; temp home with only `ANTHROPIC_API_KEY`: announced Claude Sonnet 5.5, wrote it to `~/.aux.json`, second run silent and the file unchanged |
 | The context meter reflects what the window holds | Latest call's occupancy from the ledger |
-| The TUI fits the terminal it was given | Height invariant asserted across a width×height grid |
+| The TUI fits the terminal it was given, and leaves the rest to it | **Amended 2026-10-08.** The invariant asserted the app rendered *exactly* the rows the terminal reported, because the alternate screen cannot scroll. It now asserts the app fits *within* the terminal and leaves rows for the terminal's own scrollback: `TestAppFitsWithinTheTerminalAndLeavesScrollback`, `TestChatPageFillsOnlyTheLiveRegion*`. Same guarantee against overflow, opposite shape |
+| The transcript shows the agent's prose and its tool calls | `visibility_test.go`. Before #49, `isUserVisibleAssistantResponse` blanked the text of any assistant message carrying a tool call, and only the last assistant message of a turn rendered at all -- 94 of 158 prose-bearing messages in this repository's own database, 59%, never reached the screen. The prose test was run against the old rule reinstated and fails there |
+| Durations in the transcript are real | `duration_test.go`. `formatTimestampDiff` divided by 1000 while both operands were already seconds, so a 46-second wait read `46ms` |
+| Aux paints no background of its own | `canvas_test.go`, `TestRenderedMessageEmitsNoBackgroundCodes`. A 160x44 conversation emitted 4,557 background sequences before #50 and #51; it emits none from the canvas now |
 | `.aux/` does not leak into commits | Self-ignoring `.gitignore`, verified in a scratch repo |
 | A missing API key produces a clear message | Verified: lists every env var and the config path |
 | Commands that change files or run programs ask before running | `internal/llm/tools/bash_safety_test.go`. M0.1: every audit exploit plus `\|\|`, backticks, `${`, newline, `>`, `<`, `&`, and each removed wrapper/`go` entry; `Run` prompts on `echo hi; rm -rf .` and refuses `ls && curl x`. M0.1b: mutating arguments to safe-listed commands (`go list -toolexec`, `git log --output`, `git branch -D`, `git ls-remote --upload-pack`, quoting disguises) all prompt. Caveat: `go list`/`go doc` may still fill the module cache |
@@ -176,6 +184,22 @@ never from re-reading. Treat every unmeasured claim here as a hypothesis.
 
 The shape to watch for: claims about a *mechanism* working. Machinery looks
 correct when you read it. The two newest were both machinery.
+
+**2026-10-08.** The rendering model replaced in #51 is machinery of exactly
+that shape, so it is recorded above as *not yet verified* rather than claimed.
+Its tests are real -- what leaves the managed region, how tall it is, that
+nothing prints twice -- and none of them can see a terminal. The rule applied
+rather than broken, which is the only way the count stays at ten.
+
+Worth keeping from the same day: three of the four defects the UI pass fixed
+were found by rendering the thing and reading real rows out of this
+repository's own database, and three claims *of mine* were wrong on the way --
+that `models.go` was stale (ADR 0003 made it deliberate), that the old
+spinner's block glyphs were missing from SF Mono (they are all present), and
+that the root command accepted positional arguments (it did not, which is why
+`aux --resume abc` was broken until it was run). Two things reported as
+defects were not defects at all: `\+enter` is the real newline binding, and
+the second hint row is the status bar.
 
 ---
 
@@ -432,7 +456,7 @@ is where the loop closes. P1.6 lands with P1.3.
 model catalog is what makes Aux usable at all day to day.
 
 P0 (except the M0.5 URL check), P1, P2.1, P2.2, and P2.3 are done.
-See [Progress](#progress-as-of-2026-10-05).
+See [Progress](#progress-as-of-2026-10-08).
 
 **P3 after P1 is true.** Tag when the README is honest, not before.
 
