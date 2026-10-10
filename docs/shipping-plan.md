@@ -113,6 +113,9 @@ seems wrong.
 | D13 | Performance claim | Removed from the README until M1 is done and M4 measures it |
 | D14 | Attribution | Credit OpenCode plainly in the README's first screen |
 | D15 | Executor | Mostly agents, human reviews PRs. Every item has an explicit done-when |
+| D16 | Rendering model | No alternate screen and no mouse capture. The conversation is printed into the terminal's own scrollback; Aux repaints only the live region at the bottom. The terminal's wheel, its scrollback search and its text selection keep working, and the conversation survives Aux exiting (#51) |
+| D17 | Palette | The canvas belongs to the terminal: Aux emits no background and lets the user's own ground show through (#50). The accent stays amber, decided 2026-10-08 once the painted canvas was gone and it was clear the background, not the hue, was the complaint |
+| D18 | Startup screen | Aux fills the terminal when it starts: a printed wordmark at the top, the composer on the last row. A deliberate divergence from Claude Code, which was measured in a pty and does not do it. Everything else about the model follows it |
 
 ---
 
@@ -222,6 +225,14 @@ M2.1 Catalog, M2.2 SDKs (parallel)┘            │
   README is worse than no tag.
 - **M4 only after M1.** Benchmarks of the current build measure the wrong
   product.
+- **The UI pass sits between M2.4 and M2.5**, requested 2026-10-07 and
+  sequenced there deliberately: M2.5 builds a compaction dialog into the same
+  transcript, and doing it before the pass would have built it twice. The pass
+  is not a plan item -- D3 ("do not tag until it feels like Claude Code") is
+  the decision it answers to -- and it shipped as #48 (working indicator), #49
+  (prose, tool calls and real durations), #50 (the canvas), #51 (scrollback),
+  #53 (the live region collapses, overlays still fit) and #54 (the startup
+  screen). Its decisions are D16-D18.
 
 Size key: **S** < half a day, **M** one to two days, **L** several days.
 Agent-safe unless marked **[HUMAN]**.

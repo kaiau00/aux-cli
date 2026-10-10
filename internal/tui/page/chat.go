@@ -26,9 +26,9 @@ var ChatPage PageID = "chat"
 // context drawer, never fully lost.
 const narrowWidthThreshold = 80
 
-// composerMinHeight is the smallest the editor panel can be and still show its
-// border, one row of input, and the shortcut hint.
-const composerMinHeight = 3
+// composerMinHeight is the smallest the editor panel can be and still show
+// both of its rules, one row of input, and the shortcut hint.
+const composerMinHeight = 4
 
 type chatPage struct {
 	app                   *app.App
@@ -254,8 +254,11 @@ func (p *chatPage) View() string {
 	// bounded by it. The live region is only a few rows, so without growing it
 	// first the drawer renders as a clipped sliver.
 	if p.showContextDrawer || p.showCompletionDialog || p.showCommandCompletion {
+		// Upwards, for the same reason as the overlays in tui.go: the composer
+		// stays on the bottom row it was already on.
 		layoutView = lipgloss.NewStyle().
 			Height(max(1, p.termHeight)).
+			AlignVertical(lipgloss.Bottom).
 			Render(layoutView)
 	}
 
@@ -336,7 +339,11 @@ func NewChatPage(app *app.App, commands *dialog.CommandRegistry) tea.Model {
 	editor := chat.NewEditorCmp(app, commands)
 	editorContainer := layout.NewContainer(
 		editor,
-		layout.WithBorder(true, false, false, false),
+		// Ruled above and below. The composer is the one thing on screen the
+		// user acts through, and a single rule above it left it running into
+		// the rows beneath; measuring Claude Code showed the same two-rule
+		// frame, which is the shape people recognise.
+		layout.WithBorder(true, false, true, false),
 	)
 	contextPane := chat.NewContextPaneCmp(app)
 	contextPaneContainer := layout.NewContainer(
@@ -356,7 +363,7 @@ func NewChatPage(app *app.App, commands *dialog.CommandRegistry) tea.Model {
 			layout.WithLeftPanel(messagesContainer),
 			layout.WithRightPanel(contextPaneContainer),
 			layout.WithBottomPanel(editorContainer),
-			// The composer needs three rows: its top border, one line of input,
+			// The composer needs four rows: its two rules, one line of input,
 			// and the shortcut hint. Below that the vertical ratio alone would
 			// under-allocate and the composer would overflow its panel.
 			layout.WithMinBottomHeight(composerMinHeight),
