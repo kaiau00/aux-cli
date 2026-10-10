@@ -27,7 +27,12 @@ func (h *helpCmp) SetBindings(k []key.Binding) {
 func (h *helpCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		h.width = 90
+		// 90 was hardcoded and ignored the terminal, so with its border and
+		// padding the overlay came to 93 cells and overflowed every terminal
+		// under 93 columns -- 13 cells over at the classic 80.
+		const preferredWidth = 90
+		const chrome = 4 // border and horizontal padding
+		h.width = min(preferredWidth, max(20, msg.Width-chrome))
 		h.height = msg.Height
 	}
 	return h, nil

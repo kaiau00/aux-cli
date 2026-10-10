@@ -250,6 +250,15 @@ func (p *chatPage) GetSize() (int, int) {
 func (p *chatPage) View() string {
 	layoutView := p.layout.View()
 
+	// The drawer and the completion popups are placed onto this view and
+	// bounded by it. The live region is only a few rows, so without growing it
+	// first the drawer renders as a clipped sliver.
+	if p.showContextDrawer || p.showCompletionDialog || p.showCommandCompletion {
+		layoutView = lipgloss.NewStyle().
+			Height(max(1, p.termHeight)).
+			Render(layoutView)
+	}
+
 	if p.showCompletionDialog || p.showCommandCompletion {
 		active := p.completionDialog
 		if p.showCommandCompletion {
@@ -320,6 +329,9 @@ func NewChatPage(app *app.App, commands *dialog.CommandRegistry) tea.Model {
 	messagesContainer := layout.NewContainer(
 		chat.NewMessagesCmp(app),
 		layout.WithPadding(1, 1, 0, 1),
+		// Collapses when nothing is in flight, instead of padding out to its
+		// allocation and separating the composer from the conversation.
+		layout.WithTightHeight(),
 	)
 	editor := chat.NewEditorCmp(app, commands)
 	editorContainer := layout.NewContainer(
@@ -353,6 +365,9 @@ func NewChatPage(app *app.App, commands *dialog.CommandRegistry) tea.Model {
 			// panel, so ctrl+g opens it as an overlay instead -- which is what
 			// the drawer was built for when narrow terminals dropped it.
 			layout.WithCollapseRightBelow(math.MaxInt32),
+			// The live region is as tall as the composer plus whatever is in
+			// flight, not as tall as the screen.
+			layout.WithTightVerticalFit(),
 		),
 	}
 }

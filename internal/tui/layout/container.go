@@ -1,9 +1,12 @@
 package layout
 
 import (
+	"strings"
+
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/kaiau00/aux-cli/internal/tui/theme"
 )
 
@@ -27,6 +30,10 @@ type Focusser interface {
 type container struct {
 	width  int
 	height int
+
+	// tightHeight treats height as a ceiling rather than a floor; see
+	// WithTightHeight.
+	tightHeight bool
 
 	content tea.Model
 
@@ -77,15 +84,36 @@ func (c *container) View() string {
 		style = style.Border(c.borderStyle, c.borderTop, c.borderRight, c.borderBottom, c.borderLeft)
 		style = style.BorderBackground(t.Background()).BorderForeground(t.BorderNormal())
 	}
+	// tightHeight makes the height a ceiling rather than a floor, so a
+	// container whose content is shorter than its allocation collapses instead
+	// of padding. The live region uses it; a full-screen page does not, where
+	// padding is what clears the rows below.
+	if c.tightHeight {
+		style = style.Width(width).MaxHeight(max(1, height))
+	} else {
+		style = style.Width(width).Height(height)
+	}
 	style = style.
-		Width(width).
-		Height(height).
 		PaddingTop(c.paddingTop).
 		PaddingRight(c.paddingRight).
 		PaddingBottom(c.paddingBottom).
 		PaddingLeft(c.paddingLeft)
 
-	return style.Render(c.content.View())
+	view := c.content.View()
+	// A tight container with nothing in it renders nothing, not its padding.
+	// Otherwise an empty live region still contributes its padding rows, which
+	// is the gap this was meant to close.
+	if c.tightHeight && strings.TrimSpace(ansi.Strip(view)) == "" {
+		return ""
+	}
+	return style.Render(view)
+}
+
+// WithTightHeight makes the container's height a ceiling instead of a floor.
+func WithTightHeight() ContainerOption {
+	return func(c *container) {
+		c.tightHeight = true
+	}
 }
 
 func (c *container) SetSize(width, height int) tea.Cmd {

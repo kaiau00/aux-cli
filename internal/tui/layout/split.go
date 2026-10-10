@@ -25,6 +25,7 @@ type splitPaneLayout struct {
 	ratio           float64
 	verticalRatio   float64
 	minBottomHeight int
+	tightHeight     bool
 
 	// collapseRightBelow collapses the right panel into a single-column layout
 	// when the total width is below this threshold. Zero disables collapsing.
@@ -140,14 +141,27 @@ func (s *splitPaneLayout) View() string {
 		// No background: the canvas belongs to the terminal (see
 		// styles.BaseStyle). This was the last place still painting it, and
 		// the one row-per-line residue the canvas change could not account for.
-		style := lipgloss.NewStyle().
-			Width(s.width).
-			Height(s.height)
-
+		// tightHeight: the live region is as tall as its panels, not as tall
+		// as the screen. Padding here is what put blank rows between the
+		// conversation in the terminal's scrollback and the composer.
+		style := lipgloss.NewStyle().Width(s.width)
+		if s.tightHeight {
+			style = style.MaxHeight(max(1, s.height))
+		} else {
+			style = style.Height(s.height)
+		}
 		return style.Render(finalView)
 	}
 
 	return finalView
+}
+
+// WithTightVerticalFit makes the layout's height a ceiling instead of a floor,
+// so a short live region does not pad out to the screen.
+func WithTightVerticalFit() SplitPaneOption {
+	return func(s *splitPaneLayout) {
+		s.tightHeight = true
+	}
 }
 
 func (s *splitPaneLayout) SetSize(width, height int) tea.Cmd {

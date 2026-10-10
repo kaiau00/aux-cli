@@ -476,50 +476,62 @@ func (m *messagesCmp) renderView() {
 		)
 	}
 
-	m.viewport.SetContent(
-		baseStyle.
-			Width(m.width).
-			Render(
-				lipgloss.JoinVertical(
-					lipgloss.Top,
-					messages...,
-				),
+	content := baseStyle.
+		Width(m.width).
+		Render(
+			lipgloss.JoinVertical(
+				lipgloss.Top,
+				messages...,
 			),
-	)
+		)
+	m.viewport.SetContent(content)
+
+	// Only as tall as the content, up to the allocation. A viewport pads to
+	// its height, so a fixed height here is a fixed block of blank rows
+	// whenever the live region holds less than its allocation -- which, now
+	// that settled messages go to the terminal's scrollback, is most of the
+	// time.
+	ceiling := max(1, m.height-1)
+	if len(m.uiMessages) == 0 {
+		m.viewport.Height = 0
+		return
+	}
+	m.viewport.Height = min(ceiling, lipgloss.Height(content))
 }
 
 func (m *messagesCmp) View() string {
 	baseStyle := styles.BaseStyle()
 
-	// Every branch renders exactly m.height rows. The alternate screen has no
-	// slack: one row too many and the whole app shifts up, taking the task
-	// header -- model, context budget, cost -- off the top of the screen with
-	// no way to scroll back to it.
-	fit := func(content string) string {
+	// The live region is as tall as what is in it and no taller. Aux manages
+	// only the bottom of the screen; the conversation above it belongs to the
+	// terminal's scrollback. Padding to the allocation put a block of blank
+	// rows between the two -- nine of them on a 30-row terminal.
+	//
+	// MaxHeight is a ceiling, Height is a floor. This wants the ceiling only.
+	fit := func(parts ...string) string {
+		content := lipgloss.JoinVertical(lipgloss.Top, parts...)
+		if strings.TrimSpace(ansi.Strip(content)) == "" {
+			return ""
+		}
 		return baseStyle.
 			Width(m.width).
-			Height(m.height).
-			MaxHeight(m.height).
+			MaxHeight(max(1, m.height)).
 			Render(content)
 	}
 
 	if m.rendering {
-		return fit(lipgloss.JoinVertical(lipgloss.Top, "Loading...", m.working()))
+		return fit("Loading...", m.working())
 	}
 
 	if len(m.messages) == 0 {
-		// One row below is spoken for by the working line. MaxHeight is what
-		// stops a greeting taller than the terminal from pushing the rest off
-		// the top: Height alone sets a floor, not a ceiling.
-		content := baseStyle.
-			Width(m.width).
-			Height(max(0, m.height-1)).
-			MaxHeight(max(1, m.height-1)).
-			Render(m.initialScreen())
-		return fit(lipgloss.JoinVertical(lipgloss.Top, content, m.working()))
+		return fit(m.initialScreen(), m.working())
 	}
 
-	return fit(lipgloss.JoinVertical(lipgloss.Top, m.viewport.View(), m.working()))
+	if m.viewport.Height <= 0 {
+		// Nothing in flight: the whole conversation is in scrollback.
+		return fit(m.working())
+	}
+	return fit(m.viewport.View(), m.working())
 }
 
 func hasToolsWithoutResponse(messages []message.Message) bool {
@@ -669,7 +681,11 @@ func (m *messagesCmp) SetSize(width, height int) tea.Cmd {
 	m.width = width
 	m.height = height
 	m.viewport.Width = width
-	m.viewport.Height = height - 1
+	// The viewport's height is set from its content in renderView, not from
+	// the allocation. Fixing it here is what padded the live region out to its
+	// full allocation and left a block of blank rows between the conversation
+	// in scrollback and the composer.
+	m.viewport.Height = max(1, height-1)
 	m.attachments.Width = width + 40
 	m.attachments.Height = 3
 	m.rerender()

@@ -796,6 +796,24 @@ func (a *appModel) moveToPage(pageID page.PageID) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
+// hasOverlay reports whether any dialog, picker or status overlay is showing.
+// Each is placed onto the assembled view and bounded by it, so the view has to
+// be the size of the screen while one is up rather than the size of the live
+// region.
+func (a appModel) hasOverlay() bool {
+	return a.showPermissions ||
+		a.showHelp ||
+		a.showQuit ||
+		a.showSessionDialog ||
+		a.showCommandDialog ||
+		a.showModelDialog ||
+		a.showInitDialog ||
+		a.showFilepicker ||
+		a.showThemeDialog ||
+		a.showMultiArgumentsDialog ||
+		a.isCompacting
+}
+
 func (a appModel) View() string {
 	// The task header projects truthful runtime state:
 	// project, active stage, model, context, and cost. It renders only once the
@@ -810,6 +828,16 @@ func (a appModel) View() string {
 	components = append(components, a.status.View())
 
 	appView := lipgloss.JoinVertical(lipgloss.Top, components...)
+
+	// Every overlay below is centred on appView and clipped to it, so while
+	// one is up the managed region grows to the whole screen.
+	//
+	// Without this the live region's few rows clip every dialog. That includes
+	// the permission prompt, which gates every tool call -- a clipped one is
+	// unanswerable, so this is a correctness fix and not a cosmetic one.
+	if a.hasOverlay() {
+		appView = lipgloss.NewStyle().Height(max(1, a.height+2)).Render(appView)
+	}
 
 	if a.showPermissions {
 		overlay := a.permissions.View()

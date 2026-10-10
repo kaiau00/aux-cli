@@ -267,35 +267,47 @@ func TestStreamingUpdatesCoalesceIntoOneRender(t *testing.T) {
 	}
 }
 
-// The messages pane must render exactly the height it was given, in both of its
-// states. A pane that renders taller than its allocation is clipped by the
-// terminal, and what goes missing is at the top -- the oldest content still on
-// screen.
-func TestMessagesPaneRendersItsExactHeight(t *testing.T) {
+// The messages pane never renders taller than its allocation, and collapses to
+// nothing when there is nothing in flight.
+//
+// The invariant used to be "exactly the height it was given". That was right
+// for the alternate screen, where rendering short left stale rows behind. Now
+// that settled messages go to the terminal's scrollback, filling the
+// allocation means padding the gap between the conversation and the composer
+// with blank rows -- nine of them on a 30-row terminal, which is what the
+// first cut of the scrollback change actually shipped.
+func TestMessagesPaneIsAsTallAsItsContentAndNoTaller(t *testing.T) {
 	loadConfig(t)
-	withMessages := []message.Message{{
-		ID:    "m1",
-		Role:  message.User,
-		Parts: []message.ContentPart{message.TextContent{Text: "hello"}},
-	}}
 
-	for _, tc := range []struct {
-		name     string
-		messages []message.Message
-	}{
-		{"conversation", withMessages},
-		{"empty session", nil},
-	} {
-		for _, height := range []int{10, 24, 40, 60} {
-			m := NewMessagesCmp(&app.App{CoderAgent: idleAgent{}}).(*messagesCmp)
-			m.SetSize(80, height)
-			m.messages = tc.messages
-			m.viewport.SetContent(strings.TrimSpace(strings.Repeat("line\n", 500)))
+	for _, height := range []int{10, 24, 40, 60} {
+		// Nothing in flight: everything settled and went to scrollback.
+		m := NewMessagesCmp(&app.App{CoderAgent: idleAgent{}}).(*messagesCmp)
+		m.SetSize(80, height)
+		m.messages = []message.Message{{
+			ID:    "m1",
+			Role:  message.User,
+			Parts: []message.ContentPart{message.TextContent{Text: "hello"}},
+		}}
+		m.takeScrollback()
+		m.renderView()
+		if got := lipgloss.Height(m.View()); got > 1 {
+			t.Errorf("idle at height %d: the pane rendered %d rows; it should collapse", height, got)
+		}
 
-			got := lipgloss.Height(m.View())
-			if got != height {
-				t.Errorf("%s at height %d: pane rendered %d lines (%+d)", tc.name, height, got, got-height)
-			}
+		// Something in flight: the pane shows it, capped by the allocation.
+		m2 := NewMessagesCmp(&app.App{CoderAgent: idleAgent{}}).(*messagesCmp)
+		m2.SetSize(80, height)
+		m2.session.ID = "s1"
+		m2.messages = streamingTail(longConversation("s1", 4), "s1",
+			strings.TrimSpace(strings.Repeat("a line of streamed output\n", 200)))
+		m2.takeScrollback()
+		m2.renderView()
+		got := lipgloss.Height(m2.View())
+		if got > height {
+			t.Errorf("streaming at height %d: the pane rendered %d rows, over its allocation", height, got)
+		}
+		if got == 0 {
+			t.Errorf("streaming at height %d: the pane rendered nothing", height)
 		}
 	}
 }
