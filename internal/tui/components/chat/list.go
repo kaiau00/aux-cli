@@ -524,7 +524,13 @@ func (m *messagesCmp) View() string {
 	}
 
 	if len(m.messages) == 0 {
-		return fit(m.initialScreen(), m.working())
+		// Nothing to show: the wordmark, version, model, directory and LSP
+		// list are printed into the terminal's scrollback at startup instead
+		// of being rendered here. A splash inside the live region had to be
+		// repainted on every keystroke and then surrendered the moment a reply
+		// needed the rows; printed once, it stays where the user can scroll
+		// back to it, and it is still there after Aux exits.
+		return fit(m.working())
 	}
 
 	if m.viewport.Height <= 0 {
@@ -638,33 +644,6 @@ func (m *messagesCmp) working() string {
 		Foreground(t.Primary()).
 		Bold(true).
 		Render(line)
-}
-
-func (m *messagesCmp) initialScreen() string {
-	baseStyle := styles.BaseStyle()
-	t := theme.CurrentTheme()
-
-	greeting := baseStyle.
-		Width(m.width).
-		Foreground(t.Text()).
-		Render("Hello, I am Aux. How can I help?")
-
-	prompt := baseStyle.
-		Width(m.width).
-		Foreground(t.TextMuted()).
-		Render("Ask me to inspect this project, make a change, debug an error, or explain what you are looking at.")
-
-	return baseStyle.Width(m.width).Render(
-		lipgloss.JoinVertical(
-			lipgloss.Top,
-			header(m.width),
-			"",
-			greeting,
-			prompt,
-			"",
-			lspsConfigured(m.width),
-		),
-	)
 }
 
 func (m *messagesCmp) rerender() {

@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"github.com/charmbracelet/x/ansi"
 	"strings"
 	"testing"
 
@@ -35,7 +36,10 @@ func TestEachMessageIsHandedOverExactlyOnce(t *testing.T) {
 	if len(third) == 0 {
 		t.Fatal("the new message was not handed over")
 	}
-	joined := strings.Join(third, "\n")
+	// Stripped before matching: the rendered text is interleaved with colour
+	// sequences, so a plain substring search depends on whichever colour
+	// profile some earlier test happened to leave behind.
+	joined := ansi.Strip(strings.Join(third, "\n"))
 	if !strings.Contains(joined, "brand new question") {
 		t.Errorf("the new message is missing from what was handed over: %q", joined)
 	}
@@ -70,7 +74,7 @@ func TestOpeningASessionHandsOverItsOwnHistory(t *testing.T) {
 	if len(lines) == 0 {
 		t.Fatal("the second session was not handed over; its ids collided with the first")
 	}
-	if !strings.Contains(strings.Join(lines, "\n"), "second session") {
+	if !strings.Contains(ansi.Strip(strings.Join(lines, "\n")), "second session") {
 		t.Errorf("the wrong content was handed over: %q", lines)
 	}
 }
@@ -85,13 +89,13 @@ func TestHandedOverMessagesLeaveTheLiveRegion(t *testing.T) {
 	m.messages = longConversation("s1", 4)
 
 	m.rerender()
-	if !strings.Contains(m.viewport.View(), "msg 0") {
+	if !strings.Contains(ansi.Strip(m.viewport.View()), "msg 0") {
 		t.Fatal("test setup: the conversation is not in the live region to begin with")
 	}
 
 	m.takeScrollback()
 	m.renderView()
-	if strings.Contains(m.viewport.View(), "msg 0") {
+	if strings.Contains(ansi.Strip(m.viewport.View()), "msg 0") {
 		t.Error("a message handed to the terminal is still being repainted by Aux")
 	}
 }

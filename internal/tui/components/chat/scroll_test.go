@@ -2,6 +2,7 @@ package chat
 
 import (
 	"fmt"
+	"github.com/charmbracelet/x/ansi"
 	"strings"
 	"testing"
 
@@ -190,7 +191,7 @@ func TestStreamingMessageIsNotPrintedUntilItSettles(t *testing.T) {
 	if !m.printed["streaming"] {
 		t.Fatal("the finished message was not marked as printed, so it would print twice")
 	}
-	if !strings.Contains(strings.Join(lines, "\n"), "now longer") {
+	if !strings.Contains(ansi.Strip(strings.Join(lines, "\n")), "now longer") {
 		t.Fatalf("the printed text is not the final content: %q", lines)
 	}
 }
@@ -262,7 +263,7 @@ func TestStreamingUpdatesCoalesceIntoOneRender(t *testing.T) {
 	// of the default view; look at the bottom, where it actually is.
 	m = runCmd(m, cmd1)
 	m.viewport.GotoBottom()
-	if !strings.Contains(m.View(), "abc") {
+	if !strings.Contains(ansi.Strip(m.View()), "abc") {
 		t.Fatal("the coalesced render did not reflect the latest streamed content")
 	}
 }

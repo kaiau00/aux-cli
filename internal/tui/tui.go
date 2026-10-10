@@ -117,6 +117,7 @@ var logsKeyReturnKey = key.NewBinding(
 
 type appModel struct {
 	width, height   int
+	bannerPrinted   bool
 	currentPage     page.PageID
 	previousPage    page.PageID
 	pages           map[page.PageID]tea.Model
@@ -207,6 +208,7 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
+		terminalHeight := msg.Height
 		msg.Height -= 2 // Make space for the task header and status bar
 		a.width, a.height = msg.Width, msg.Height
 
@@ -245,6 +247,13 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			args, argsCmd := a.multiArgumentsDialog.Update(msg)
 			a.multiArgumentsDialog = args.(dialog.MultiArgumentsDialogCmp)
 			cmds = append(cmds, argsCmd, a.multiArgumentsDialog.Init())
+		}
+
+		// The banner needs the terminal's size, so it is printed on the first
+		// size report rather than from Init.
+		if !a.bannerPrinted && msg.Width > 0 && terminalHeight > 0 {
+			a.bannerPrinted = true
+			cmds = append(cmds, a.startupBanner(msg.Width, terminalHeight))
 		}
 
 		return a, tea.Batch(cmds...)
@@ -814,20 +823,61 @@ func (a appModel) hasOverlay() bool {
 		a.isCompacting
 }
 
-func (a appModel) View() string {
+// startupBanner prints the banner into the terminal's scrollback and pads it
+// so that the live region lands on the terminal's last row -- Aux occupies the
+// whole screen from the moment it starts, without taking the alternate screen
+// and so without costing the user their scrollback, their selection or their
+// wheel.
+//
+// This is a deliberate divergence from Claude Code, which was measured here
+// and does not do it: it prints its banner wherever the cursor happens to be
+// and leaves the rows below its live region untouched. Filling the screen is
+// what was asked for; everything else about the model -- printed history, a
+// collapsed live region, no alternate screen -- follows Claude Code.
+func (a appModel) startupBanner(width, terminalHeight int) tea.Cmd {
+	banner := chat.Banner(width)
+	if banner == "" {
+		return nil
+	}
+	// The live region is rendered below whatever is printed, so the padding is
+	// whatever the two of them do not already account for.
+	//
+	// Measured from baseView rather than View: on a first run the init dialog
+	// is already up when the first size report arrives, and an overlay grows
+	// the region to the whole screen, which made the padding come out as zero
+	// and left the bottom of the terminal empty once the dialog was dismissed.
+	pad := terminalHeight - lipgloss.Height(banner) - lipgloss.Height(a.baseView())
+	if pad > 0 {
+		banner += strings.Repeat("\n", pad)
+	}
+	return tea.Println(banner)
+}
+
+// baseView is the live region with no overlay on it: the page, the run
+// information and the status line. Separated from View so the startup banner
+// can measure the region it will sit above without an open dialog changing the
+// answer.
+func (a appModel) baseView() string {
 	// The task header projects truthful runtime state:
 	// project, active stage, model, context, and cost. It renders only once the
 	// terminal width is known.
 	a.header.SetVM(a.headerVM())
 
-	components := []string{}
+	// The header sits below the composer, not above it. Claude Code puts its
+	// run information -- mode, model, effort -- under the prompt, and measuring
+	// it showed why: the composer's rule is the top edge of the live region, so
+	// everything Aux repaints is in one block beneath the printed
+	// conversation instead of being split either side of it.
+	components := []string{a.pages[a.currentPage].View()}
 	if header := a.header.View(); header != "" {
 		components = append(components, header)
 	}
-	components = append(components, a.pages[a.currentPage].View())
 	components = append(components, a.status.View())
+	return lipgloss.JoinVertical(lipgloss.Top, components...)
+}
 
-	appView := lipgloss.JoinVertical(lipgloss.Top, components...)
+func (a appModel) View() string {
+	appView := a.baseView()
 
 	// Every overlay below is centred on appView and clipped to it, so while
 	// one is up the managed region grows to the whole screen.
@@ -836,7 +886,14 @@ func (a appModel) View() string {
 	// the permission prompt, which gates every tool call -- a clipped one is
 	// unanswerable, so this is a correctness fix and not a cosmetic one.
 	if a.hasOverlay() {
-		appView = lipgloss.NewStyle().Height(max(1, a.height+2)).Render(appView)
+		// Grown upwards, not downwards. The live region lives at the bottom of
+		// the screen, so padding it out underneath moved the composer to the
+		// top and left the dialog hanging below it -- which is what the real
+		// binary did on a first run, with the init dialog up.
+		appView = lipgloss.NewStyle().
+			Height(max(1, a.height+2)).
+			AlignVertical(lipgloss.Bottom).
+			Render(appView)
 	}
 
 	if a.showPermissions {

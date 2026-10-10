@@ -22,7 +22,13 @@ import (
 // font.
 //
 // Adding a glyph here means checking it against both fonts first.
-const fontSafeGlyphs = "·»½×—•…←↑→↓≈─│┃└┼▀░▖▗▘▝■□▲▶▸○●✓✗"
+//
+// The quadrant and block glyphs (▄█▙▛▜▟) were added for the startup
+// wordmark and were checked by parsing the cmap tables of SFNSMono.ttf and
+// Menlo.ttc directly: both fonts carry all of U+2580..U+259F. The same parse
+// is why ❯ is not here -- Claude Code's composer prompt is absent from SF
+// Mono, as are ⚠ and ◆, so each would be substituted from another font.
+const fontSafeGlyphs = "·»½×—•…←↑→↓≈─│┃└┼▀▄█░▖▗▘▙▛▜▝▟■□▲▶▸○●✓✗"
 
 var goStringLiteral = regexp.MustCompile(`"([^"\\\n]*)"`)
 
