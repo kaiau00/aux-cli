@@ -200,12 +200,17 @@ func itoa(n int) string {
 	return string(b)
 }
 
-// Opening an overlay grows the managed region to the whole screen (#53). The
-// composer has to stay where it was -- at the bottom -- while that happens.
-// Growing the region by padding underneath instead put the composer at the top
-// of the screen and left the dialog floating below it, which is what the real
-// binary did on a first run with the init dialog up.
-func TestAnOverlayDoesNotMoveTheComposerToTheTop(t *testing.T) {
+// Closing a dialog must leave the composer where it was: on the bottom row.
+//
+// Bubble Tea's inline renderer cannot scroll the terminal back down, so a
+// region that grows for a dialog and then shrinks again leaves the composer
+// stranded near the top of the screen with the rest of it blank. Found by
+// driving the real binary in a pty -- the View()-level audit could not see it,
+// because the string it returns is correct either way.
+//
+// The region owning the screen while nothing has been printed is what makes
+// this hold: there is nothing to grow, so nothing drifts.
+func TestClosingADialogLeavesTheComposerOnTheBottomRow(t *testing.T) {
 	const height = 30
 	m, _ := startupModel(t)
 	m, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: height})
@@ -214,6 +219,27 @@ func TestAnOverlayDoesNotMoveTheComposerToTheTop(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected an appModel, got %T", m)
 	}
+	bottomRow := func(a appModel, what string) {
+		t.Helper()
+		lines := strings.Split(ansi.Strip(a.View()), "\n")
+		composer := -1
+		for i, line := range lines {
+			if strings.Contains(line, "Describe a task") {
+				composer = i
+			}
+		}
+		if composer < 0 {
+			t.Fatalf("%s: no composer in the region at all", what)
+		}
+		// The composer, its lower rule, the run information and the status
+		// line are the last rows; nothing blank may follow them.
+		if trailing := len(lines) - 1 - composer; trailing > 4 {
+			t.Errorf("%s: composer on row %d of %d, %d rows above the bottom",
+				what, composer+1, len(lines), trailing)
+		}
+	}
+
+	bottomRow(am, "before any dialog")
 
 	for _, tc := range []struct {
 		name string
@@ -222,30 +248,50 @@ func TestAnOverlayDoesNotMoveTheComposerToTheTop(t *testing.T) {
 		{"help", func(a *appModel) { a.showHelp = true }},
 		{"init dialog", func(a *appModel) { a.showInitDialog = true }},
 		{"quit confirmation", func(a *appModel) { a.showQuit = true }},
+		{"model picker", func(a *appModel) { a.showModelDialog = true }},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			with := am
-			tc.set(&with)
-			lines := strings.Split(ansi.Strip(with.View()), "\n")
-			if len(lines) < height {
-				t.Fatalf("the region is %d rows of %d; the overlay is clipped", len(lines), height)
+			opened := am
+			tc.set(&opened)
+			// While it is up the dialog has the region to itself, so the
+			// region's height is all that can be checked here.
+			if lipgloss.Height(opened.View()) != lipgloss.Height(am.View()) {
+				t.Errorf("the region changed height for the %s; it should already own the screen", tc.name)
 			}
-			composer := -1
-			for i, line := range lines {
-				if strings.Contains(line, "Describe a task") {
-					composer = i
-				}
-			}
-			if composer < 0 {
-				t.Fatalf("the composer is not in the grown region at all")
-			}
-			// It belongs in the bottom few rows, where it is when no overlay
-			// is up -- not at the top with the dialog hanging below it.
-			if composer < len(lines)-6 {
-				t.Errorf("the composer is on row %d of %d; it should be in the last rows",
-					composer+1, len(lines))
-			}
+			// Closing it is the same model again, so the composer comes back
+			// to the row it was on.
+			bottomRow(am, "after the "+tc.name+" closed")
 		})
+	}
+}
+
+// A dialog has the managed region to itself. Compositing it over the composer
+// left fragments of the composer's full-width rules showing in the columns the
+// box did not cover, and at 80x24 the box and those rules overlapped outright.
+func TestADialogIsNotCompositedOverTheComposer(t *testing.T) {
+	m, _ := startupModel(t)
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	am, ok := m.(appModel)
+	if !ok {
+		t.Fatalf("expected an appModel, got %T", m)
+	}
+	am.showHelp = true
+
+	plain := ansi.Strip(am.View())
+	if strings.Contains(plain, "Describe a task") {
+		t.Error("the composer is rendered under the dialog; its rules will show through")
+	}
+	if !strings.Contains(plain, "Keyboard Shortcuts") {
+		t.Errorf("the help dialog is not in the region at all: %q", plain)
+	}
+	// A row with the dialog's *side* border and a long run of rule on it is
+	// the composer's rule showing through -- the dialog's own top and bottom
+	// borders are made of the same glyph, so the side border tells them apart.
+	for i, line := range strings.Split(plain, "\n") {
+		if strings.Contains(line, "│") && strings.Count(line, "─") > 20 {
+			t.Errorf("row %d has the dialog's side border and a rule together, so the composer shows through: %q",
+				i+1, line)
+		}
 	}
 }
 

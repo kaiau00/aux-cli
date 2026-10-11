@@ -126,7 +126,9 @@ func (s *sessionDialogCmp) View() string {
 		}
 	}
 
-	maxWidth = max(30, min(maxWidth, s.width-15)) // Limit width to avoid overflow
+	// fitWidth rather than max(30, ...): that floor put the width back
+	// above the terminal's, so at 40 columns the picker was 43 cells wide.
+	maxWidth = fitWidth(maxWidth, s.width)
 
 	// Limit height to avoid taking up too much screen space
 	maxVisibleSessions := min(10, len(s.sessions))

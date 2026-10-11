@@ -27,6 +27,13 @@ type SessionClearedMsg struct{}
 
 type EditorFocusMsg bool
 
+// ScrollbackPrintedMsg says that part of the conversation has just been handed
+// to the terminal. It is the signal that there is now history above the live
+// region: before it, the region owns the screen below the startup banner and
+// can be as tall as it likes; after it, the region has to sit tight against
+// what was printed, or there is a block of blank rows between the two.
+type ScrollbackPrintedMsg struct{}
+
 // displayPath shortens a working directory for the startup banner. Rendering it
 // raw let lipgloss wrap it, which broke the path across three lines in the
 // middle of a directory name. Here the home prefix collapses to "~" and, if it

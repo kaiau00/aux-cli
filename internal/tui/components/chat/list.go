@@ -208,7 +208,8 @@ func (m *messagesCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// The printed messages have to leave the live region, or they show
 		// twice until the next render.
 		m.renderView()
-		cmd = tea.Batch(cmd, tea.Println(strings.Join(lines, "\n")))
+		cmd = tea.Batch(cmd, tea.Println(strings.Join(lines, "\n")),
+			func() tea.Msg { return ScrollbackPrintedMsg{} })
 	}
 	return model, cmd
 }

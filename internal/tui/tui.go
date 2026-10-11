@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/kaiau00/aux-cli/internal/app"
 	"github.com/kaiau00/aux-cli/internal/config"
 	"github.com/kaiau00/aux-cli/internal/llm/agent"
@@ -116,16 +117,21 @@ var logsKeyReturnKey = key.NewBinding(
 )
 
 type appModel struct {
-	width, height   int
-	bannerPrinted   bool
-	currentPage     page.PageID
-	previousPage    page.PageID
-	pages           map[page.PageID]tea.Model
-	loadedPages     map[page.PageID]bool
-	header          core.TaskHeaderCmp
-	status          core.StatusCmp
-	app             *app.App
-	selectedSession session.Session
+	width, height int
+	bannerPrinted bool
+	bannerRows    int
+	// conversationPrinted goes true the first time any of the conversation is
+	// handed to the terminal. Until then there is nothing above the live
+	// region, so the region can own the whole screen below the banner.
+	conversationPrinted bool
+	currentPage         page.PageID
+	previousPage        page.PageID
+	pages               map[page.PageID]tea.Model
+	loadedPages         map[page.PageID]bool
+	header              core.TaskHeaderCmp
+	status              core.StatusCmp
+	app                 *app.App
+	selectedSession     session.Session
 
 	showPermissions bool
 	permissions     dialog.PermissionDialogCmp
@@ -207,10 +213,45 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	var cmd tea.Cmd
 	switch msg := msg.(type) {
+	case chat.ScrollbackPrintedMsg:
+		// There is history above the region now, so it stops owning the screen.
+		a.conversationPrinted = true
+		return a, nil
+
 	case tea.WindowSizeMsg:
 		terminalHeight := msg.Height
-		msg.Height -= 2 // Make space for the task header and status bar
+
+		// The banner is measured before anything is sized, because its rows
+		// come off the screen the live region has to work with. Printed at
+		// the end of this case, once the children know their size.
+		var bannerCmd tea.Cmd
+		if !a.bannerPrinted && msg.Width > 0 && terminalHeight > 0 {
+			a.bannerPrinted = true
+			if banner := chat.Banner(msg.Width); banner != "" {
+				a.bannerRows = lipgloss.Height(banner)
+				bannerCmd = tea.Println(banner)
+			}
+		}
+
+		// Everything downstream is sized from the region, not from the
+		// terminal, so that the page's own growth for the drawer and the
+		// completion popups lands on exactly the height this model pads to.
+		// When the two disagreed, opening and closing the drawer left the
+		// composer four rows -- the banner's height -- above the bottom.
+		region := terminalHeight
+		if !a.conversationPrinted && a.bannerRows > 0 {
+			region = max(1, terminalHeight-a.bannerRows)
+		}
+		msg.Height = region - 2 // Make space for the task header and status bar
 		a.width, a.height = msg.Width, msg.Height
+
+		// Dialogs own the whole region while they are up -- the header and the
+		// status line are not drawn under them -- so they are told the
+		// region's height rather than the page's. Handing them region-2 made
+		// them two rows too tall for the region they were placed on, which
+		// PlaceOverlay then expanded past the terminal.
+		dialogMsg := msg
+		dialogMsg.Height = region
 
 		h, _ := a.header.Update(msg)
 		a.header = h.(core.TaskHeaderCmp)
@@ -220,40 +261,52 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.pages[a.currentPage], cmd = a.pages[a.currentPage].Update(msg)
 		cmds = append(cmds, cmd)
 
-		prm, permCmd := a.permissions.Update(msg)
+		prm, permCmd := a.permissions.Update(dialogMsg)
 		a.permissions = prm.(dialog.PermissionDialogCmp)
 		cmds = append(cmds, permCmd)
 
-		help, helpCmd := a.help.Update(msg)
+		help, helpCmd := a.help.Update(dialogMsg)
 		a.help = help.(dialog.HelpCmp)
 		cmds = append(cmds, helpCmd)
 
-		session, sessionCmd := a.sessionDialog.Update(msg)
+		session, sessionCmd := a.sessionDialog.Update(dialogMsg)
 		a.sessionDialog = session.(dialog.SessionDialog)
 		cmds = append(cmds, sessionCmd)
 
-		command, commandCmd := a.commandDialog.Update(msg)
+		command, commandCmd := a.commandDialog.Update(dialogMsg)
 		a.commandDialog = command.(dialog.CommandDialog)
 		cmds = append(cmds, commandCmd)
 
-		filepicker, filepickerCmd := a.filepicker.Update(msg)
+		filepicker, filepickerCmd := a.filepicker.Update(dialogMsg)
 		a.filepicker = filepicker.(dialog.FilepickerCmp)
 		cmds = append(cmds, filepickerCmd)
 
-		a.initDialog.SetSize(msg.Width, msg.Height)
+		// The model and theme pickers were never given the terminal's size at
+		// all, so they rendered at their unsized defaults: the model picker
+		// came out 47 cells wide and overflowed every terminal narrower than
+		// that. Found by widening the audit's size grid.
+		models, modelsCmd := a.modelDialog.Update(dialogMsg)
+		a.modelDialog = models.(dialog.ModelDialog)
+		cmds = append(cmds, modelsCmd)
 
+		themes, themesCmd := a.themeDialog.Update(dialogMsg)
+		a.themeDialog = themes.(dialog.ThemeDialog)
+		cmds = append(cmds, themesCmd)
+
+		a.initDialog.SetSize(dialogMsg.Width, dialogMsg.Height)
+
+		// Sized whether or not it is showing. Inside the `if` it only learned
+		// the size when the terminal was resized while it was already open,
+		// so the first render after opening used the unsized default.
+		a.multiArgumentsDialog.SetSize(dialogMsg.Width, dialogMsg.Height)
 		if a.showMultiArgumentsDialog {
-			a.multiArgumentsDialog.SetSize(msg.Width, msg.Height)
-			args, argsCmd := a.multiArgumentsDialog.Update(msg)
+			args, argsCmd := a.multiArgumentsDialog.Update(dialogMsg)
 			a.multiArgumentsDialog = args.(dialog.MultiArgumentsDialogCmp)
 			cmds = append(cmds, argsCmd, a.multiArgumentsDialog.Init())
 		}
 
-		// The banner needs the terminal's size, so it is printed on the first
-		// size report rather than from Init.
-		if !a.bannerPrinted && msg.Width > 0 && terminalHeight > 0 {
-			a.bannerPrinted = true
-			cmds = append(cmds, a.startupBanner(msg.Width, terminalHeight))
+		if bannerCmd != nil {
+			cmds = append(cmds, bannerCmd)
 		}
 
 		return a, tea.Batch(cmds...)
@@ -823,40 +876,112 @@ func (a appModel) hasOverlay() bool {
 		a.isCompacting
 }
 
-// startupBanner prints the banner into the terminal's scrollback and pads it
-// so that the live region lands on the terminal's last row -- Aux occupies the
-// whole screen from the moment it starts, without taking the alternate screen
-// and so without costing the user their scrollback, their selection or their
-// wheel.
+// managedRegionHeight is how tall the live region renders, or 0 to let it be
+// as tall as its content.
 //
-// This is a deliberate divergence from Claude Code, which was measured here
-// and does not do it: it prints its banner wherever the cursor happens to be
-// and leaves the rows below its live region untouched. Filling the screen is
-// what was asked for; everything else about the model -- printed history, a
-// collapsed live region, no alternate screen -- follows Claude Code.
-func (a appModel) startupBanner(width, terminalHeight int) tea.Cmd {
-	banner := chat.Banner(width)
-	if banner == "" {
-		return nil
+// Until any of the conversation has been printed there is nothing above the
+// region, so it owns the whole screen below the banner: the composer sits on
+// the terminal's last row and Aux fills the terminal from the moment it
+// starts, without the alternate screen. Sizing it here rather than padding
+// the banner print means a resize recomputes it, which the padding could not.
+//
+// It also removes a whole class of defect. An overlay needs most of the
+// screen, so with a collapsed region one had to be grown and then shrunk
+// again -- and Bubble Tea's inline renderer cannot scroll the terminal back
+// down, so closing a dialog left the composer stranded near the top with the
+// rest of the screen blank. Found by driving the real binary in a pty. While
+// the region already owns the screen there is nothing to grow, so nothing
+// drifts.
+//
+// Once the conversation is printed the region goes tight against it: a floor
+// here instead would put a block of blank rows between the history and the
+// composer, which is the defect #53 was raised to fix.
+func (a appModel) managedRegionHeight() int {
+	// a.height was already set from the region, banner subtracted, when the
+	// terminal reported its size -- so the region is simply that plus the two
+	// rows the header and status line take. Subtracting the banner again here
+	// took it off twice and left the bottom four rows of the screen empty.
+	region := a.height + 2
+	if region <= 0 {
+		return 0
 	}
-	// The live region is rendered below whatever is printed, so the padding is
-	// whatever the two of them do not already account for.
-	//
-	// Measured from baseView rather than View: on a first run the init dialog
-	// is already up when the first size report arrives, and an overlay grows
-	// the region to the whole screen, which made the padding come out as zero
-	// and left the bottom of the terminal empty once the dialog was dismissed.
-	pad := terminalHeight - lipgloss.Height(banner) - lipgloss.Height(a.baseView())
-	if pad > 0 {
-		banner += strings.Repeat("\n", pad)
+	if !a.conversationPrinted && a.bannerRows > 0 {
+		return region
 	}
-	return tea.Println(banner)
+	if a.hasOverlay() {
+		return region
+	}
+	return 0
 }
 
-// baseView is the live region with no overlay on it: the page, the run
-// information and the status line. Separated from View so the startup banner
-// can measure the region it will sit above without an open dialog changing the
-// answer.
+// centreOverlay centres a dialog on the managed region.
+//
+// It refuses to place one the region cannot hold, and says so instead. The
+// placement expands the view to fit whatever it is given, so an oversized
+// dialog used to push the rendered region past the terminal and lose its own
+// title off the top and its buttons off the bottom -- and a prompt whose
+// buttons are off the screen cannot be answered. Measured at 40x14, where the
+// region is ten rows: the model picker wanted fourteen and the init dialog
+// twenty-three.
+func centreOverlay(appView, overlay string) string {
+	regionHeight := lipgloss.Height(appView)
+	regionWidth := lipgloss.Width(appView)
+	// PlaceOverlay draws a drop shadow around what it is given, and that costs
+	// two rows and a column: the shadow background is built with `i <=
+	// fgHeight` and a trailing newline, so it is two lines taller than the
+	// dialog. Checking the bare dialog made a 16-row one "fit" a 16-row region
+	// and then render 18.
+	const shadowRows, shadowCols = 2, 1
+	if lipgloss.Height(overlay)+shadowRows > regionHeight ||
+		lipgloss.Width(overlay)+shadowCols > regionWidth {
+		overlay = tooSmallNotice(regionWidth-shadowCols, regionHeight-shadowRows)
+	}
+	row := regionHeight/2 - lipgloss.Height(overlay)/2
+	col := regionWidth/2 - lipgloss.Width(overlay)/2
+	return layout.PlaceOverlay(col, row, overlay, appView, true)
+}
+
+// tooSmallNotice is what a dialog becomes when the terminal is too small to
+// show it. Saying so is the honest option: a clipped dialog looks like a
+// rendering fault, and a clipped prompt cannot be answered at all.
+func tooSmallNotice(width, height int) string {
+	t := theme.CurrentTheme()
+	// Short enough to fit a 40-column terminal without being cut, which is
+	// the width this notice exists for.
+	const message = "Terminal too small"
+	const hint = "Resize or press esc"
+	// width-5: the border and the overlay's drop shadow. The padding is
+	// counted inside Width by lipgloss, so it is not subtracted again here.
+	inner := max(10, min(max(lipgloss.Width(message), lipgloss.Width(hint))+2, width-5))
+	// Truncated to the padded content width, or lipgloss wraps the lines
+	// instead of cutting them and the notice doubles in height.
+	text := max(1, inner-2)
+	body := lipgloss.JoinVertical(lipgloss.Center,
+		ansi.Truncate(message, text, "\u2026"),
+		ansi.Truncate(hint, text, "\u2026"),
+	)
+	notice := lipgloss.NewStyle().
+		Width(inner).
+		Padding(0, 1).
+		Align(lipgloss.Center).
+		Foreground(t.Text()).
+		Background(t.Background()).
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(t.BorderFocused()).
+		BorderBackground(t.Background()).
+		Render(body)
+	// Even the notice has to fit; at that point there is nothing to do but
+	// show the words without a frame.
+	if lipgloss.Height(notice) > height || lipgloss.Width(notice) > width {
+		return lipgloss.NewStyle().
+			Width(max(1, min(lipgloss.Width(message), width))).
+			MaxHeight(max(1, height)).
+			Foreground(t.Text()).
+			Render(message)
+	}
+	return notice
+}
+
 func (a appModel) baseView() string {
 	// The task header projects truthful runtime state:
 	// project, active stage, model, context, and cost. It renders only once the
@@ -879,51 +1004,40 @@ func (a appModel) baseView() string {
 func (a appModel) View() string {
 	appView := a.baseView()
 
-	// Every overlay below is centred on appView and clipped to it, so while
-	// one is up the managed region grows to the whole screen.
+	// Every overlay below is centred on appView and clipped to it, so the
+	// region has to be as tall as the screen before one is placed. A clipped
+	// permission prompt gates every tool call and cannot be answered, so this
+	// is a correctness rule, not a cosmetic one.
 	//
-	// Without this the live region's few rows clip every dialog. That includes
-	// the permission prompt, which gates every tool call -- a clipped one is
-	// unanswerable, so this is a correctness fix and not a cosmetic one.
-	if a.hasOverlay() {
-		// Grown upwards, not downwards. The live region lives at the bottom of
-		// the screen, so padding it out underneath moved the composer to the
-		// top and left the dialog hanging below it -- which is what the real
-		// binary did on a first run, with the init dialog up.
+	// Grown upwards: the composer sits on the bottom row, and padding
+	// underneath moved it to the top of the screen with the dialog hanging
+	// below it.
+	if height := a.managedRegionHeight(); height > 0 {
 		appView = lipgloss.NewStyle().
-			Height(max(1, a.height+2)).
+			Height(height).
 			AlignVertical(lipgloss.Bottom).
 			Render(appView)
 	}
 
+	// While a dialog is up it has the region to itself. Centring an opaque box
+	// over the composer left fragments of the composer's full-width rules
+	// showing in the columns the box did not cover, and at 80x24 the box and
+	// those rules overlapped outright. Measured in a pty, not reasoned about.
+	if a.hasOverlay() {
+		appView = lipgloss.NewStyle().
+			Width(max(1, a.width)).
+			Height(lipgloss.Height(appView)).
+			Render("")
+	}
+
 	if a.showPermissions {
 		overlay := a.permissions.View()
-		row := lipgloss.Height(appView) / 2
-		row -= lipgloss.Height(overlay) / 2
-		col := lipgloss.Width(appView) / 2
-		col -= lipgloss.Width(overlay) / 2
-		appView = layout.PlaceOverlay(
-			col,
-			row,
-			overlay,
-			appView,
-			true,
-		)
+		appView = centreOverlay(appView, overlay)
 	}
 
 	if a.showFilepicker {
 		overlay := a.filepicker.View()
-		row := lipgloss.Height(appView) / 2
-		row -= lipgloss.Height(overlay) / 2
-		col := lipgloss.Width(appView) / 2
-		col -= lipgloss.Width(overlay) / 2
-		appView = layout.PlaceOverlay(
-			col,
-			row,
-			overlay,
-			appView,
-			true,
-		)
+		appView = centreOverlay(appView, overlay)
 
 	}
 
@@ -939,17 +1053,7 @@ func (a appModel) View() string {
 			Foreground(t.Text())
 
 		overlay := style.Render("Summarizing\n" + a.compactingMessage)
-		row := lipgloss.Height(appView) / 2
-		row -= lipgloss.Height(overlay) / 2
-		col := lipgloss.Width(appView) / 2
-		col -= lipgloss.Width(overlay) / 2
-		appView = layout.PlaceOverlay(
-			col,
-			row,
-			overlay,
-			appView,
-			true,
-		)
+		appView = centreOverlay(appView, overlay)
 	}
 
 	if a.showHelp {
@@ -969,118 +1073,45 @@ func (a appModel) View() string {
 		a.help.SetBindings(bindings)
 
 		overlay := a.help.View()
-		row := lipgloss.Height(appView) / 2
-		row -= lipgloss.Height(overlay) / 2
-		col := lipgloss.Width(appView) / 2
-		col -= lipgloss.Width(overlay) / 2
-		appView = layout.PlaceOverlay(
-			col,
-			row,
-			overlay,
-			appView,
-			true,
-		)
+		appView = centreOverlay(appView, overlay)
 	}
 
 	if a.showQuit {
 		overlay := a.quit.View()
-		row := lipgloss.Height(appView) / 2
-		row -= lipgloss.Height(overlay) / 2
-		col := lipgloss.Width(appView) / 2
-		col -= lipgloss.Width(overlay) / 2
-		appView = layout.PlaceOverlay(
-			col,
-			row,
-			overlay,
-			appView,
-			true,
-		)
+		appView = centreOverlay(appView, overlay)
 	}
 
 	if a.showSessionDialog {
 		overlay := a.sessionDialog.View()
-		row := lipgloss.Height(appView) / 2
-		row -= lipgloss.Height(overlay) / 2
-		col := lipgloss.Width(appView) / 2
-		col -= lipgloss.Width(overlay) / 2
-		appView = layout.PlaceOverlay(
-			col,
-			row,
-			overlay,
-			appView,
-			true,
-		)
+		appView = centreOverlay(appView, overlay)
 	}
 
 	if a.showModelDialog {
 		overlay := a.modelDialog.View()
-		row := lipgloss.Height(appView) / 2
-		row -= lipgloss.Height(overlay) / 2
-		col := lipgloss.Width(appView) / 2
-		col -= lipgloss.Width(overlay) / 2
-		appView = layout.PlaceOverlay(
-			col,
-			row,
-			overlay,
-			appView,
-			true,
-		)
+		appView = centreOverlay(appView, overlay)
 	}
 
 	if a.showCommandDialog {
 		overlay := a.commandDialog.View()
-		row := lipgloss.Height(appView) / 2
-		row -= lipgloss.Height(overlay) / 2
-		col := lipgloss.Width(appView) / 2
-		col -= lipgloss.Width(overlay) / 2
-		appView = layout.PlaceOverlay(
-			col,
-			row,
-			overlay,
-			appView,
-			true,
-		)
+		appView = centreOverlay(appView, overlay)
 	}
 
 	if a.showInitDialog {
-		overlay := a.initDialog.View()
-		appView = layout.PlaceOverlay(
-			a.width/2-lipgloss.Width(overlay)/2,
-			a.height/2-lipgloss.Height(overlay)/2,
-			overlay,
-			appView,
-			true,
-		)
+		// Through centreOverlay like every other dialog. This one centred
+		// itself against a.width/a.height rather than the region, and so
+		// skipped the check that the region can hold it: at 40x14 it rendered
+		// twenty-three rows into a ten-row region.
+		appView = centreOverlay(appView, a.initDialog.View())
 	}
 
 	if a.showThemeDialog {
 		overlay := a.themeDialog.View()
-		row := lipgloss.Height(appView) / 2
-		row -= lipgloss.Height(overlay) / 2
-		col := lipgloss.Width(appView) / 2
-		col -= lipgloss.Width(overlay) / 2
-		appView = layout.PlaceOverlay(
-			col,
-			row,
-			overlay,
-			appView,
-			true,
-		)
+		appView = centreOverlay(appView, overlay)
 	}
 
 	if a.showMultiArgumentsDialog {
 		overlay := a.multiArgumentsDialog.View()
-		row := lipgloss.Height(appView) / 2
-		row -= lipgloss.Height(overlay) / 2
-		col := lipgloss.Width(appView) / 2
-		col -= lipgloss.Width(overlay) / 2
-		appView = layout.PlaceOverlay(
-			col,
-			row,
-			overlay,
-			appView,
-			true,
-		)
+		appView = centreOverlay(appView, overlay)
 	}
 
 	return appView

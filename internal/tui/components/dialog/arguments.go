@@ -181,7 +181,7 @@ func (m MultiArgumentsDialogCmp) View() string {
 	baseStyle := styles.BaseStyle()
 
 	// Calculate width needed for content
-	maxWidth := 60 // Width for explanation text
+	maxWidth := fitWidth(60, m.width) // Width for explanation text
 
 	title := lipgloss.NewStyle().
 		Foreground(t.Primary()).

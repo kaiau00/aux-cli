@@ -232,7 +232,15 @@ M2.1 Catalog, M2.2 SDKs (parallel)┘            │
   the decision it answers to -- and it shipped as #48 (working indicator), #49
   (prose, tool calls and real durations), #50 (the canvas), #51 (scrollback),
   #53 (the live region collapses, overlays still fit) and #54 (the startup
-  screen). Its decisions are D16-D18.
+  screen), #54 (the startup screen, and the dialog audit that followed it).
+  Its decisions are D16-D18.
+- **Two levels of UI audit, and they catch different things.**
+  `TestFullSurfaceAudit` renders `View()` for every state at eight sizes in
+  both modes; the pty harness drives the real binary and checks the rendered
+  screen. The second found three defects the first reported clean, because
+  both were about what the terminal does with what Aux emits -- scrolling,
+  cursor position, prints against repaints -- and `View()` returns a string.
+  Neither replaces a person at their own terminal.
 
 Size key: **S** < half a day, **M** one to two days, **L** several days.
 Agent-safe unless marked **[HUMAN]**.
