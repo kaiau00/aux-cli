@@ -17,7 +17,7 @@ disagree, the plan wins and this file gets corrected.
 
 ---
 
-## Progress (as of 2026-10-07)
+## Progress (as of 2026-10-11)
 
 Update this section and the plan's §6 checklist in every PR that moves an item.
 
@@ -45,17 +45,23 @@ Update this section and the plan's §6 checklist in every PR that moves an item.
 | History goes to the terminal's scrollback (UI pass) | #51 |
 | Live region collapses; overlays still fit (UI pass) | #53 |
 
-**Open:** nothing. M2.4 merged as #47; `main`'s own post-merge run is green.
+**Open:** **#54** -- the startup screen, and the dialog audit that followed
+it. Everything else in the UI pass merged as #48, #49, #50, #51 and #53, and
+`main`'s own post-merge run is green on each. Move #54's two rows into the
+table above when it merges; until then this file must not claim it did.
 
-**Next:** a UI pass, requested 2026-10-07 and sequenced *before* M2.5, because
-M2.5 builds a dialog into the same transcript and would otherwise be built
-twice. Three parts: the working indicator (#48), the transcript's visibility
-defects (#49), the canvas (#50) and the scrollback (#51). The palette is
-**closed**: the accent stays amber, decided 2026-10-08 once the painted canvas
-was gone and it was clear the background, not the hue, was the complaint. Then M2.5,
-M2.6–M2.8, M3. The plan has no UI item; D3 ("do not tag until it feels like
-Claude Code") is the decision this answers to. What remains of the pass is
-under *Opportunistic*.
+**Next:** **M2.5 compaction as a decision**, then M2.6-M2.8, then M3. The UI
+pass is finished in code and the palette is closed (the accent stays amber --
+see the plan's D17). M2.5 was deliberately sequenced after it: it builds a
+dialog into the transcript, and the transcript's rendering model is now
+settled, so it will not be built twice.
+
+Six parts: the working indicator (#48), the transcript's visibility defects
+(#49), the canvas (#50), the scrollback (#51), the live region and its overlays
+(#53), and the startup screen with the dialog audit that followed it (#54).
+The plan records the pass in §5 and its decisions as D16-D18; D3 ("do not tag
+until it feels like Claude Code") is the decision it answers to. What remains
+is under *Opportunistic*.
 
 **Not yet verified** (each is a done-when that has not been run):
 
@@ -67,12 +73,25 @@ under *Opportunistic*.
   resident-pages check have not been run against a real provider.
 - M2.2: the per-provider live check that cache tokens show in the status bar
   needs real keys. The offline streaming fixtures pass for all four SDKs.
+- **The UI pass has never run in a real terminal.** This is the one
+  outstanding done-when for the whole pass. Six PRs changed how Aux draws, the
+  rendering model among them. Two levels of audit stand behind it -- `View()`
+  rendered across every state and size, and the real binary driven in a pty
+  with its byte stream replayed through a terminal emulator -- and neither is
+  a person looking at their own screen. Six checks remain human-only:
+  wheel-scrolling into history, where the composer sits, drag-selecting
+  without Shift, the conversation surviving quit, resizing mid-session, and
+  the indicator, prose and durations during a live turn. Six defects in
+  August, three more on 2026-10-07 and eleven on 2026-10-10 appeared only when
+  something was run rather than read, so this is the shape of claim this file
+  has been wrong about before.
 
-**Gate numbers on `main`:** coverage 37.0% locally and 36.4% on CI, against a
-floor raised from 33.8 to **36.4** in #47. The floor tracks CI, which measures
-0.6 points under macOS here, so the laptop number is never the one to write.
-M3.7 still owns getting it to 45%. Dead-code baseline: 47 entries, down from 48 — #45 deleted the
-unused `appModel.findCommand`.
+**Gate numbers on `main`** (`7584324`, measured 2026-10-10): coverage 38.1%
+locally, against a 36.4% floor raised in #47. CI's last reported figure is
+37.1%, at `ac43a18`. The floor tracks CI, which measures ~0.6 points under
+macOS here, so the laptop number is never the one to write -- which is why the
+floor stays at 36.4 even though the laptop reads higher. Dead-code baseline: 47
+entries. M3.7 still owns getting coverage to 45%.
 
 ---
 
@@ -149,7 +168,15 @@ Aux should only say true things about itself. Verified 2026-10-02.
 | `aux -p` runs nothing that would prompt unless `--yes` is given | M0.2: `TestRunNonInteractiveDeniesWithoutYes` / `…ApprovesWithYes` (parent and subagent sessions); scratch repo: `touch created.txt` denied and listed on stderr without `--yes`, created with it |
 | First run picks a current model and says which | M2.1: `catalog_test.go`, `config/model_test.go`; temp home with only `ANTHROPIC_API_KEY`: announced Claude Sonnet 5.5, wrote it to `~/.aux.json`, second run silent and the file unchanged |
 | The context meter reflects what the window holds | Latest call's occupancy from the ledger |
-| The TUI fits the terminal it was given | Height invariant asserted across a width×height grid |
+| The TUI fits the terminal it was given, and leaves the rest to it | **Amended 2026-10-08.** The invariant asserted the app rendered *exactly* the rows the terminal reported, because the alternate screen cannot scroll. It now asserts the app fits *within* the terminal and leaves rows for the terminal's own scrollback: `TestAppFitsWithinTheTerminalAndLeavesScrollback`, `TestChatPageFillsOnlyTheLiveRegion*`. Same guarantee against overflow, opposite shape |
+| The transcript shows the agent's prose and its tool calls | `visibility_test.go`. Before #49, `isUserVisibleAssistantResponse` blanked the text of any assistant message carrying a tool call, and only the last assistant message of a turn rendered at all -- 94 of 158 prose-bearing messages in this repository's own database, 59%, never reached the screen. The prose test was run against the old rule reinstated and fails there |
+| Durations in the transcript are real | `duration_test.go`. `formatTimestampDiff` divided by 1000 while both operands were already seconds, so a 46-second wait read `46ms` |
+| Aux paints no background of its own | `canvas_test.go`, `TestRenderedMessageEmitsNoBackgroundCodes`. A 160x44 conversation emitted 4,557 background sequences before #50 and #51; it emits none from the canvas now |
+| Aux fills the terminal when it starts, without the alternate screen | #54: `TestTheStartupBannerFillsTheTerminal` across six sizes asserts printed banner + live region == the terminal's height; confirmed by running the real binary in a pty over twelve lines of existing output and replaying the byte stream through a terminal emulator -- wordmark on rows 1-4, composer on row 30 |
+| The startup banner is printed once and cannot be duplicated | #54: `TestTheStartupBannerIsPrintedOnce` resizes three times and asserts nothing is printed again. A printed line belongs to the terminal and cannot be withdrawn |
+| No dialog renders past the terminal, down to 40×14 | #54: `TestNoDialogRendersPastTheTerminal` over all eleven overlays at six sizes, asserting both that none overflows and that none falls back to the too-small notice in a terminal with room for it. Where a terminal genuinely cannot hold one, Aux says so instead of drawing a clipped dialog -- a clipped prompt cannot be answered |
+| Closing a dialog leaves the composer on the bottom row | #54: `TestClosingADialogLeavesTheComposerOnTheBottomRow`. Bubble Tea's inline renderer cannot scroll the terminal back down, so a region that grows for a dialog and shrinks again strands the composer up the screen; the region owns the screen below the banner instead, so there is nothing to grow |
+| Every glyph the TUI draws exists in the terminal's font | `TestIconsAreFontSafe` walks the whole TUI tree against an allowlist; each entry checked by parsing the cmap tables of SFNSMono.ttf and Menlo.ttc. This is why the composer prompt is `>` and not `❯`, which SF Mono lacks |
 | `.aux/` does not leak into commits | Self-ignoring `.gitignore`, verified in a scratch repo |
 | A missing API key produces a clear message | Verified: lists every env var and the config path |
 | Commands that change files or run programs ask before running | `internal/llm/tools/bash_safety_test.go`. M0.1: every audit exploit plus `\|\|`, backticks, `${`, newline, `>`, `<`, `&`, and each removed wrapper/`go` entry; `Run` prompts on `echo hi; rm -rf .` and refuses `ls && curl x`. M0.1b: mutating arguments to safe-listed commands (`go list -toolexec`, `git log --output`, `git branch -D`, `git ls-remote --upload-pack`, quoting disguises) all prompt. Caveat: `go list`/`go doc` may still fill the module cache |
@@ -177,6 +204,44 @@ never from re-reading. Treat every unmeasured claim here as a hypothesis.
 
 The shape to watch for: claims about a *mechanism* working. Machinery looks
 correct when you read it. The two newest were both machinery.
+
+**2026-10-08.** The rendering model replaced in #51 is machinery of exactly
+that shape, so it is recorded above as *not yet verified* rather than claimed.
+Its tests are real -- what leaves the managed region, how tall it is, that
+nothing prints twice -- and none of them can see a terminal. The rule applied
+rather than broken, which is the only way the count stays at ten.
+
+Worth keeping from the same day: three of the four defects the UI pass fixed
+were found by rendering the thing and reading real rows out of this
+repository's own database, and three claims *of mine* were wrong on the way --
+that `models.go` was stale (ADR 0003 made it deliberate), that the old
+spinner's block glyphs were missing from SF Mono (they are all present), and
+that the root command accepted positional arguments (it did not, which is why
+`aux --resume abc` was broken until it was run). Two things reported as
+defects were not defects at all: `\+enter` is the real newline binding, and
+the second hint row is the status bar.
+
+**Sharpened 2026-10-10.** Rendering `View()` is not the same as running the
+program. `TestFullSurfaceAudit` renders every state at eight sizes in both modes
+and reported *no findings* on the same tree that, when the real binary was run
+in a pty, threw the composer to the top of the screen the moment any dialog
+opened and left the bottom third of the terminal empty on a first run. Both
+bugs were invisible to the audit because both are about what the terminal does
+with what Aux emits -- scrolling, cursor position, the order of prints against
+repaints -- and `View()` returns a string. The audit is still worth having; it
+is just one rung below running the thing, and the rung above it is a person at
+their own terminal, which is still owed.
+
+The same day, a second lesson with the opposite shape: **an audit is only as
+good as the states and sizes it covers.** That audit rendered 8 of the 11
+overlays the model can show, its size grid stopped at 70x20, and its
+permission state had no permission in it -- so the dialog it exercised was one
+no user ever sees. Closing those three gaps turned up eight more defects in
+one pass, including a file picker that ignored its `WindowSizeMsg` entirely and
+rendered 134 cells wide in every terminal, and two pickers that were never
+given the terminal's size at all. None of them were new; all of them had
+shipped. A clean audit means "nothing in the states I thought to check", and
+the honest reading of one is to go looking for the states it skipped.
 
 ---
 
@@ -433,7 +498,7 @@ is where the loop closes. P1.6 lands with P1.3.
 model catalog is what makes Aux usable at all day to day.
 
 P0 (except the M0.5 URL check), P1, P2.1, P2.2, and P2.3 are done.
-See [Progress](#progress-as-of-2026-10-05).
+See [Progress](#progress-as-of-2026-10-11).
 
 **P3 after P1 is true.** Tag when the README is honest, not before.
 
@@ -446,6 +511,8 @@ See [Progress](#progress-as-of-2026-10-05).
 | | |
 | --- | --- |
 | Full-surface audit, 2026-10-08 | `TestFullSurfaceAudit` renders every state (splash, idle, working, drawer, and each of the overlays) at six terminal sizes in both light and dark -- about 130 renders -- and checks seven invariants on each: never taller than the terminal, never wider, never blank, an overlay takes the screen rather than a sliver, the idle region collapses, no run of three or more blank rows inside the region, and the composer is always reachable. Opt-in at `AUX_AUDIT=1` because it takes about three and a half minutes, which is too slow for every push. It found two defects beyond the one reported. **The help overlay overflowed every terminal under 93 columns** -- its width was hardcoded to 90 and ignored the window, so with border and padding it came to 93 and lost its right-hand column of keys at the classic 80; `TestHelpFitsEveryTerminalWidth` now covers 40 to 200 and fails against the old hardcoded width. **The model picker panicked with no configured provider**, slicing the empty provider name to capitalise it -- a crash reachable with one keystroke on a first run, found by the new overlay test on CI where no catalog is cached and missed locally because this machine had one. It now explains itself instead. Final state: no findings across every state, size and mode |
+| Dialogs fit the terminal, and a screen-level audit to prove it, 2026-10-10 | A thorough audit, asked for after the startup screen landed. The method that found everything here: drive the real binary in a pty through a state matrix, replay each byte stream through a terminal emulator, and check the **screen** rather than the string `View()` returns. `TestFullSurfaceAudit` reported no findings on the same tree. **Three defects in the rendering model.** Closing any dialog stranded the composer near the top of the screen with the rest blank -- Bubble Tea's inline renderer cannot scroll the terminal back down, so a region that grows for a dialog and shrinks again leaves it up there. The region now owns the screen below the printed banner while nothing of the conversation has been printed, so there is nothing to grow and nothing drifts; `chat.ScrollbackPrintedMsg` is the signal that history now exists and the region must go tight against it. Dialogs were also composited *over* the composer, so its full-width rules showed through the columns the box did not cover and at 80x24 the two collided outright; a dialog has the region to itself now. And the page grew its own region for the drawer to the terminal's height while this model padded to the terminal minus the banner, so opening and closing the drawer left the composer four rows -- the banner's height -- above the bottom: there is one authority for that number now, and dialogs are told the region's height rather than the page's, because the header and status line are not drawn under them. **Eight defects in the dialogs themselves**, all found by widening the audit's size grid from 70x20 down to 40x14 and adding the four overlays it had never rendered. The file picker ignored its `WindowSizeMsg` entirely -- `f.width = 60; f.viewport.Width = 80` -- and so rendered **134 cells wide and 28 rows tall in every terminal**: at 80x24 its preview pane ran off the right and its path header off the top. The model and theme pickers were **never given the terminal's size at all**; measured, the model picker fell back to the too-small notice at every width from 44 to 47. The multi-argument prompt was sized only while already visible, so its first render used the unsized default. The permission dialog -- the one that gates every tool call -- returned early from `SetSize` when it had no permission yet, leaving width at zero, and `View` renders unbounded at zero: 54 cells in a 40-column terminal. And five dialogs' width clamps were each broken differently: `models.go` had a constant that was never compared with the terminal, `init.go` clamped only *after* laying its text out at the unclamped width, `arguments.go` had no clamp, `session.go`'s clamp sat inside a `max(30, ...)` that put the floor back over the edge, and `commands.go` had none. A shared `fitWidth`/`fitRows` replaces all five. The init dialog also centred itself against the terminal rather than the region, which skipped the fit check entirely. **New behaviour:** where a terminal genuinely cannot hold a dialog, Aux renders a short "Terminal too small" notice instead of a clipped one. A clipped dialog reads as a rendering fault and a clipped prompt cannot be answered. The ten duplicated centre-and-place blocks in `View` collapsed into one `centreOverlay`, which is where that check lives. **The audit itself was the other finding.** It rendered 8 of the 11 overlays `hasOverlay` knows about, its grid stopped at 70x20, and its permission state had no permission in it -- so the dialog it tested was one no user ever sees. All three are closed, and two of its invariants were amended rather than deleted: "an overlay fills the screen" became "the region plus what was printed accounts for the terminal", and the blank-row check now exempts the splash, where the empty conversation area above a bottom-pinned composer is the point (D18). Tests: `dialog_fit_test.go` (no dialog past the terminal at six sizes; the notice fits and replaces what it stands in for), `startup_test.go` (the composer returns to the bottom row after each of four dialogs; a dialog is not composited over it), `filepicker_size_test.go`, and `fit.go`'s helpers. Each checked against its own fix disabled; where a test turned out not to be load-bearing -- the model-picker sizing passed either way until the grid reached 44 columns -- the test was tightened rather than the claim kept. **Still not verified in a real terminal by a human.** |
+| Startup screen: a printed wordmark, the whole terminal, 2026-10-10 | Asked for: fill the terminal, a print at startup, and behave like Claude Code in a terminal. The last of those was measured rather than assumed -- `claude` v2.1.246 driven in a pty, its raw byte stream captured and replayed through a terminal emulator. What it does: **no alternate screen** (no `?1049h` anywhere), **no screen clear** of any form (with twelve lines already on screen it printed its banner below them), **no mouse tracking** (which is why selection works), a three-line mark printed once into scrollback, and a five-row live region framed by two full-width rules. Aux already matched the model; what it lacked was the print, so an empty terminal showed a five-row sliver with nothing above it. Now: an `AUX` wordmark in quadrant blocks with the version, model and context window, the working directory and the LSP list beside it, printed once and padded so the composer lands on the terminal's last row -- the screen is Aux's from the moment it starts, with the scrollback, the wheel and text selection all intact. Filling the screen is a deliberate divergence (D18): Claude Code leaves the rows below its region untouched. Two measured borrowings: the composer is now ruled above *and* below, and the run information moved from above the composer to below it. One measured *non*-borrowing: Claude Code's prompt glyph `❯` is **absent from SF Mono**, as are `⚠` and `◆`, so Aux keeps `>`; the wordmark's blocks were added to the font-safe allowlist only after parsing both fonts' cmap tables. The splash it replaces is deleted, not orphaned -- its LSP line moved into the banner, because nothing else in the TUI names the language servers. Running the real binary found what the tests could not: the overlay growth added in #53 padded the region *downwards*, so opening any dialog threw the composer to the top of the screen with the dialog hanging below it -- it grows upwards now; and the startup padding was measured through `View()`, which on a first run reports the full screen because the init dialog is already up, so the fill came out as zero and the bottom third of the terminal stayed empty once the dialog was answered -- it is measured through the new `baseView()` instead. Found while writing the tests: the banner did not clamp its own name line to the width, and the ASCII path still emitted `·` and `…`. Tests: `banner_test.go` (equal-width mark lines, names Aux/model/directory, narrow terminals drop the mark rather than wrap it, never overflows, ASCII stays ASCII, paints no background, no trailing padding) and `startup_test.go` (fills the terminal across six sizes, printed exactly once across three resizes, composer ruled above and below, header below the composer, an overlay does not move the composer to the top, the fill survives a dialog being up at startup) -- every one of them checked against its fix disabled and failing. Also fixed in passing: three scrollback tests matched plain substrings against ANSI-laden output, so any test that set a colour profile broke them; they strip first now, proven by leaking TrueColor deliberately and watching them still pass. **Still not verified in a real terminal by a human** -- the pty capture is a faithful byte stream, but it is not someone's eyes on their own screen |
 | Live region collapses, and overlays still fit, 2026-10-08 | #51 shipped the scrollback model with the live region padded out to a fixed allocation, so a finished turn left **nine blank rows** between the conversation in scrollback and the composer. Reported as "absolutely horrible", and it was: the one view never rendered while building it was the idle one, which is the view a user sees most. Three places forced the height rather than capping it -- `messagesCmp.View`'s `fit` closure, `layout.Container`, and `splitPaneLayout.View` -- all correct under the alternate screen, where rendering short left stale rows behind, and all wrong inline. They are ceilings now (`MaxHeight`, not `Height`), the viewport is sized from its content rather than its allocation, and an empty tight container renders nothing instead of its padding. Idle went 44 -> 14 -> **5 rows** (header, rule, composer, hint, status), growing to 7 while a reply streams. Fixing that exposed a worse bug it had been hiding: every overlay is placed onto the assembled view and bounded by it, so collapsing the view **clipped all eleven of them** -- including the permission dialog that gates every tool call, which clipped is unanswerable. The managed region now grows to the screen whenever an overlay is up, and shrinks back when it closes. Tests: `TestAnOverlayGrowsTheManagedRegion` over all nine overlay kinds, checked against the fix disabled and failing for every one of them; `TestTheDrawerGrowsTheLiveRegion` (open, grown, closed, back); `TestMessagesPaneIsAsTallAsItsContentAndNoTaller`, which replaces `TestMessagesPaneRendersItsExactHeight` -- the old invariant *demanded* the padding that caused this |
 | History goes to the terminal's scrollback, 2026-10-08 | Aux ran in the alternate screen with a full-height viewport over every message. It now runs inline: finished messages are printed once, above the live region, with `tea.Println`, and Aux repaints only what is still in flight -- the composer, the streaming reply, the working line and the status row. Measured on a 44-row terminal: the managed region went from **44 rows to 14**, so 30 rows belong to the terminal. Consequences, all of them the point: the terminal's own wheel, scrollback search and text selection work again (mouse capture is gone, so selection no longer needs Shift held), and what you did survives Aux exiting. `tea.Println` is a no-op while the alternate screen is active, so dropping it was a precondition rather than a preference. Three things found by doing it: `splitPaneLayout.Update` sized itself from any `WindowSizeMsg` it received and reclaimed the whole screen, undoing the cap -- the page is now the only sizing authority; the split was also still painting a background, the last canvas leak #50 missed and the exact source of its residual 66 sequences; and `renderView` cached in-flight messages, so a debounced re-render replayed whichever delta arrived first and the stream appeared to stop. The context pane is no longer a column -- a live region of 14 rows cannot host one -- so ctrl+g opens it as an overlay, which is what the drawer was built for. Two previously deferred items are resolved by construction: the transcript is no longer top-anchored, and the always-present right pane is gone. What it gives up is recorded under *Opportunistic*: printed lines cannot be re-wrapped on resize. Tests: `scrollback_test.go` (handed over exactly once, a session hands over its own history even when ids collide, handed-over messages leave the live region, nothing is handed over before the width is known) and `TestStreamingMessageIsNotPrintedUntilItSettles`, which replaces `TestStreamingUpdateDoesNotStealScrollPosition` -- that bug class is gone by construction, since Aux no longer owns a scroll position, and the risk that replaces it is printing a half-streamed reply that cannot be withdrawn. The height invariant inverted: `TestAppFitsWithinTheTerminalAndLeavesScrollback` and `TestChatPageFillsOnlyTheLiveRegion*` now assert the app fits *within* the terminal and leaves rows for scrollback, where before they asserted it filled the window exactly. **Not yet verified in a real terminal** -- the tests measure what leaves the managed region and how tall it is, not what the scrollback looks like |
 | Canvas belongs to the terminal, 2026-10-07 | Aux painted its own background everywhere: a 160x44 conversation emitted **4,557** background colour sequences against 2,203 foreground ones, two background changes for every foreground one, which is what made it read as a themed application sitting in a terminal rather than as a terminal program. `BaseStyle` and `layout.Container` no longer set one, and the transcript and log pages strip glamour's own with a new `styles.StripBackgrounds` instead of stamping the theme's over them. After: **66** sequences in the same view, -99%. Grounded in reading `openai/codex`, which barely defines colours -- its status colours are ANSI *names* under the comment "Semantic status colors that preserve the terminal's configured palette", it queries the terminal's real background and branches on `is_light`, degrades across TrueColor/256/16, and carries exactly one brand colour (`CHATGPT_BLUE_200`). Measured: Codex sets a background 39 times against 172 foregrounds (0.23); Aux was 129 against 181 (0.71) and deferred to the terminal's own colours **zero** times. The rule now is: the canvas is the terminal's, and surfaces that must be opaque -- dialogs, selection fills, status badges -- opt in. Dialogs keep their explicit fills, and `ForceReplaceBackgroundWithLipgloss` stays for them. The theme keeps a `Background()` role as the reference the contrast tests check legibility against, so that guarantee is unchanged. Verified light and dark: `AdaptiveColor` switches the foregrounds, so a light terminal gets the light variants. Noted while measuring, pre-existing and not introduced here: two decorative light-mode values (`lightSelection #e8d7ad`, a computed `#c9ab71`) sit at 1.42 and 2.20 against white -- about what they already were against the theme's own cream, and they are selection fills and dim rules, where low contrast is intended; the roles the contrast tests cover all still pass. `TestRenderedMessageMatchesTerminalColorProfile` was amended rather than deleted: its guard against glamour defaulting to TrueColor stands, and "no background to diverge from" is strictly stronger for the incident it exists for than "both halves in the same profile". Tests: `canvas_test.go` (BaseStyle paints no background but still sets a foreground; `StripBackgrounds` removes 24-bit, indexed, plain and bright background forms while keeping foreground and bold; a surface can still paint), plus `TestRenderedMessageEmitsNoBackgroundCodes` over a real markdown message with a code block, list and tool call |

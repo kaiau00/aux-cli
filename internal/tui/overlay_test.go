@@ -82,9 +82,19 @@ func TestAnOverlayGrowsTheManagedRegion(t *testing.T) {
 			if !with.hasOverlay() {
 				t.Fatal("hasOverlay does not know about this overlay, so the region will not grow for it")
 			}
+			// Amended 2026-10-10. The assertion was `== termHeight`, which was
+			// a proxy for "not clipped" and stopped being true once the
+			// region began owning only the screen *below* the printed banner.
+			// The invariant it stood for is this one: the region plus whatever
+			// was printed above it accounts for the whole terminal, so a
+			// dialog centred in the region is whole.
 			got := lipgloss.Height(with.View())
-			if got != termHeight {
-				t.Errorf("with the %s up the view is %d rows, want the terminal's %d; the overlay is clipped",
+			if got+with.bannerRows != termHeight {
+				t.Errorf("with the %s up the region is %d rows and %d were printed, which is not the terminal's %d; the overlay is clipped",
+					tc.name, got, with.bannerRows, termHeight)
+			}
+			if got < termHeight/2 {
+				t.Errorf("with the %s up the region is only %d rows of %d; a dialog will not fit",
 					tc.name, got, termHeight)
 			}
 		})

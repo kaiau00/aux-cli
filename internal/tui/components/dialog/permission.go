@@ -449,9 +449,11 @@ func (p *permissionDialogCmp) BindingKeys() []key.Binding {
 }
 
 func (p *permissionDialogCmp) SetSize() tea.Cmd {
-	if p.permission.ID == "" {
-		return nil
-	}
+	// No early return when there is no permission yet. It used to bail here
+	// and leave width and height at zero, and View renders unbounded at zero
+	// -- 54 cells wide in a 40-column terminal, with the buttons past the
+	// right edge. A dialog that gates every tool call must never render wider
+	// than the screen, whatever state it is in.
 	switch p.permission.ToolName {
 	case tools.BashToolName:
 		p.width = int(float64(p.windowSize.Width) * 0.4)
@@ -469,6 +471,8 @@ func (p *permissionDialogCmp) SetSize() tea.Cmd {
 		p.width = int(float64(p.windowSize.Width) * 0.7)
 		p.height = int(float64(p.windowSize.Height) * 0.5)
 	}
+	p.width = fitWidth(p.width, p.windowSize.Width)
+	p.height = fitRows(p.height, p.windowSize.Height)
 	return nil
 }
 

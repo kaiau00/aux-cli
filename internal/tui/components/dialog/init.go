@@ -97,7 +97,11 @@ func (m InitDialogCmp) View() string {
 	baseStyle := styles.BaseStyle()
 
 	// Calculate width needed for content
-	maxWidth := 60 // Width for explanation text
+	// Fitted before anything is rendered with it. The clamp used to sit
+	// below these styles, so the text was laid out at the full 60 columns
+	// and only the frame was narrowed -- 67 cells wide in a 40-column
+	// terminal.
+	maxWidth := fitWidth(60, m.width)
 
 	title := baseStyle.
 		Foreground(t.Primary()).
@@ -118,7 +122,6 @@ func (m InitDialogCmp) View() string {
 		Padding(1, 1).
 		Render("Would you like to initialize this project?")
 
-	maxWidth = min(maxWidth, m.width-10)
 	yesStyle := baseStyle
 	noStyle := baseStyle
 

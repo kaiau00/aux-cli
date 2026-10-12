@@ -120,10 +120,21 @@ func (f *filepickerCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		f.width = 60
-		f.height = 20
-		f.viewport.Width = 80
-		f.viewport.Height = 22
+		// Sized from the terminal, not hardcoded. These were f.width = 60,
+		// f.viewport.Width = 80 regardless of the message, so the picker
+		// rendered 134 cells wide and 28 rows tall in every terminal: at 80
+		// columns the preview pane's right border was off the screen and the
+		// path header had scrolled off the top. Found by opening it in a pty.
+		//
+		// The list takes a little under half the width and the preview the
+		// rest; both leave room for their borders, their padding and the
+		// overlay's drop shadow.
+		available := max(minPickerWidth, msg.Width-pickerMargin)
+		list := max(minListWidth, available*listWidthPercent/100)
+		f.width = list + listWidthOverhead
+		f.viewport.Width = max(minPreviewWidth, available-list-previewOverhead)
+		f.height = max(minPickerHeight, msg.Height-pickerVerticalMargin)
+		f.viewport.Height = f.height
 		f.cursor = 0
 		f.getCurrentFileBelowCursor()
 	case tea.KeyMsg:
@@ -258,10 +269,31 @@ func (f *filepickerCmp) addAttachmentToMessage() (tea.Model, tea.Cmd) {
 	return f, util.CmdHandler(AttachmentAddedMsg{attachment})
 }
 
+// Sizing for the picker, all relative to the terminal it is opened in.
+// pickerListChrome is the rows the box spends on its path row, its blank
+// spacers and its hint line, which the file list does not get.
+const pickerListChrome = 6
+
+const (
+	pickerMargin         = 2 // the overlay's drop shadow
+	pickerVerticalMargin = 8 // borders, padding, the path header and the drop shadow
+	minPickerWidth       = 30
+	minPickerHeight      = 6
+	minListWidth         = 20
+	minPreviewWidth      = 8
+	listWidthPercent     = 42
+	// adjustedWidth derives from f.width as f.width-15, so the list's own
+	// width has to be carried with that offset added back on.
+	listWidthOverhead = 15
+	// The preview's border and padding, plus the gap to the list.
+	previewOverhead = 10
+)
+
 func (f *filepickerCmp) View() string {
 	t := theme.CurrentTheme()
-	const maxVisibleDirs = 20
-	const maxWidth = 80
+	// As many rows as the picker was given, rather than a fixed 20.
+	maxVisibleDirs := max(1, f.height-pickerListChrome)
+	maxWidth := max(minListWidth, f.width-listWidthOverhead)
 
 	adjustedWidth := maxWidth
 	for _, file := range f.dirs {

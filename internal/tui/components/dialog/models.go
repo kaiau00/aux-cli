@@ -17,6 +17,7 @@ import (
 )
 
 const (
+	// Preferred, not absolute: both are fitted to the terminal in View.
 	numVisibleModels = 10
 	maxDialogWidth   = 40
 )
@@ -186,6 +187,10 @@ func (m *modelDialogCmp) switchProvider(offset int) {
 }
 
 func (m *modelDialogCmp) View() string {
+	// Fitted to the terminal. maxDialogWidth was used directly, so at 40
+	// columns the picker rendered 47 cells wide and lost its right border.
+	maxDialogWidth := fitWidth(maxDialogWidth, m.width)
+	numVisibleModels := min(numVisibleModels, fitRows(numVisibleModels, m.height))
 	t := theme.CurrentTheme()
 	baseStyle := styles.BaseStyle()
 

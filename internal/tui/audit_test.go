@@ -18,6 +18,7 @@ import (
 	"github.com/kaiau00/aux-cli/internal/db/dbtest"
 	"github.com/kaiau00/aux-cli/internal/lsp"
 	"github.com/kaiau00/aux-cli/internal/message"
+	"github.com/kaiau00/aux-cli/internal/permission"
 	"github.com/kaiau00/aux-cli/internal/session"
 	"github.com/kaiau00/aux-cli/internal/tui/components/chat"
 	"github.com/muesli/termenv"
@@ -133,15 +134,38 @@ func TestFullSurfaceAudit(t *testing.T) {
 		{name: "idle-conversation", open: true},
 		{name: "working", open: true, busy: true},
 		{name: "drawer", open: true},
-		{name: "permission", open: true, overlay: func(a *appModel) { a.showPermissions = true }},
+		{name: "permission", open: true, overlay: func(a *appModel) {
+			// With a real request in it, the way a user ever sees it. Setting
+			// only the flag left the dialog with no permission and so no size.
+			a.permissions.SetPermissions(permission.PermissionRequest{
+				ID: "p1", SessionID: "audit", ToolName: "view", Action: "read",
+				Description: "Read internal/cost/store.go",
+				Params:      map[string]any{"file_path": "internal/cost/store.go"},
+			})
+			a.showPermissions = true
+		}},
 		{name: "help", open: true, overlay: func(a *appModel) { a.showHelp = true }},
 		{name: "model-picker", open: true, overlay: func(a *appModel) { a.showModelDialog = true }},
 		{name: "session-picker", open: true, overlay: func(a *appModel) { a.showSessionDialog = true }},
 		{name: "commands", open: true, overlay: func(a *appModel) { a.showCommandDialog = true }},
 		{name: "compacting", open: true, overlay: func(a *appModel) { a.isCompacting = true }},
 		{name: "quit", open: true, overlay: func(a *appModel) { a.showQuit = true }},
+		// Added 2026-10-10. These four are overlays hasOverlay knows about
+		// that the audit never rendered, and the gap is where a real defect
+		// was living: the file picker ignored its WindowSizeMsg entirely and
+		// rendered 134 cells wide in every terminal. The audit now covers
+		// every overlay the model can show.
+		{name: "filepicker", open: true, overlay: func(a *appModel) { a.showFilepicker = true }},
+		{name: "theme-picker", open: true, overlay: func(a *appModel) { a.showThemeDialog = true }},
+		{name: "init-dialog", open: true, overlay: func(a *appModel) { a.showInitDialog = true }},
+		{name: "multi-arguments", open: true, overlay: func(a *appModel) { a.showMultiArgumentsDialog = true }},
 	}
-	sizes := [][2]int{{70, 20}, {80, 24}, {100, 30}, {120, 36}, {160, 44}, {200, 50}}
+	// Down to 40x14. The grid used to start at 70x20, and that is where a
+	// family of defects was hiding: the help dialog, the model picker and the
+	// file picker all overflow a short terminal, losing their titles and their
+	// bottom borders. 80x24 is the classic default; a split pane or a small
+	// laptop window is routinely narrower and shorter than that.
+	sizes := [][2]int{{40, 14}, {60, 18}, {70, 20}, {80, 24}, {100, 30}, {120, 36}, {160, 44}, {200, 50}}
 
 	var findings []string
 	note := func(f string, args ...any) { findings = append(findings, fmt.Sprintf(f, args...)) }
@@ -202,9 +226,23 @@ func TestFullSurfaceAudit(t *testing.T) {
 					note("%s: rendered nothing", id)
 					continue
 				}
-				// 4. an overlay must take the screen, not a sliver
-				if (st.overlay != nil || st.name == "drawer") && len(lines) < h {
-					note("%s: overlay region is %d rows of %d; it is clipped", id, len(lines), h)
+				// 4. an overlay must take the screen, not a sliver.
+				//
+				// Amended 2026-10-10: the region owns the screen *below* the
+				// printed startup banner, so the rows it renders plus the
+				// banner's are what account for the terminal. The bare
+				// `len(lines) < h` this replaces was a proxy for "not
+				// clipped" and fired for every overlay once the banner
+				// existed.
+				if st.overlay != nil || st.name == "drawer" {
+					var bannerRows int
+					if am, ok := m.(appModel); ok {
+						bannerRows = am.bannerRows
+					}
+					if len(lines)+bannerRows != h {
+						note("%s: overlay region is %d rows with %d printed, which is not the terminal's %d; it is clipped",
+							id, len(lines), bannerRows, h)
+					}
 				}
 				// 5. idle must collapse, not pad
 				if st.name == "idle-conversation" && len(lines) > 8 {
@@ -223,7 +261,14 @@ func TestFullSurfaceAudit(t *testing.T) {
 						blank = 0
 					}
 				}
-				if st.overlay == nil && st.name != "drawer" && worst >= 3 {
+				//
+				// The splash is exempt: with nothing printed but the banner,
+				// the region owns the screen and the composer is pinned to
+				// the bottom row (D18), so the empty conversation area above
+				// it is the point rather than waste. Everywhere else a run of
+				// blank rows is the defect #53 was raised to fix -- a gap
+				// between the printed history and the composer.
+				if st.overlay == nil && st.name != "drawer" && st.name != "splash" && worst >= 3 {
 					note("%s: %d consecutive blank rows inside the region", id, worst)
 				}
 				// 7. the composer has to be reachable in every non-overlay state

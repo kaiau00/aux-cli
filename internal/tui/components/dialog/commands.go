@@ -164,6 +164,7 @@ func (c *commandDialogCmp) View() string {
 		}
 	}
 
+	maxWidth = fitWidth(maxWidth, c.width)
 	c.listView.SetMaxWidth(maxWidth)
 
 	title := baseStyle.
