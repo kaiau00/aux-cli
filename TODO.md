@@ -44,11 +44,12 @@ Update this section and the plan's §6 checklist in every PR that moves an item.
 | Canvas belongs to the terminal (UI pass) | #50 |
 | History goes to the terminal's scrollback (UI pass) | #51 |
 | Live region collapses; overlays still fit (UI pass) | #53 |
+| Startup screen: a printed wordmark, the whole terminal (UI pass) | #54 |
+| Dialogs fit the terminal; a screen-level audit (UI pass) | #54 |
 
-**Open:** **#54** -- the startup screen, and the dialog audit that followed
-it. Everything else in the UI pass merged as #48, #49, #50, #51 and #53, and
-`main`'s own post-merge run is green on each. Move #54's two rows into the
-table above when it merges; until then this file must not claim it did.
+**Open:** nothing. The UI pass merged as #48, #49, #50, #51, #53 and #54;
+`main`'s own post-merge run is green on each. #52 recorded the same pass in
+these files and was superseded by #54, which carries its content.
 
 **Next:** **M2.5 compaction as a decision**, then M2.6-M2.8, then M3. The UI
 pass is finished in code and the palette is closed (the accent stays amber --
@@ -86,7 +87,7 @@ is under *Opportunistic*.
   something was run rather than read, so this is the shape of claim this file
   has been wrong about before.
 
-**Gate numbers on `main`** (`7584324`, measured 2026-10-10): coverage 38.1%
+**Gate numbers on `main`** (`e54e5d4`, measured 2026-10-11): coverage 38.9%
 locally, against a 36.4% floor raised in #47. CI's last reported figure is
 37.1%, at `ac43a18`. The floor tracks CI, which measures ~0.6 points under
 macOS here, so the laptop number is never the one to write -- which is why the
