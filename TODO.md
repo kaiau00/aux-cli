@@ -17,7 +17,7 @@ disagree, the plan wins and this file gets corrected.
 
 ---
 
-## Progress (as of 2026-10-07)
+## Progress (as of 2026-10-11)
 
 Update this section and the plan's §6 checklist in every PR that moves an item.
 
@@ -44,32 +44,24 @@ Update this section and the plan's §6 checklist in every PR that moves an item.
 | Canvas belongs to the terminal (UI pass) | #50 |
 | History goes to the terminal's scrollback (UI pass) | #51 |
 | Live region collapses; overlays still fit (UI pass) | #53 |
-| Startup screen: a printed wordmark, the whole terminal (UI pass) | #54 |
-| Dialogs fit the terminal; a screen-level audit (UI pass) | #54 |
 
-**Open:** nothing. M2.4 merged as #47; `main`'s own post-merge run is green.
+**Open:** **#54** -- the startup screen, and the dialog audit that followed
+it. Everything else in the UI pass merged as #48, #49, #50, #51 and #53, and
+`main`'s own post-merge run is green on each. Move #54's two rows into the
+table above when it merges; until then this file must not claim it did.
 
-**Next:** M2.5, then M2.6–M2.8, then M3.
+**Next:** **M2.5 compaction as a decision**, then M2.6-M2.8, then M3. The UI
+pass is finished in code and the palette is closed (the accent stays amber --
+see the plan's D17). M2.5 was deliberately sequenced after it: it builds a
+dialog into the transcript, and the transcript's rendering model is now
+settled, so it will not be built twice.
 
-The UI pass is **done in code**, requested 2026-10-07 and sequenced *before*
-M2.5 because M2.5 builds a dialog into the same transcript and would otherwise
-be built twice. Six parts: the working indicator (#48), the transcript's
-visibility defects (#49), the canvas (#50), the scrollback (#51), the live
-region and its overlays (#53), and the startup screen (#54). The palette is
-**closed**: the accent stays amber, decided 2026-10-08 once the painted canvas
-was gone and it was clear the background, not the hue, was the complaint. The
-plan now records the pass in §5 and its decisions as D16–D18; D3 ("do not tag
+Six parts: the working indicator (#48), the transcript's visibility defects
+(#49), the canvas (#50), the scrollback (#51), the live region and its overlays
+(#53), and the startup screen with the dialog audit that followed it (#54).
+The plan records the pass in §5 and its decisions as D16-D18; D3 ("do not tag
 until it feels like Claude Code") is the decision it answers to. What remains
-of the pass is under *Opportunistic*.
-
-**The one thing the UI pass still owes:** nobody has run it in a real
-terminal. Every finding so far came from rendering `View()`, from replaying a
-captured byte stream through a terminal emulator, or from driving the real
-binary in a pty -- all faithful, none of them a person looking at their own
-screen. Six checks remain human-only: wheel-scrolling into history, where the
-composer sits, drag-selecting without Shift, the conversation surviving quit,
-resizing mid-session, and the indicator, prose and durations during a live
-turn.
+is under *Opportunistic*.
 
 **Not yet verified** (each is a done-when that has not been run):
 
@@ -81,14 +73,25 @@ turn.
   resident-pages check have not been run against a real provider.
 - M2.2: the per-provider live check that cache tokens show in the status bar
   needs real keys. The offline streaming fixtures pass for all four SDKs.
+- **The UI pass has never run in a real terminal.** This is the one
+  outstanding done-when for the whole pass. Six PRs changed how Aux draws, the
+  rendering model among them. Two levels of audit stand behind it -- `View()`
+  rendered across every state and size, and the real binary driven in a pty
+  with its byte stream replayed through a terminal emulator -- and neither is
+  a person looking at their own screen. Six checks remain human-only:
+  wheel-scrolling into history, where the composer sits, drag-selecting
+  without Shift, the conversation surviving quit, resizing mid-session, and
+  the indicator, prose and durations during a live turn. Six defects in
+  August, three more on 2026-10-07 and eleven on 2026-10-10 appeared only when
+  something was run rather than read, so this is the shape of claim this file
+  has been wrong about before.
 
-**Gate numbers on `main`:** coverage 38.4% locally against a floor of **36.4**,
-raised from 33.8 in #47. The floor was left where it is: it tracks CI, which
-measures about 0.6 points under macOS here, so the laptop number is never the
-one to write. The floor tracks CI, which measures
-0.6 points under macOS here, so the laptop number is never the one to write.
-M3.7 still owns getting it to 45%. Dead-code baseline: 47 entries, down from 48 — #45 deleted the
-unused `appModel.findCommand`.
+**Gate numbers on `main`** (`7584324`, measured 2026-10-10): coverage 38.1%
+locally, against a 36.4% floor raised in #47. CI's last reported figure is
+37.1%, at `ac43a18`. The floor tracks CI, which measures ~0.6 points under
+macOS here, so the laptop number is never the one to write -- which is why the
+floor stays at 36.4 even though the laptop reads higher. Dead-code baseline: 47
+entries. M3.7 still owns getting coverage to 45%.
 
 ---
 
@@ -165,7 +168,10 @@ Aux should only say true things about itself. Verified 2026-10-02.
 | `aux -p` runs nothing that would prompt unless `--yes` is given | M0.2: `TestRunNonInteractiveDeniesWithoutYes` / `…ApprovesWithYes` (parent and subagent sessions); scratch repo: `touch created.txt` denied and listed on stderr without `--yes`, created with it |
 | First run picks a current model and says which | M2.1: `catalog_test.go`, `config/model_test.go`; temp home with only `ANTHROPIC_API_KEY`: announced Claude Sonnet 5.5, wrote it to `~/.aux.json`, second run silent and the file unchanged |
 | The context meter reflects what the window holds | Latest call's occupancy from the ledger |
-| The TUI fits the terminal it was given, and leaves the rest to it | Height invariant asserted across a width×height grid |
+| The TUI fits the terminal it was given, and leaves the rest to it | **Amended 2026-10-08.** The invariant asserted the app rendered *exactly* the rows the terminal reported, because the alternate screen cannot scroll. It now asserts the app fits *within* the terminal and leaves rows for the terminal's own scrollback: `TestAppFitsWithinTheTerminalAndLeavesScrollback`, `TestChatPageFillsOnlyTheLiveRegion*`. Same guarantee against overflow, opposite shape |
+| The transcript shows the agent's prose and its tool calls | `visibility_test.go`. Before #49, `isUserVisibleAssistantResponse` blanked the text of any assistant message carrying a tool call, and only the last assistant message of a turn rendered at all -- 94 of 158 prose-bearing messages in this repository's own database, 59%, never reached the screen. The prose test was run against the old rule reinstated and fails there |
+| Durations in the transcript are real | `duration_test.go`. `formatTimestampDiff` divided by 1000 while both operands were already seconds, so a 46-second wait read `46ms` |
+| Aux paints no background of its own | `canvas_test.go`, `TestRenderedMessageEmitsNoBackgroundCodes`. A 160x44 conversation emitted 4,557 background sequences before #50 and #51; it emits none from the canvas now |
 | Aux fills the terminal when it starts, without the alternate screen | #54: `TestTheStartupBannerFillsTheTerminal` across six sizes asserts printed banner + live region == the terminal's height; confirmed by running the real binary in a pty over twelve lines of existing output and replaying the byte stream through a terminal emulator -- wordmark on rows 1-4, composer on row 30 |
 | The startup banner is printed once and cannot be duplicated | #54: `TestTheStartupBannerIsPrintedOnce` resizes three times and asserts nothing is printed again. A printed line belongs to the terminal and cannot be withdrawn |
 | No dialog renders past the terminal, down to 40×14 | #54: `TestNoDialogRendersPastTheTerminal` over all eleven overlays at six sizes, asserting both that none overflows and that none falls back to the too-small notice in a terminal with room for it. Where a terminal genuinely cannot hold one, Aux says so instead of drawing a clipped dialog -- a clipped prompt cannot be answered |
@@ -199,8 +205,24 @@ never from re-reading. Treat every unmeasured claim here as a hypothesis.
 The shape to watch for: claims about a *mechanism* working. Machinery looks
 correct when you read it. The two newest were both machinery.
 
+**2026-10-08.** The rendering model replaced in #51 is machinery of exactly
+that shape, so it is recorded above as *not yet verified* rather than claimed.
+Its tests are real -- what leaves the managed region, how tall it is, that
+nothing prints twice -- and none of them can see a terminal. The rule applied
+rather than broken, which is the only way the count stays at ten.
+
+Worth keeping from the same day: three of the four defects the UI pass fixed
+were found by rendering the thing and reading real rows out of this
+repository's own database, and three claims *of mine* were wrong on the way --
+that `models.go` was stale (ADR 0003 made it deliberate), that the old
+spinner's block glyphs were missing from SF Mono (they are all present), and
+that the root command accepted positional arguments (it did not, which is why
+`aux --resume abc` was broken until it was run). Two things reported as
+defects were not defects at all: `\+enter` is the real newline binding, and
+the second hint row is the status bar.
+
 **Sharpened 2026-10-10.** Rendering `View()` is not the same as running the
-program. `TestFullSurfaceAudit` renders every state at six sizes in both modes
+program. `TestFullSurfaceAudit` renders every state at eight sizes in both modes
 and reported *no findings* on the same tree that, when the real binary was run
 in a pty, threw the composer to the top of the screen the moment any dialog
 opened and left the bottom third of the terminal empty on a first run. Both
@@ -476,7 +498,7 @@ is where the loop closes. P1.6 lands with P1.3.
 model catalog is what makes Aux usable at all day to day.
 
 P0 (except the M0.5 URL check), P1, P2.1, P2.2, and P2.3 are done.
-See [Progress](#progress-as-of-2026-10-05).
+See [Progress](#progress-as-of-2026-10-11).
 
 **P3 after P1 is true.** Tag when the README is honest, not before.
 
