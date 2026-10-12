@@ -1,12 +1,9 @@
 package layout
 
 import (
-	"strings"
-
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/x/ansi"
 	"github.com/kaiau00/aux-cli/internal/tui/theme"
 )
 
@@ -103,7 +100,14 @@ func (c *container) View() string {
 	// A tight container with nothing in it renders nothing, not its padding.
 	// Otherwise an empty live region still contributes its padding rows, which
 	// is the gap this was meant to close.
-	if c.tightHeight && strings.TrimSpace(ansi.Strip(view)) == "" {
+	//
+	// "Nothing in it" means no rows, not no ink. A row that is deliberately
+	// blank -- the one the live region keeps for the working line, so that its
+	// height does not change when a turn starts and ends -- has to survive, or
+	// the region shrinks by a row between turns and Bubble Tea's inline
+	// renderer, which cannot scroll the terminal back, leaves a stale copy of
+	// that row on screen.
+	if c.tightHeight && view == "" {
 		return ""
 	}
 	return style.Render(view)
