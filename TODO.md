@@ -46,8 +46,9 @@ Update this section and the plan's §6 checklist in every PR that moves an item.
 | Live region collapses; overlays still fit (UI pass) | #53 |
 | Startup screen: a printed wordmark, the whole terminal (UI pass) | #54 |
 | Dialogs fit the terminal; a screen-level audit (UI pass) | #54 |
+| Live region is one height, so no row is left behind (UI pass) | #56 |
 
-**Open:** nothing. The UI pass merged as #48, #49, #50, #51, #53 and #54;
+**Open:** nothing. The UI pass merged as #48, #49, #50, #51, #53, #54 and #56;
 `main`'s own post-merge run is green on each. #52 recorded the same pass in
 these files and was superseded by #54, which carries its content.
 
@@ -59,7 +60,8 @@ settled, so it will not be built twice.
 
 Six parts: the working indicator (#48), the transcript's visibility defects
 (#49), the canvas (#50), the scrollback (#51), the live region and its overlays
-(#53), and the startup screen with the dialog audit that followed it (#54).
+(#53), the startup screen with the dialog audit that followed it (#54), and
+the duplicated composer a real terminal turned up (#56).
 The plan records the pass in §5 and its decisions as D16-D18; D3 ("do not tag
 until it feels like Claude Code") is the decision it answers to. What remains
 is under *Opportunistic*.
@@ -87,7 +89,7 @@ is under *Opportunistic*.
   something was run rather than read, so this is the shape of claim this file
   has been wrong about before.
 
-**Gate numbers on `main`** (`e54e5d4`, measured 2026-10-11): coverage 38.9%
+**Gate numbers on `main`** (`7375ba5`, measured 2026-10-12): coverage 38.9%
 locally, against a 36.4% floor raised in #47. CI's last reported figure is
 37.1%, at `ac43a18`. The floor tracks CI, which measures ~0.6 points under
 macOS here, so the laptop number is never the one to write -- which is why the

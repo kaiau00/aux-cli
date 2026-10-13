@@ -239,8 +239,9 @@ M2.1 Catalog, M2.2 SDKs (parallel)┘            │
   until it feels like Claude Code") is the decision it answers to. It shipped
   as #48 (working indicator), #49 (prose, tool calls and real durations), #50
   (the canvas), #51 (scrollback), #53 (the live region collapses, overlays
-  still fit) and #54 (the startup screen, and the dialog audit that followed
-  it). Its decisions are D16-D18. See §6.
+  still fit), #54 (the startup screen, and the dialog audit that followed it)
+  and #56 (the live region holds one height, so the renderer leaves no row
+  behind). Its decisions are D16-D18. See §6.
 - **Two levels of UI audit, and they catch different things.**
   `TestFullSurfaceAudit` renders `View()` for every state at eight sizes in
   both modes; the pty harness drives the real binary and checks the rendered
@@ -1041,7 +1042,9 @@ in M1.6.
       its tool calls and real durations (#49), the canvas belongs to the
       terminal (#50), history goes to the terminal's scrollback (#51), the
       live region collapses with overlays still fitting (#53), and the startup
-      screen with the dialog audit that followed it (#54) are all merged.
+      screen with the dialog audit that followed it (#54), and the live
+      region holding one height so no row is left behind (#56) are all
+      merged.
       The box stays unticked for the done-when below, not for the code.
       **One done-when outstanding:** none of it has been exercised in a real
       terminal. Two levels of audit stand behind it -- `View()` across every
