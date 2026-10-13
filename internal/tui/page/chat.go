@@ -331,7 +331,10 @@ func NewChatPage(app *app.App, commands *dialog.CommandRegistry) tea.Model {
 
 	messagesContainer := layout.NewContainer(
 		chat.NewMessagesCmp(app),
-		layout.WithPadding(1, 1, 0, 1),
+		// No top padding: the pane's own reserved row is the single row of
+		// separation between the printed conversation and the composer, and a
+		// padding row on top of it would make two.
+		layout.WithPadding(0, 1, 0, 1),
 		// Collapses when nothing is in flight, instead of padding out to its
 		// allocation and separating the composer from the conversation.
 		layout.WithTightHeight(),
