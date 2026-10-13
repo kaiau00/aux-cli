@@ -1039,10 +1039,10 @@ in M1.6.
 - [ ] UI pass (not a plan item; requested 2026-10-07, before M2.5 — see §5):
       orbit working indicator (#48), the transcript shows the agent's prose,
       its tool calls and real durations (#49), the canvas belongs to the
-      terminal (#50), history goes to the terminal's scrollback (#51) and the
-      live region collapses with overlays still fitting (#53) are **merged**;
-      the startup screen and the dialog audit that followed it (**#54**) are
-      open.
+      terminal (#50), history goes to the terminal's scrollback (#51), the
+      live region collapses with overlays still fitting (#53), and the startup
+      screen with the dialog audit that followed it (#54) are all merged.
+      The box stays unticked for the done-when below, not for the code.
       **One done-when outstanding:** none of it has been exercised in a real
       terminal. Two levels of audit stand behind it -- `View()` across every
       state and size, and the real binary driven in a pty -- and neither is a

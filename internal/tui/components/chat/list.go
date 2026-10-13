@@ -511,7 +511,10 @@ func (m *messagesCmp) View() string {
 	// MaxHeight is a ceiling, Height is a floor. This wants the ceiling only.
 	fit := func(parts ...string) string {
 		content := lipgloss.JoinVertical(lipgloss.Top, parts...)
-		if strings.TrimSpace(ansi.Strip(content)) == "" {
+		// Emptiness is "no rows at all", not "no ink". A reserved working row
+		// is blank on purpose and has to survive, or the region shrinks by a
+		// row between turns and the renderer leaves a stale one behind.
+		if content == "" {
 			return ""
 		}
 		return baseStyle.
@@ -521,7 +524,7 @@ func (m *messagesCmp) View() string {
 	}
 
 	if m.rendering {
-		return fit("Loading...", m.working())
+		return fit("Loading...", m.workingRow())
 	}
 
 	if len(m.messages) == 0 {
@@ -531,14 +534,17 @@ func (m *messagesCmp) View() string {
 		// repainted on every keystroke and then surrendered the moment a reply
 		// needed the rows; printed once, it stays where the user can scroll
 		// back to it, and it is still there after Aux exits.
-		return fit(m.working())
+		return fit(m.workingRow())
 	}
 
-	if m.viewport.Height <= 0 {
-		// Nothing in flight: the whole conversation is in scrollback.
-		return fit(m.working())
+	// Nothing in flight: the whole conversation is in scrollback. The viewport
+	// is skipped rather than rendered empty -- rendered, it contributed a blank
+	// row during a turn and none between turns, which changed the region's
+	// height by a row on its own.
+	if m.viewport.Height <= 0 || strings.TrimSpace(ansi.Strip(m.viewport.View())) == "" {
+		return fit(m.workingRow())
 	}
-	return fit(m.viewport.View(), m.working())
+	return fit(m.viewport.View(), m.workingRow())
 }
 
 func hasToolsWithoutResponse(messages []message.Message) bool {
@@ -645,6 +651,31 @@ func (m *messagesCmp) working() string {
 		Foreground(t.Primary()).
 		Bold(true).
 		Render(line)
+}
+
+// workingRow is the one row the live region keeps for the working line.
+//
+// While a reply is in flight it holds the spinner and what the agent is doing.
+// When nothing is in flight it is blank -- but it is still there, and that is
+// the point. The row used to disappear between turns, so the live region was
+// one row taller mid-turn than it was either side of it. Bubble Tea's inline
+// renderer repaints in place and cannot scroll the terminal back down, so each
+// time the region shrank it left the bottom row of the previous frame on
+// screen: a second, stale copy of the composer directly above the real one,
+// with the hint line it had overwritten gone. Reported from a real terminal,
+// where it is visible, rather than from a replay, where it is not.
+//
+// Reserved whenever there is a conversation, which is exactly when the working
+// line can appear. Before that there is nothing to keep the height stable for,
+// and the region is padded to the screen anyway.
+func (m *messagesCmp) workingRow() string {
+	if line := m.working(); line != "" {
+		return line
+	}
+	if len(m.messages) == 0 || m.width <= 0 {
+		return ""
+	}
+	return styles.BaseStyle().Width(m.width).MaxHeight(1).Render("")
 }
 
 func (m *messagesCmp) rerender() {
