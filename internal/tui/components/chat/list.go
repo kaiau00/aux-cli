@@ -208,7 +208,13 @@ func (m *messagesCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// The printed messages have to leave the live region, or they show
 		// twice until the next render.
 		m.renderView()
-		cmd = tea.Batch(cmd, tea.Println(strings.Join(lines, "\n")),
+		// Trimmed: lipgloss pads every line out to the pane's width, and that
+		// padding would sit in the user's scrollback for good and come back
+		// when they copy it. It also makes each line exactly the terminal's
+		// width, which is the one width that stops the renderer clearing the
+		// row beneath it. See styles.TrimTrailingSpace.
+		cmd = tea.Batch(cmd,
+			tea.Println(styles.TrimTrailingSpace(strings.Join(lines, "\n"))),
 			func() tea.Msg { return ScrollbackPrintedMsg{} })
 	}
 	return model, cmd

@@ -23,6 +23,7 @@ import (
 	"github.com/kaiau00/aux-cli/internal/tui/components/dialog"
 	"github.com/kaiau00/aux-cli/internal/tui/layout"
 	"github.com/kaiau00/aux-cli/internal/tui/page"
+	"github.com/kaiau00/aux-cli/internal/tui/styles"
 	"github.com/kaiau00/aux-cli/internal/tui/theme"
 	"github.com/kaiau00/aux-cli/internal/tui/util"
 	"github.com/kaiau00/aux-cli/internal/viewmodel"
@@ -238,6 +239,26 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// completion popups lands on exactly the height this model pads to.
 		// When the two disagreed, opening and closing the drawer left the
 		// composer four rows -- the banner's height -- above the bottom.
+		// Narrowing the window re-wraps every row the previous frame left on
+		// screen. Bubble Tea's inline renderer moves its cursor up by the
+		// number of *lines* it last rendered rather than the number of rows
+		// those lines now occupy, so it lands short, paints over the wrong
+		// rows and leaves the ones it missed behind -- a stale copy of the
+		// composer above the real one. Reported from a real terminal as a
+		// duplicate that depended on the window's size; reproduced in a pty by
+		// shrinking 100 columns to 70, where the 30-cell tail of the old rule
+		// is still visible above the stale row.
+		//
+		// The renderer resets its cache on a resize but not its line count, so
+		// there is no way to correct the arithmetic from here. Clearing is the
+		// one lever available. It costs the conversation its place on screen --
+		// it is still in the terminal's scrollback, one scroll up -- and it is
+		// done only when the width actually shrinks: widening cannot re-wrap
+		// anything, because every line already fitted the narrower width.
+		if a.width > 0 && msg.Width < a.width {
+			cmds = append(cmds, tea.ClearScreen)
+		}
+
 		region := terminalHeight
 		if !a.conversationPrinted && a.bannerRows > 0 {
 			region = max(1, terminalHeight-a.bannerRows)
@@ -1114,7 +1135,11 @@ func (a appModel) View() string {
 		appView = centreOverlay(appView, overlay)
 	}
 
-	return appView
+	// Trimmed at the one place everything leaves this model. A line padded to
+	// exactly the terminal's width is never cleared by the renderer and wraps
+	// the moment the window narrows, which left a stale copy of the composer
+	// on screen. See styles.TrimTrailingSpace.
+	return styles.TrimTrailingSpace(appView)
 }
 
 func New(app *app.App) tea.Model {
