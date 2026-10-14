@@ -42,9 +42,12 @@ var readOnlyTools = map[string]bool{
 // isReadOnlyTool reports whether a tool only observes the workspace.
 func isReadOnlyTool(name string) bool { return readOnlyTools[name] }
 
-// findTool resolves a tool call to a registered tool, or nil.
-func (a *agent) findTool(name string) tools.BaseTool {
-	for _, t := range a.tools {
+// findTool resolves a tool call to a registered tool, or nil. It looks in the
+// same set the model was offered for this turn, late-discovered tools
+// included -- otherwise a model could call an MCP tool it had just been shown
+// and be told it does not exist.
+func (a *agent) findTool(ctx context.Context, name string) tools.BaseTool {
+	for _, t := range a.currentTools(ctx) {
 		if t.Info().Name == name {
 			return t
 		}
@@ -56,7 +59,7 @@ func (a *agent) findTool(name string) tools.BaseTool {
 // result. denied reports whether the call failed because the user refused it,
 // which the caller uses to decide what happens to the rest of the turn.
 func (a *agent) runToolCall(ctx context.Context, call message.ToolCall) (result message.ToolResult, denied bool) {
-	tool := a.findTool(call.Name)
+	tool := a.findTool(ctx, call.Name)
 	if tool == nil {
 		return message.ToolResult{
 			ToolCallID: call.ID,
