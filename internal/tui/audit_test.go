@@ -244,31 +244,54 @@ func TestFullSurfaceAudit(t *testing.T) {
 							id, len(lines), bannerRows, h)
 					}
 				}
-				// 5. idle must collapse, not pad
-				if st.name == "idle-conversation" && len(lines) > 8 {
-					note("%s: idle region is %d rows; it should collapse", id, len(lines))
+				// 5. no row of the screen may be left below the composer.
+				//
+				// Replaces "idle must collapse, not pad". That check was the
+				// old rule: the region went tight against the printed
+				// conversation and whatever was under it was the terminal's.
+				// It is not, because Bubble Tea's inline renderer erases
+				// below a frame shorter than the one before it, so those rows
+				// went blank and the composer sat wherever the short frame
+				// ended -- reported from a real terminal as the typing bar
+				// going to the top. Under D18 as amended the region is the
+				// screen less what Aux printed, so the two account for the
+				// terminal exactly -- or for more than it, once the
+				// conversation is taller than the screen and the terminal
+				// scrolls the rest off the top. Never for less.
+				if st.overlay == nil && st.name != "drawer" {
+					var printedRows int
+					if am, ok := m.(appModel); ok {
+						printedRows = am.printedRows
+					}
+					if total := printedRows + len(lines); total < h {
+						note("%s: %d printed + %d live = %d rows of a %d-row terminal, so the composer is %d row(s) off the bottom",
+							id, printedRows, len(lines), total, h, h-total)
+					}
 				}
-				// 6. a run of blank rows inside the region is wasted space
+				// 6. a run of blank rows *between* the region's own rows is
+				// wasted space -- the gap between the history and the
+				// composer that #53 was raised to fix. Blank rows above
+				// everything are the pad that holds the composer on the last
+				// row, which is the point rather than waste, so the count
+				// starts at the region's first row with anything on it.
 				blank := 0
 				worst := 0
+				started := false
 				for _, l := range lines {
 					if strings.TrimSpace(l) == "" {
+						if !started {
+							continue
+						}
 						blank++
 						if blank > worst {
 							worst = blank
 						}
 					} else {
+						started = true
 						blank = 0
 					}
 				}
-				//
-				// The splash is exempt: with nothing printed but the banner,
-				// the region owns the screen and the composer is pinned to
-				// the bottom row (D18), so the empty conversation area above
-				// it is the point rather than waste. Everywhere else a run of
-				// blank rows is the defect #53 was raised to fix -- a gap
-				// between the printed history and the composer.
-				if st.overlay == nil && st.name != "drawer" && st.name != "splash" && worst >= 3 {
+				if st.overlay == nil && st.name != "drawer" && worst >= 3 {
 					note("%s: %d consecutive blank rows inside the region", id, worst)
 				}
 				// 7. the composer has to be reachable in every non-overlay state

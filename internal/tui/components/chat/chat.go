@@ -27,12 +27,17 @@ type SessionClearedMsg struct{}
 
 type EditorFocusMsg bool
 
-// ScrollbackPrintedMsg says that part of the conversation has just been handed
-// to the terminal. It is the signal that there is now history above the live
-// region: before it, the region owns the screen below the startup banner and
-// can be as tall as it likes; after it, the region has to sit tight against
-// what was printed, or there is a block of blank rows between the two.
-type ScrollbackPrintedMsg struct{}
+// PrintScrollbackMsg hands a settled piece of the conversation to the model
+// that owns the live region, for it to print.
+//
+// Printing it here, where it is produced, would be the obvious thing. It is
+// wrong because the rows it takes have to be counted in the same update that
+// hands them over: the region keeps only what the terminal has not been given,
+// and that is what holds the composer on the bottom row. As two messages --
+// one to print, one to report the count -- the renderer can flush between
+// them, and whichever arrives second sizes the region for a screen it no
+// longer has.
+type PrintScrollbackMsg struct{ Content string }
 
 // displayPath shortens a working directory for the startup banner. Rendering it
 // raw let lipgloss wrap it, which broke the path across three lines in the

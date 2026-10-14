@@ -381,3 +381,10 @@ func NewChatPage(app *app.App, commands *dialog.CommandRegistry) tea.Model {
 		),
 	}
 }
+
+// FillsScreen reports whether the page's view grows to the whole region
+// instead of collapsing to its content. The drawer and the completion popups
+// are placed onto the view and bounded by it, so each one grows it first.
+func (p *chatPage) FillsScreen() bool {
+	return p.showContextDrawer || p.showCompletionDialog || p.showCommandCompletion
+}

@@ -213,9 +213,9 @@ func (m *messagesCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// when they copy it. It also makes each line exactly the terminal's
 		// width, which is the one width that stops the renderer clearing the
 		// row beneath it. See styles.TrimTrailingSpace.
-		cmd = tea.Batch(cmd,
-			tea.Println(styles.TrimTrailingSpace(strings.Join(lines, "\n"))),
-			func() tea.Msg { return ScrollbackPrintedMsg{} })
+		cmd = tea.Batch(cmd, util.CmdHandler(PrintScrollbackMsg{
+			Content: styles.TrimTrailingSpace(strings.Join(lines, "\n")),
+		}))
 	}
 	return model, cmd
 }
