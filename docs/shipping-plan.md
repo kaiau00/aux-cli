@@ -116,6 +116,7 @@ seems wrong.
 | D16 | Rendering model | **Added 2026-10-08.** History is written to the terminal's own scrollback and Aux repaints only a live region at the bottom, the way Codex does. No alternate screen, no mouse capture, no full-height viewport. The terminal's wheel, scrollback search and text selection are the user's again, and a session survives Aux exiting |
 | D17 | Palette | **Added 2026-10-08.** The canvas belongs to the terminal: Aux sets a foreground and leaves the background alone, and surfaces that must be opaque (dialogs, selection fills, badges) opt in. The accent stays amber -- the complaint was the painted background, not the hue, which only became clear once the background was gone |
 | D18 | Startup screen | Aux fills the terminal when it starts: a printed wordmark at the top, the composer on the last row. A deliberate divergence from Claude Code, which was measured in a pty and does not do it. Everything else about the model follows it. **Amended 2026-10-13.** The composer stays on the last row for the whole session, not only at startup: the live region is the terminal less the rows Aux has printed, so what is printed and what is repainted always account for the screen. It had been true only until the first message, after which the region collapsed to its own content and the composer went wherever that ended -- reported from a real terminal as the typing bar going to the top. The cost is a block of blank rows between a short conversation and the composer, which is what pinning it to the bottom means; Claude Code instead keeps its prompt directly under the content |
+| D19 | What may block the first paint | **Added 2026-10-14.** Nothing slow. Work that is not needed to draw the first frame runs in the background and is awaited at the point it is actually used -- MCP discovery is awaited at the start of a turn, not at startup -- and anything compiled or scanned per start is cached. Measured before: 14s to the first byte on screen, 9-10s of it one MCP server over `npx -y` and 0.6s of it wazero recompiling SQLite's Wasm module. After: 0.5s. The rule is what makes the remaining case actionable: the `@`-file completion list still shells out to `rg \| fzf` in a constructor before the TUI exists, which costs 5.7s in a directory with no ignore rules |
 
 ---
 
@@ -240,7 +241,11 @@ M2.1 Catalog, M2.2 SDKs (parallel)┘            │
   as #48 (working indicator), #49 (prose, tool calls and real durations), #50
   (the canvas), #51 (scrollback), #53 (the live region collapses, overlays
   still fit) and #54 (the startup screen, and the dialog audit that followed
-  it). Its decisions are D16-D18. See §6.
+  it) -- then, once it was in front of a person, as #56 (one height across a
+  turn), #57 (no line padded to the terminal's width), #58 (the composer holds
+  the last row all session), #59 (the transcript separates its messages) and
+  #60 (the user's own messages on the right). Its decisions are D16-D19.
+  See §6.
 - **Two levels of UI audit, and they catch different things.**
   `TestFullSurfaceAudit` renders `View()` for every state at eight sizes in
   both modes; the pty harness drives the real binary and checks the rendered
@@ -1040,15 +1045,24 @@ in M1.6.
       orbit working indicator (#48), the transcript shows the agent's prose,
       its tool calls and real durations (#49), the canvas belongs to the
       terminal (#50), history goes to the terminal's scrollback (#51), the
-      live region collapses with overlays still fitting (#53), and the startup
-      screen with the dialog audit that followed it (#54) are all merged.
-      The box stays unticked for the done-when below, not for the code.
-      **One done-when outstanding:** none of it has been exercised in a real
-      terminal. Two levels of audit stand behind it -- `View()` across every
-      state and size, and the real binary driven in a pty -- and neither is a
-      person at their own terminal, so neither can say whether selection works
-      without Shift or whether a session survives Aux exiting. Close this
-      before the rc
+      live region collapses with overlays still fitting (#53), the startup
+      screen with the dialog audit that followed it (#54), one height across a
+      turn (#56), no line padded to the terminal's width (#57), the composer
+      holding the last row all session (#58), the transcript separating its
+      messages (#59) and the user's own messages on the right (#60) are all
+      merged. The box stays unticked for the done-when below, not for the code.
+      **Done-when, partly closed:** it has now been run in a real terminal,
+      and five of the eleven parts came out of that -- four defects both
+      levels of audit had passed clean through (#56-#59) and one request no
+      audit can raise (#60). Still unreported:
+      wheel-scrolling into history, drag-selecting without Shift, a session
+      surviving Aux exiting, and the indicator, prose and durations during a
+      live turn. Composer position and resizing were exercised and each
+      produced a fix; neither has been confirmed good since. Close this before
+      the rc
+- [ ] Startup under a second (not a plan item; D19): MCP discovery and the
+      SQLite Wasm compile are off the startup path (#61), 14s to 0.5s
+      measured. The `@`-completion scan still blocks it outside a repository
 - [ ] M2.5 compaction, M2.6 memory UX, M2.7 text, M2.8 trimming — merged
 - [ ] M3.5 `--version` local builds
 - [ ] M3.7 coverage ≥ 45%, floor raised
