@@ -185,13 +185,13 @@ func TestStreamingMessageIsNotPrintedUntilItSettles(t *testing.T) {
 		message.Finish{Reason: message.FinishReasonEndTurn, Time: 10},
 	)
 	lines := m.takeScrollback()
-	if len(lines) == 0 {
+	if lines == "" {
 		t.Fatal("a finished message was not handed over")
 	}
 	if !m.printed["streaming"] {
 		t.Fatal("the finished message was not marked as printed, so it would print twice")
 	}
-	if !strings.Contains(ansi.Strip(strings.Join(lines, "\n")), "now longer") {
+	if !strings.Contains(ansi.Strip(lines), "now longer") {
 		t.Fatalf("the printed text is not the final content: %q", lines)
 	}
 }
