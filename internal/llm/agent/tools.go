@@ -20,7 +20,12 @@ func CoderAgentTools(
 	impactSvc *impact.Service,
 ) []tools.BaseTool {
 	ctx := context.Background()
-	otherTools := GetMcpTools(ctx, permissions)
+	// MCP tools are deliberately absent here. Discovering them meant waiting
+	// for every configured server to answer before the agent could be built --
+	// and the TUI is built after the agent, so Aux drew nothing at all until
+	// then: nine seconds of a fourteen-second startup on one `npx -y` server.
+	// They are resolved per turn instead, through Deps.LateTools.
+	var otherTools []tools.BaseTool
 	if len(lspClients) > 0 {
 		otherTools = append(otherTools, tools.NewDiagnosticsTool(lspClients))
 	}

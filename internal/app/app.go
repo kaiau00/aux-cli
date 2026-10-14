@@ -167,7 +167,10 @@ func New(ctx context.Context, conn *sql.DB) (*App, error) {
 	// Initialize LSP clients in the background
 	go app.initLSPClients(ctx)
 
-	agent.GetMcpTools(ctx, app.Permissions)
+	// Started, not awaited: the tools are resolved at the first turn through
+	// Deps.LateTools below. This used to block here, with the TUI not yet
+	// built, so a slow MCP server held the whole screen blank.
+	agent.StartMcpTools(ctx, app.Permissions)
 
 	var err error
 	virtualizer := artifact.NewVirtualizer(
@@ -193,6 +196,9 @@ func New(ctx context.Context, conn *sql.DB) (*App, error) {
 		GovernorMode: cost.GovernorMode(config.Get().CostGovernor.Mode),
 		Hooks:        app.Hooks,
 		Permissions:  app.Permissions,
+		LateTools: func(ctx context.Context) []tools.BaseTool {
+			return agent.GetMcpTools(ctx, app.Permissions)
+		},
 	}
 	coderTools := append(
 		agent.CoderAgentTools(coderDeps, app.Permissions, app.History, app.LSPClients, app.Hooks, app.Impact),

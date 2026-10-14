@@ -33,6 +33,9 @@ func Connect() (*sql.DB, error) {
 	if err := ignoreSelf(dataDir); err != nil {
 		logging.Warn("failed to mark the data directory as git-ignored", "dir", dataDir, "error", err)
 	}
+	// Before the first connection: that is when SQLite's Wasm module is
+	// compiled, and the cache has to be in place to be used.
+	useCompiledSQLiteCache(dataDir)
 	dbPath := filepath.Join(dataDir, "aux.db")
 	db, err := sql.Open("sqlite3", DSN(dbPath))
 	if err != nil {

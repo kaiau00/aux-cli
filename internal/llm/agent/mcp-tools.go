@@ -139,10 +139,39 @@ func NewMcpTool(name string, tool mcp.Tool, permissions permission.Service, mcpC
 	}
 }
 
+// Discovery is started in the background when Aux starts and awaited at the
+// start of a turn.
+//
+// It used to run synchronously while the app was being built, before the TUI
+// existed, so Aux showed nothing at all until the slowest configured server had
+// answered. Measured on one `npx -y` server: 9.1s to answer `initialize`, out
+// of a 14s startup, with a goroutine dump showing main parked in mcp-go's
+// Discover and initializeLegacy the whole time.
+//
+// Awaiting it at the turn rather than dropping it keeps the tool set complete:
+// a turn is never offered a smaller set of tools than the next one, which would
+// both lose the server silently and cost the provider's prompt cache. In
+// practice the user types for longer than discovery takes, so nothing waits.
 var (
 	mcpTools   []tools.BaseTool
 	mcpToolsMu sync.Mutex
+	mcpOnce    sync.Once
+	mcpDone    = make(chan struct{})
 )
+
+// StartMcpTools begins discovering the configured MCP servers' tools and
+// returns immediately.
+func StartMcpTools(ctx context.Context, permissions permission.Service) {
+	mcpOnce.Do(func() {
+		go func() {
+			defer close(mcpDone)
+			discovered := discoverMcpTools(ctx, permissions)
+			mcpToolsMu.Lock()
+			mcpTools = discovered
+			mcpToolsMu.Unlock()
+		}()
+	})
+}
 
 func getTools(ctx context.Context, name string, m config.MCPServer, permissions permission.Service, c MCPClient) []tools.BaseTool {
 	var stdioTools []tools.BaseTool
@@ -197,12 +226,25 @@ func serverNames(servers map[string]config.MCPServer) []string {
 	return names
 }
 
+// GetMcpTools returns every tool the configured MCP servers offer, starting
+// discovery if it has not begun and waiting for it to finish.
 func GetMcpTools(ctx context.Context, permissions permission.Service) []tools.BaseTool {
+	StartMcpTools(ctx, permissions)
+	select {
+	case <-mcpDone:
+	case <-ctx.Done():
+		// A cancelled turn is not a reason to hand back a half-discovered set.
+		return nil
+	}
 	mcpToolsMu.Lock()
 	defer mcpToolsMu.Unlock()
-	if len(mcpTools) > 0 {
-		return mcpTools
-	}
+	return mcpTools
+}
+
+// discoverMcpTools connects to every configured server and lists its tools. It
+// is the slow part, and runs once, off the startup path.
+func discoverMcpTools(ctx context.Context, permissions permission.Service) []tools.BaseTool {
+	var discovered []tools.BaseTool
 	cfg := config.Get()
 	if cfg == nil {
 		return nil
@@ -222,7 +264,7 @@ func GetMcpTools(ctx context.Context, permissions permission.Service) []tools.Ba
 				continue
 			}
 
-			mcpTools = append(mcpTools, getTools(ctx, name, m, permissions, c)...)
+			discovered = append(discovered, getTools(ctx, name, m, permissions, c)...)
 		case config.MCPSse:
 			c, err := client.NewSSEMCPClient(
 				m.URL,
@@ -232,9 +274,9 @@ func GetMcpTools(ctx context.Context, permissions permission.Service) []tools.Ba
 				logging.Error("error creating mcp client", "error", err)
 				continue
 			}
-			mcpTools = append(mcpTools, getTools(ctx, name, m, permissions, c)...)
+			discovered = append(discovered, getTools(ctx, name, m, permissions, c)...)
 		}
 	}
 
-	return mcpTools
+	return discovered
 }

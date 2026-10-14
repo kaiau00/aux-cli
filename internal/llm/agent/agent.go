@@ -91,6 +91,15 @@ type Deps struct {
 	GovernorMode cost.GovernorMode       // optional; off/observe/on, default off
 	Hooks        *hooks.Registry         // optional; dispatches ToolPre/ToolPost around tool execution
 	Permissions  permission.Service      // optional; asks the user to approve continuing past a budget ceiling
+	// LateTools is resolved at the start of every turn instead of when the
+	// agent is built, for tools that are slow to discover. MCP servers are the
+	// reason it exists: discovering them took nine seconds of a fourteen-second
+	// startup, and nothing was on screen until it finished. Resolved per turn
+	// rather than dropped, so a turn is never offered fewer tools than the next
+	// one. Appended after the built-in tools, in a stable order, because
+	// providers key their prompt cache on an exact prefix of the serialized
+	// tool block.
+	LateTools func(context.Context) []tools.BaseTool // optional
 }
 
 type agent struct {
@@ -106,8 +115,9 @@ type agent struct {
 	permissions permission.Service
 	executor    *tools.Executor
 
-	tools    []tools.BaseTool
-	provider provider.Provider
+	tools     []tools.BaseTool
+	lateTools func(context.Context) []tools.BaseTool
+	provider  provider.Provider
 
 	titleProvider     provider.Provider
 	summarizeProvider provider.Provider
@@ -163,12 +173,29 @@ func NewAgent(
 		permissions:       deps.Permissions,
 		executor:          tools.NewExecutor(deps.Recorder, deps.Virtualizer).WithHooks(deps.Hooks),
 		tools:             agentTools,
+		lateTools:         deps.LateTools,
 		titleProvider:     titleProvider,
 		summarizeProvider: summarizeProvider,
 		activeRequests:    sync.Map{},
 	}
 
 	return agent, nil
+}
+
+// currentTools is the tool set for this turn: the built-in tools, plus
+// whatever was too slow to discover at startup. The late ones go last so the
+// prefix every provider caches on does not move.
+func (a *agent) currentTools(ctx context.Context) []tools.BaseTool {
+	if a.lateTools == nil {
+		return a.tools
+	}
+	late := a.lateTools(ctx)
+	if len(late) == 0 {
+		return a.tools
+	}
+	all := make([]tools.BaseTool, 0, len(a.tools)+len(late))
+	all = append(all, a.tools...)
+	return append(all, late...)
 }
 
 func (a *agent) Model() models.Model {
@@ -485,7 +512,7 @@ func (a *agent) streamAndHandleEvents(ctx context.Context, sessionID string, msg
 		TaskID:              corr.TaskID,
 		CallID:              tracker.id,
 		History:             msgHistory,
-		Tools:               a.tools,
+		Tools:               a.currentTools(ctx),
 		ProjectManifest:     projectManifest,
 		TaskSpecText:        taskSpecText,
 		ExcludedToolCallIDs: excluded,
