@@ -44,25 +44,38 @@ func toMarkdown(content string, focused bool, width int) string {
 	return rendered
 }
 
+// The user's own messages are laid out against the right edge and everything
+// Aux produces against the left, so who said something is readable from where
+// it sits rather than from a label on it.
+const (
+	// userBubbleNumerator/userBubbleDenominator is how much of the pane a
+	// message of the user's own may take before it wraps. Wide enough to read,
+	// narrow enough that it still reads as a column on the right: a
+	// full-width block aligned right is indistinguishable from one aligned
+	// left.
+	userBubbleNumerator   = 2
+	userBubbleDenominator = 3
+	// minUserBubble keeps a narrow terminal readable, where two thirds of the
+	// pane is a handful of columns.
+	minUserBubble = 24
+)
+
 func renderMessage(msg string, isUser bool, isFocused bool, width int, info ...string) string {
+	if isUser {
+		return renderUserBubble(msg, isFocused, width, info...)
+	}
 	t := theme.CurrentTheme()
 
 	// A single-width accent bar, not a filled block: user and assistant
-	// messages are told apart by BorderForeground hue alone (Info vs
-	// Primary), not by weight or fill, so the framing stays light no matter
-	// how long the conversation gets.
+	// messages are told apart by which side it is on and by
+	// BorderForeground hue (Info vs Primary), not by weight or fill, so the
+	// framing stays light no matter how long the conversation gets.
 	style := styles.BaseStyle().
 		Width(width - 1).
 		BorderLeft(true).
 		Foreground(t.TextMuted()).
 		BorderForeground(t.Primary()).
 		BorderStyle(lipgloss.NormalBorder())
-
-	if isUser {
-		style = style.
-			BorderForeground(t.Info()).
-			Foreground(t.Text())
-	}
 
 	// Markdown, with glamour's own background codes stripped so the terminal's
 	// background shows through.
@@ -86,6 +99,58 @@ func renderMessage(msg string, isUser bool, isFocused bool, width int, info ...s
 	return rendered
 }
 
+// userBubbleInner is the widest the user's own text may be laid out at, inside
+// its accent bar. Exported to the package because an attachment strip is built
+// before the bubble is and has to be built to the same width.
+func userBubbleInner(width int) int {
+	box := max(minUserBubble, width*userBubbleNumerator/userBubbleDenominator)
+	// The alignment box is a column short of the pane, and the bar takes
+	// another: nothing may end up exactly the terminal's width, which is the
+	// one width Bubble Tea's renderer never clears (see #57).
+	box = min(box, width-1)
+	return max(1, box-1)
+}
+
+// renderUserBubble lays the user's own message out flush against the right
+// edge, with the accent bar mirrored onto its right side.
+func renderUserBubble(msg string, isFocused bool, width int, info ...string) string {
+	t := theme.CurrentTheme()
+	inner := userBubbleInner(width)
+
+	// A column short of the bubble, kept clear so the text does not run into
+	// the bar: the mirror of the space the left side has after its own bar.
+	text := max(1, inner-1)
+	parts := []string{
+		strings.TrimSuffix(styles.StripBackgrounds(toMarkdown(msg, isFocused, text)), "\n"),
+	}
+	if len(info) > 0 {
+		parts = append(parts, info...)
+	}
+	body := lipgloss.JoinVertical(lipgloss.Left, parts...)
+
+	// Measured after the padding glamour adds is taken off, so a short message
+	// hugs the right edge instead of sitting at the left of a box two thirds
+	// of the pane wide.
+	body = styles.TrimTrailingSpace(body)
+	content := min(inner, max(1, lipgloss.Width(body))+1)
+
+	bubble := styles.BaseStyle().
+		Width(content).
+		PaddingRight(1).
+		BorderRight(true).
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(t.Info()).
+		Foreground(t.Text()).
+		Render(body)
+
+	// Right-aligned by padding on the left, which is why the box stops a
+	// column short of the pane.
+	return lipgloss.NewStyle().
+		Width(max(1, width-1)).
+		Align(lipgloss.Right).
+		Render(bubble)
+}
+
 func renderUserMessage(msg message.Message, isFocused bool, width int, position int) uiMessage {
 	var styledAttachments []string
 	t := theme.CurrentTheme()
@@ -106,7 +171,7 @@ func renderUserMessage(msg message.Message, isFocused bool, width int, position 
 	content := ""
 	if len(styledAttachments) > 0 {
 		attachmentContent := styles.BaseStyle().
-			Width(width).
+			Width(userBubbleInner(width)).
 			Background(t.BackgroundSecondary()).
 			Render(lipgloss.JoinHorizontal(lipgloss.Left, styledAttachments...))
 		content = renderMessage(msg.Content().String(), true, isFocused, width, attachmentContent)
