@@ -16,7 +16,13 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # Pinned, not `ubuntu-latest`. GitHub is moving that label to Ubuntu 26.04
+    # in a rollout running from 2026-10-19 to 2026-11-19, and it warns the
+    # change can break builds that depend on tools differing between 24.04 and
+    # 26.04. A release should not be able to change its build environment
+    # underneath it mid-rollout, so the label is explicit and moves when this
+    # file says so -- verified green on 26.04 before it was written here.
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v4
 
