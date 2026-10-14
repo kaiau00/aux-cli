@@ -84,12 +84,37 @@ func messageIsSettled(messages []message.Message, i int) bool {
 	return i < len(messages)-1
 }
 
+// messageGapRows is the blank rows between one block of the transcript and the
+// next: between two messages, and between the parts of one message -- its
+// prose and each tool call it made.
+//
+// The live region has always had it. The printed transcript did not, and a
+// conversation read as one undifferentiated block: measured at 100x30, a
+// question, its reply, the reply's footer and the next question were ten
+// consecutive rows with a gutter on every one and nothing to mark where either
+// turn began. Reported as the separation between each chat being too compact.
+const messageGapRows = 1
+
+// blockSeparator goes between two blocks of one print: messageGapRows blank
+// rows, so the row before it and the row after it are not adjacent.
+func blockSeparator() string {
+	return strings.Repeat("\n", messageGapRows+1)
+}
+
+// leadingGap is the same separation at the start of a print. It is one newline
+// shorter, because what the print follows -- the banner, or an earlier print --
+// has already had its last row terminated by the renderer, so the first
+// newline here would only end a row that is already ended.
+func leadingGap() string {
+	return strings.Repeat("\n", messageGapRows)
+}
+
 // takeScrollback renders every settled message not yet handed over, marks them
-// handed over, and returns the lines to print. Separated from Update so the
+// handed over, and returns what to print. Separated from Update so the
 // decision of what reaches the terminal is testable without a terminal.
-func (m *messagesCmp) takeScrollback() []string {
+func (m *messagesCmp) takeScrollback() string {
 	if m.width == 0 {
-		return nil
+		return ""
 	}
 	var out []string
 	for i, msg := range m.messages {
@@ -101,9 +126,25 @@ func (m *messagesCmp) takeScrollback() []string {
 		if rendered == "" {
 			continue
 		}
-		out = append(out, rendered, "")
+		// The gap goes before the message, never after it.
+		//
+		// After it, it is stripped: a print that ends in blank rows pushes the
+		// live region down by rows that nothing will ever fill. So a trailing
+		// gap only ever separated messages that happened to be printed in the
+		// same batch -- and a question settles the moment it is sent while its
+		// reply settles when the model finishes, which is two batches. That is
+		// the normal case, and it had nothing between them at all.
+		//
+		// Before it, the gap is part of the same print as the message it
+		// belongs to, and the separation holds however the messages batch. The
+		// first one of a run is separated from the startup banner by the same
+		// rule.
+		out = append(out, rendered)
 	}
-	return out
+	if len(out) == 0 {
+		return ""
+	}
+	return leadingGap() + strings.Join(out, blockSeparator())
 }
 
 // renderOne renders a single message exactly as the transcript would.
@@ -125,7 +166,10 @@ func (m *messagesCmp) renderOne(index int, msg message.Message) string {
 		for _, p := range parts {
 			rendered = append(rendered, p.content)
 		}
-		return strings.Join(rendered, "\n")
+		// Spaced the way renderView spaces them, or a reply that called a tool
+		// is laid out one way while it is in flight and another once it is
+		// printed, and jumps as the turn ends.
+		return strings.Join(rendered, blockSeparator())
 	}
 	return ""
 }
@@ -201,10 +245,7 @@ func (m *messagesCmp) Init() tea.Cmd {
 // stream and a session being opened all arrive differently.
 func (m *messagesCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	model, cmd := m.updateInner(msg)
-	if lines := m.takeScrollback(); len(lines) > 0 {
-		for len(lines) > 0 && lines[len(lines)-1] == "" {
-			lines = lines[:len(lines)-1]
-		}
+	if printed := m.takeScrollback(); printed != "" {
 		// The printed messages have to leave the live region, or they show
 		// twice until the next render.
 		m.renderView()
@@ -214,7 +255,7 @@ func (m *messagesCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// width, which is the one width that stops the renderer clearing the
 		// row beneath it. See styles.TrimTrailingSpace.
 		cmd = tea.Batch(cmd, util.CmdHandler(PrintScrollbackMsg{
-			Content: styles.TrimTrailingSpace(strings.Join(lines, "\n")),
+			Content: styles.TrimTrailingSpace(printed),
 		}))
 	}
 	return model, cmd

@@ -1,10 +1,11 @@
 package chat
 
 import (
-	"github.com/charmbracelet/x/ansi"
 	"strings"
 	"testing"
 
+	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/kaiau00/aux-cli/internal/app"
 	"github.com/kaiau00/aux-cli/internal/message"
 )
@@ -20,10 +21,10 @@ func TestEachMessageIsHandedOverExactlyOnce(t *testing.T) {
 	m.messages = longConversation("s1", 6)
 
 	first := m.takeScrollback()
-	if len(first) == 0 {
+	if first == "" {
 		t.Fatal("the settled conversation was not handed over")
 	}
-	if again := m.takeScrollback(); len(again) != 0 {
+	if again := m.takeScrollback(); again != "" {
 		t.Fatalf("a second call handed the same messages over again: %q", again)
 	}
 
@@ -33,13 +34,13 @@ func TestEachMessageIsHandedOverExactlyOnce(t *testing.T) {
 		Parts: []message.ContentPart{message.TextContent{Text: "a brand new question"}},
 	})
 	third := m.takeScrollback()
-	if len(third) == 0 {
+	if third == "" {
 		t.Fatal("the new message was not handed over")
 	}
 	// Stripped before matching: the rendered text is interleaved with colour
 	// sequences, so a plain substring search depends on whichever colour
 	// profile some earlier test happened to leave behind.
-	joined := ansi.Strip(strings.Join(third, "\n"))
+	joined := ansi.Strip(third)
 	if !strings.Contains(joined, "brand new question") {
 		t.Errorf("the new message is missing from what was handed over: %q", joined)
 	}
@@ -59,7 +60,7 @@ func TestOpeningASessionHandsOverItsOwnHistory(t *testing.T) {
 
 	m.session.ID = "s1"
 	m.messages = longConversation("s1", 4)
-	if len(m.takeScrollback()) == 0 {
+	if m.takeScrollback() == "" {
 		t.Fatal("the first session was not handed over")
 	}
 
@@ -71,10 +72,10 @@ func TestOpeningASessionHandsOverItsOwnHistory(t *testing.T) {
 		Parts: []message.ContentPart{message.TextContent{Text: "the second session's question"}},
 	}}
 	lines := m.takeScrollback()
-	if len(lines) == 0 {
+	if lines == "" {
 		t.Fatal("the second session was not handed over; its ids collided with the first")
 	}
-	if !strings.Contains(ansi.Strip(strings.Join(lines, "\n")), "second session") {
+	if !strings.Contains(ansi.Strip(lines), "second session") {
 		t.Errorf("the wrong content was handed over: %q", lines)
 	}
 }
@@ -108,8 +109,8 @@ func TestNothingIsHandedOverBeforeTheWidthIsKnown(t *testing.T) {
 	m.session.ID = "s1"
 	m.messages = longConversation("s1", 3)
 
-	if lines := m.takeScrollback(); len(lines) != 0 {
-		t.Errorf("handed over %d lines before the width was known", len(lines))
+	if lines := m.takeScrollback(); lines != "" {
+		t.Errorf("handed over %d rows before the width was known", lipgloss.Height(lines))
 	}
 	if m.printed["m0"] {
 		t.Error("a message was marked printed before it could be rendered, so it will never print")
