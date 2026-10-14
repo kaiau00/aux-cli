@@ -118,21 +118,35 @@ var logsKeyReturnKey = key.NewBinding(
 )
 
 type appModel struct {
+	// width and height are the live region: height is two rows short of it,
+	// which is what the page gets, because the task header and the status line
+	// take one row each. termHeight is the terminal itself.
 	width, height int
+	termHeight    int
 	bannerPrinted bool
 	bannerRows    int
-	// conversationPrinted goes true the first time any of the conversation is
-	// handed to the terminal. Until then there is nothing above the live
-	// region, so the region can own the whole screen below the banner.
-	conversationPrinted bool
-	currentPage         page.PageID
-	previousPage        page.PageID
-	pages               map[page.PageID]tea.Model
-	loadedPages         map[page.PageID]bool
-	header              core.TaskHeaderCmp
-	status              core.StatusCmp
-	app                 *app.App
-	selectedSession     session.Session
+	// printedRows counts the rows Aux has handed to the terminal: the startup
+	// banner, and every piece of the conversation that has settled. They are
+	// the terminal's from then on -- it can scroll them, select them, and
+	// keep them after Aux exits -- and the live region takes only what is
+	// left.
+	//
+	// That subtraction is what holds the composer on the bottom row. The
+	// region used to collapse to its own content the moment anything was
+	// printed, and Bubble Tea's inline renderer erases everything below a
+	// frame shorter than the one before it, so the composer ended up wherever
+	// the collapsed frame finished -- near the top of an empty screen.
+	// Reported from a real terminal as the typing bar going to the top after
+	// a message was sent.
+	printedRows     int
+	currentPage     page.PageID
+	previousPage    page.PageID
+	pages           map[page.PageID]tea.Model
+	loadedPages     map[page.PageID]bool
+	header          core.TaskHeaderCmp
+	status          core.StatusCmp
+	app             *app.App
+	selectedSession session.Session
 
 	showPermissions bool
 	permissions     dialog.PermissionDialogCmp
@@ -211,16 +225,42 @@ func (a appModel) Init() tea.Cmd {
 }
 
 func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	next, cmd := a.update(msg)
+	updated, ok := next.(appModel)
+	if !ok {
+		return next, cmd
+	}
+	// Whatever needs the screen has just taken it: the rows above the region
+	// have been painted over, so they are not the terminal's any more and are
+	// dropped from the count. Without this the region would shrink again when
+	// the dialog closed, and the inline renderer cannot scroll the terminal
+	// back down -- the composer would be stranded above the bottom row by
+	// however much it had grown. The banner's rows are kept, because the
+	// region stops short of them and they are still on screen behind the
+	// first dialog of a run.
+	if updated.fillsScreen() {
+		updated.printedRows = min(updated.printedRows, updated.bannerRows)
+	}
+	return updated, cmd
+}
+
+func (a appModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	var cmd tea.Cmd
 	switch msg := msg.(type) {
-	case chat.ScrollbackPrintedMsg:
-		// There is history above the region now, so it stops owning the screen.
-		a.conversationPrinted = true
-		return a, nil
+	case chat.PrintScrollbackMsg:
+		if msg.Content == "" {
+			return a, nil
+		}
+		// Counted and printed together, in that order, so no frame is ever
+		// rendered for a screen Aux no longer has all of. See
+		// chat.PrintScrollbackMsg.
+		a.printedRows += lipgloss.Height(msg.Content)
+		return a, tea.Println(msg.Content)
 
 	case tea.WindowSizeMsg:
 		terminalHeight := msg.Height
+		a.termHeight = terminalHeight
 
 		// The banner is measured before anything is sized, because its rows
 		// come off the screen the live region has to work with. Printed at
@@ -230,15 +270,11 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.bannerPrinted = true
 			if banner := chat.Banner(msg.Width); banner != "" {
 				a.bannerRows = lipgloss.Height(banner)
+				a.printedRows += a.bannerRows
 				bannerCmd = tea.Println(banner)
 			}
 		}
 
-		// Everything downstream is sized from the region, not from the
-		// terminal, so that the page's own growth for the drawer and the
-		// completion popups lands on exactly the height this model pads to.
-		// When the two disagreed, opening and closing the drawer left the
-		// composer four rows -- the banner's height -- above the bottom.
 		// Narrowing the window re-wraps every row the previous frame left on
 		// screen. Bubble Tea's inline renderer moves its cursor up by the
 		// number of *lines* it last rendered rather than the number of rows
@@ -257,12 +293,21 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// anything, because every line already fitted the narrower width.
 		if a.width > 0 && msg.Width < a.width {
 			cmds = append(cmds, tea.ClearScreen)
+			// Nothing of Aux's is on the screen any more, the banner
+			// included, so none of it is spoken for: the region takes the
+			// whole terminal again and the composer is back on the last row.
+			// What was printed is still in the scrollback, one scroll up.
+			a.printedRows, a.bannerRows = 0, 0
 		}
 
-		region := terminalHeight
-		if !a.conversationPrinted && a.bannerRows > 0 {
-			region = max(1, terminalHeight-a.bannerRows)
-		}
+		// The region when something needs the whole screen -- a dialog, the
+		// drawer, a completion popup. It is the terminal less the banner,
+		// which is deliberately left where it is; see managedRegionHeight.
+		// Fixed between resizes, so the page's own growth for those cases
+		// cannot drift away from the height this model pads to. When the two
+		// disagreed, opening and closing the drawer left the composer four
+		// rows -- the banner's height -- above the bottom.
+		region := max(1, terminalHeight-min(a.printedRows, a.bannerRows))
 		msg.Height = region - 2 // Make space for the task header and status bar
 		a.width, a.height = msg.Width, msg.Height
 
@@ -900,39 +945,52 @@ func (a appModel) hasOverlay() bool {
 // managedRegionHeight is how tall the live region renders, or 0 to let it be
 // as tall as its content.
 //
-// Until any of the conversation has been printed there is nothing above the
-// region, so it owns the whole screen below the banner: the composer sits on
-// the terminal's last row and Aux fills the terminal from the moment it
-// starts, without the alternate screen. Sizing it here rather than padding
-// the banner print means a resize recomputes it, which the padding could not.
+// It is the terminal less the rows Aux has already given it, so that what is
+// printed and what is repainted add up to the screen and the composer stays on
+// the last row. At startup only the banner has been printed, so the region is
+// everything below it: Aux fills the terminal from the moment it starts,
+// without taking the alternate screen. Each settled piece of the conversation
+// then takes rows from the region as it takes rows of the screen, and once the
+// conversation is taller than the screen the region is only as tall as its own
+// content -- from there the terminal's own scrolling is what keeps it on the
+// bottom.
 //
-// It also removes a whole class of defect. An overlay needs most of the
-// screen, so with a collapsed region one had to be grown and then shrunk
-// again -- and Bubble Tea's inline renderer cannot scroll the terminal back
-// down, so closing a dialog left the composer stranded near the top with the
-// rest of the screen blank. Found by driving the real binary in a pty. While
-// the region already owns the screen there is nothing to grow, so nothing
-// drifts.
+// Padding is a floor in lipgloss, so a region shorter than what the page
+// renders is simply not padded; it never clips.
 //
-// Once the conversation is printed the region goes tight against it: a floor
-// here instead would put a block of blank rows between the history and the
-// composer, which is the defect #53 was raised to fix.
+// Anything that needs the whole screen gets a.height+2 instead: a dialog is
+// centred on the region and bounded by it, and the drawer and the completion
+// popups are placed onto it. Sized tight against a long conversation there
+// would be nowhere to put them, and Aux would show the too-small notice in a
+// terminal with plenty of room. That height stops short of the banner, which
+// is left on screen -- on a first run the init prompt is up before the user
+// has seen it.
 func (a appModel) managedRegionHeight() int {
-	// a.height was already set from the region, banner subtracted, when the
-	// terminal reported its size -- so the region is simply that plus the two
-	// rows the header and status line take. Subtracting the banner again here
-	// took it off twice and left the bottom four rows of the screen empty.
-	region := a.height + 2
-	if region <= 0 {
-		return 0
+	if a.fillsScreen() {
+		// a.height was set from the fill height when the terminal reported
+		// its size, so the region is that plus the two rows the header and
+		// the status line take. Recomputing it from the banner here took the
+		// banner off twice and left the bottom four rows of the screen empty.
+		return max(0, a.height+2)
 	}
-	if !a.conversationPrinted && a.bannerRows > 0 {
-		return region
-	}
+	return max(0, a.termHeight-a.printedRows)
+}
+
+// fillsScreen reports whether what is showing needs the whole screen rather
+// than the rows the printed conversation has left.
+func (a appModel) fillsScreen() bool {
 	if a.hasOverlay() {
-		return region
+		return true
 	}
-	return 0
+	// Only the chat page collapses to its content. The logs page renders at
+	// the height it was given.
+	if a.currentPage != page.ChatPage {
+		return true
+	}
+	if filler, ok := a.pages[a.currentPage].(interface{ FillsScreen() bool }); ok {
+		return filler.FillsScreen()
+	}
+	return false
 }
 
 // centreOverlay centres a dialog on the managed region.
