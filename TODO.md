@@ -17,7 +17,7 @@ disagree, the plan wins and this file gets corrected.
 
 ---
 
-## Progress (as of 2026-10-11)
+## Progress (as of 2026-10-14)
 
 Update this section and the plan's §6 checklist in every PR that moves an item.
 
@@ -46,10 +46,22 @@ Update this section and the plan's §6 checklist in every PR that moves an item.
 | Live region collapses; overlays still fit (UI pass) | #53 |
 | Startup screen: a printed wordmark, the whole terminal (UI pass) | #54 |
 | Dialogs fit the terminal; a screen-level audit (UI pass) | #54 |
+| Live region holds one height, so no row is left behind (UI pass) | #56 |
+| No line padded to the terminal's width; clear on a narrower one (UI pass) | #57 |
+| Composer stays on the last row for the whole session (UI pass) | #58 |
+| The printed transcript separates its messages (UI pass) | #59 |
+| The user's own messages sit on the right (UI pass) | #60 |
+| Startup: no wait on MCP, no SQLite recompile (not a plan item) | #61 |
 
-**Open:** nothing. The UI pass merged as #48, #49, #50, #51, #53 and #54;
-`main`'s own post-merge run is green on each. #52 recorded the same pass in
-these files and was superseded by #54, which carries its content.
+**Open:** nothing. The UI pass merged as #48, #49, #50, #51, #53, #54, #56,
+#57, #58, #59 and #60, and the startup work as #61; `main`'s own post-merge
+run is green on each.
+
+Two documentation PRs were closed rather than merged, both for the same
+reason: each described a `main` that had moved on, and merging either would
+have rolled these files back. #52's content reached `main` by hand through
+#54 -- verified addition by addition before closing -- and #55 recorded only
+up to #56. This entry replaces both.
 
 **Next:** **M2.5 compaction as a decision**, then M2.6-M2.8, then M3. The UI
 pass is finished in code and the palette is closed (the accent stays amber --
@@ -57,10 +69,21 @@ see the plan's D17). M2.5 was deliberately sequenced after it: it builds a
 dialog into the transcript, and the transcript's rendering model is now
 settled, so it will not be built twice.
 
-Six parts: the working indicator (#48), the transcript's visibility defects
-(#49), the canvas (#50), the scrollback (#51), the live region and its overlays
-(#53), and the startup screen with the dialog audit that followed it (#54).
-The plan records the pass in §5 and its decisions as D16-D18; D3 ("do not tag
+Eleven parts. Six were planned work on the rendering model: the working
+indicator (#48), the transcript's visibility defects (#49), the canvas (#50),
+the scrollback (#51), the live region and its overlays (#53), and the startup
+screen with the dialog audit that followed it (#54).
+
+The other five came from a person at a real terminal. Four are defects no
+audit had found: a row left behind after every turn (#56), a duplicated
+composer that depended on the window's width (#57), the composer going to the
+top of the screen as soon as a message was sent (#58), and a transcript so
+tight that a question, its reply and the next question ran together (#59). The
+fifth is not a defect but a request, which is the other thing only a person
+can produce: the user's own messages belong on the right, Aux's output on the
+left (#60).
+
+The plan records the pass in §5 and its decisions as D16-D19; D3 ("do not tag
 until it feels like Claude Code") is the decision it answers to. What remains
 is under *Opportunistic*.
 
@@ -74,25 +97,35 @@ is under *Opportunistic*.
   resident-pages check have not been run against a real provider.
 - M2.2: the per-provider live check that cache tokens show in the status bar
   needs real keys. The offline streaming fixtures pass for all four SDKs.
-- **The UI pass has never run in a real terminal.** This is the one
-  outstanding done-when for the whole pass. Six PRs changed how Aux draws, the
-  rendering model among them. Two levels of audit stand behind it -- `View()`
-  rendered across every state and size, and the real binary driven in a pty
-  with its byte stream replayed through a terminal emulator -- and neither is
-  a person looking at their own screen. Six checks remain human-only:
-  wheel-scrolling into history, where the composer sits, drag-selecting
-  without Shift, the conversation surviving quit, resizing mid-session, and
-  the indicator, prose and durations during a live turn. Six defects in
-  August, three more on 2026-10-07 and eleven on 2026-10-10 appeared only when
+- **The UI pass has now run in a real terminal, and that is where five of its
+  eleven parts came from.** Between 2026-10-11 and 2026-10-14 the binary was
+  installed and used, and reported back: a stale row after every turn, a
+  duplicated composer that depended on the window's width, the composer
+  jumping to the top of the screen on the first message, and a transcript too
+  tight to tell one message from the next. Each became #56 through #59, and
+  the two levels of audit -- `View()` rendered across every state and size,
+  and the real binary driven in a pty with its byte stream replayed through a
+  terminal emulator -- had passed clean through every one of them. #60, the
+  side a message sits on, is the other thing only a person produces: a
+  request, which no audit can raise at all.
+
+  Still human-only, and not yet reported on: wheel-scrolling into history,
+  drag-selecting without Shift, the conversation surviving quit, and the
+  indicator, prose and durations during a live turn. Composer position and
+  resizing have been exercised and each produced a fix; neither has been
+  confirmed good since the fix. Six defects in August, three more on
+  2026-10-07, eleven on 2026-10-10 and five this week appeared only when
   something was run rather than read, so this is the shape of claim this file
   has been wrong about before.
 
-**Gate numbers on `main`** (`e54e5d4`, measured 2026-10-11): coverage 38.9%
-locally, against a 36.4% floor raised in #47. CI's last reported figure is
-37.1%, at `ac43a18`. The floor tracks CI, which measures ~0.6 points under
-macOS here, so the laptop number is never the one to write -- which is why the
-floor stays at 36.4 even though the laptop reads higher. Dead-code baseline: 47
-entries. M3.7 still owns getting coverage to 45%.
+**Gate numbers on `main`** (`59c0073`, measured 2026-10-14): CI reports
+coverage **38.6%** against a **38.4%** floor, raised from 36.4 in #58. The
+laptop reads 39.1% for the same tree: the floor tracks CI, which measures
+~0.5 points under macOS here, so the laptop number is never the one to write.
+The margin is now 0.2 points, which is tight by design but does mean the next
+change that removes tested code will trip the gate rather than quietly erode
+the number. Dead-code baseline: 47 entries. M3.7 still owns getting coverage
+to 45%.
 
 ---
 
