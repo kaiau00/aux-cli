@@ -21,14 +21,11 @@ func loadConfig(t *testing.T) {
 }
 
 // Every provider's prompt has to say the same true thing about what Aux is and
-// what the model is.
+// where the model fits.
 //
 // The OpenAI variant said Aux was "built by OpenAI" and that it "wraps OpenAI
-// models" -- inherited from the fork and false on both counts. The Anthropic
-// variant opened "You are Aux", which is the other half of the confusion: the
-// model is not the harness. A model that believes either will tell the user
-// its provider wrote this tool, or answer for the harness's behaviour as if it
-// were its own.
+// models" -- inherited from the fork and false on both counts. A model told
+// that will repeat it to the user.
 func TestEveryCoderPromptSaysWhatAuxIs(t *testing.T) {
 	loadConfig(t)
 	providers := []models.ModelProvider{
@@ -45,11 +42,13 @@ func TestEveryCoderPromptSaysWhatAuxIs(t *testing.T) {
 	for _, provider := range providers {
 		prompt := CoderPrompt(provider)
 		for _, want := range []string{
+			"You are Aux",      // the identity it answers to
 			"open-source",      // what Aux is
 			"harness",          // not a model
 			"forked from",      // where it came from
 			"not a product of", // whose it is not
 			"API key",          // whose model it is, and who pays
+			"name the model",   // and it says which, when asked
 		} {
 			if !strings.Contains(prompt, want) {
 				t.Errorf("%s: the prompt never says %q", provider, want)
@@ -84,17 +83,30 @@ func TestNoPromptClaimsAProviderBuiltAux(t *testing.T) {
 	}
 }
 
-// The model is told not to confuse itself with the harness. "You are Aux"
-// invites exactly that, so it may not come back.
-func TestThePromptDoesNotTellTheModelItIsAux(t *testing.T) {
+// Asked who it is, the answer is Aux -- and the model it runs on is a separate
+// fact, available when asked rather than volunteered as the identity.
+//
+// Both halves are required together. Aux without the separation attributes the
+// model's vendor nothing and claims its intelligence as its own; the
+// separation without Aux leaves the user talking to "an AI assistant" with no
+// name for the thing in front of them.
+func TestItAnswersAsAuxAndKeepsTheModelSeparate(t *testing.T) {
 	loadConfig(t)
 	for _, provider := range []models.ModelProvider{models.ProviderOpenAI, models.ProviderAnthropic} {
 		prompt := CoderPrompt(provider)
-		if strings.Contains(prompt, "You are Aux") {
-			t.Errorf("%s: the prompt says \"You are Aux\"; the model is not the harness", provider)
+		if !strings.Contains(prompt, "you are Aux") && !strings.Contains(prompt, "You are Aux") {
+			t.Errorf("%s: nothing in the prompt says it is Aux", provider)
 		}
-		if !strings.Contains(prompt, "You are not Aux") {
-			t.Errorf("%s: the prompt never separates the model from the harness", provider)
+		// The separation, in the terms that make it actionable for a user:
+		// the model is theirs, on their key, and swappable.
+		for _, want := range []string{
+			"The model is a separate thing",
+			"the user\nsupplies the model",
+			"it is still Aux",
+		} {
+			if !strings.Contains(prompt, want) {
+				t.Errorf("%s: the prompt never says %q, so the model reads as Aux's own", provider, want)
+			}
 		}
 	}
 }
