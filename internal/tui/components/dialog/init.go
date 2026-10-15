@@ -114,7 +114,7 @@ func (m InitDialogCmp) View() string {
 		Foreground(t.Text()).
 		Width(maxWidth).
 		Padding(0, 1).
-		Render("Initialization generates a new Aux.md file that contains information about your codebase. This file serves as memory for each project, and you can add to it to help the agents work better.")
+		Render("Initialization generates a new AUX.md file that contains information about your codebase. This file serves as memory for each project, and you can add to it to help the agents work better.")
 
 	question := baseStyle.
 		Foreground(t.Text()).
