@@ -1228,14 +1228,14 @@ func New(app *app.App) tea.Model {
 	model.RegisterCommand(dialog.Command{
 		ID:          "init",
 		Title:       "Initialize Project",
-		Description: "Create/update the Aux.md memory file",
+		Description: "Create/update the AUX.md memory file",
 		Handler: func(cmd dialog.Command) tea.Cmd {
-			prompt := `Please analyze this codebase and create an Aux.md file containing:
+			prompt := `Please analyze this codebase and create an AUX.md file containing:
 1. Build/lint/test commands - especially for running a single test
 2. Code style guidelines including imports, formatting, types, naming conventions, error handling, etc.
 
 The file you create will be given to agentic coding agents (such as yourself) that operate in this repository. Make it about 20 lines long.
-If there's already a aux.md, improve it.
+If one already exists under any of the names Aux reads -- AUX.md, Aux.md, aux.md, CLAUDE.md, AGENTS.md -- improve that file in place rather than adding a second one.
 If there are Cursor rules (in .cursor/rules/ or .cursorrules) or Copilot rules (in .github/copilot-instructions.md), make sure to include them.`
 			return tea.Batch(
 				util.CmdHandler(chat.SendMsg{

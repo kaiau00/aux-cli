@@ -52,6 +52,7 @@ Update this section and the plan's §6 checklist in every PR that moves an item.
 | The printed transcript separates its messages (UI pass) | #59 |
 | The user's own messages sit on the right (UI pass) | #60 |
 | Startup: no wait on MCP, no SQLite recompile (not a plan item) | #61 |
+| M2.7 text that says the wrong thing; the dashboard token out of the transcript | #64, #65 |
 
 **Open:** nothing. The UI pass merged as #48, #49, #50, #51, #53, #54, #56,
 #57, #58, #59 and #60, and the startup work as #61; `main`'s own post-merge
@@ -369,16 +370,27 @@ make memory not a black box: `aux memory list`, delete ("forget that"),
 provenance on use, export. Ship this before more memory *features*; a memory
 that surprises people is worse than none. Depends on P2.3 for the slash form.
 
-### P2.7 Text that still says the wrong thing
+### P2.7 Text that still says the wrong thing — **done**
 
-- The OpenAI coder prompt begins "built by OpenAI" (`prompt/coder.go:28`).
-- `aux --help` opens with OpenCode's description, not Aux's.
-- The instruction file is spelled `Aux.md`, `aux.md`, and `AUX.md` in the
-  prompt and `defaultContextPaths`. Pick one, document it, keep the others as
-  aliases.
-- The dashboard URL breaks mid-address in the intro message (glamour splits at
-  `127.0.0.`); print the bare origin and point at `d` in the context pane,
-  which also stops the token being written into the transcript.
+All four, each with a test rather than a one-off grep:
+
+- The OpenAI coder prompt began "built by OpenAI" and "wraps OpenAI models".
+  Every provider now gets one identity block: Aux is an open-source agentic
+  coding harness, the model is the user's on the user's key, and the two are
+  kept apart when something fails.
+- `aux --help` opened with OpenCode's description. It now says what Aux is,
+  whose model it runs, and where it came from.
+- The instruction file is `AUX.md`. The other five spellings stay readable --
+  a project with a `CLAUDE.md` or an `AGENTS.md` is the normal case -- but
+  `/init` writes `AUX.md` and improves an existing file under any of those
+  names instead of adding a second one. The old prompt asked for `Aux.md` and
+  then offered to improve `aux.md`, which on a case-sensitive filesystem are
+  two different files.
+- The dashboard's access token is out of the intro message and out of the
+  startup line: both print the bare origin, and the tokened link stays behind
+  `d` in the context pane (D10). `buildIntroBody` is now given the address
+  rather than the server, so the function that writes a message into the
+  database and the terminal's scrollback holds no credential to leak.
 
 ---
 
