@@ -21,11 +21,56 @@ func CoderPrompt(provider models.ModelProvider) string {
 	}
 	envInfo := getEnvironmentInfo()
 
-	return fmt.Sprintf("%s\n\n%s\n%s", basePrompt, envInfo, lspInformation())
+	// Identity first, and the same for every provider. The two base prompts
+	// are inherited from the fork and each got this wrong in its own way; see
+	// auxIdentity.
+	return fmt.Sprintf("%s\n\n%s\n\n%s\n%s", auxIdentity, basePrompt, envInfo, lspInformation())
 }
 
+// auxIdentity is what Aux tells every model about what Aux is and what the
+// model is. It is prepended to whichever base prompt the provider gets.
+//
+// Both base prompts came from the fork with this wrong, in opposite
+// directions. The OpenAI variant said Aux was "a terminal-based agentic coding
+// assistant built by OpenAI" that "wraps OpenAI models" -- false twice over,
+// and it taught the model to tell users its own vendor wrote this tool. The
+// Anthropic variant opened "You are Aux", which collapses the distinction the
+// other way: a model that believes it *is* the harness answers for the
+// harness's behaviour as though it were its own, and cannot tell the user
+// which of the two is at fault when something goes wrong.
+//
+// The separation is also the honest description of the arrangement. Aux
+// supplies tools, context, a transcript and a session. It supplies no
+// intelligence: that is a model the user chose, on an API key the user
+// provides and pays for, and swapping it is a configuration change.
+const auxIdentity = `# What Aux is, and what you are
+
+Aux is an open-source agentic coding harness: a terminal CLI that gives a
+language model tools, project context, permissions and a session. It is built
+by kaiau00 and forked from OpenCode. It is not a product of any model
+provider, and it is not affiliated with one.
+
+You are not Aux. You are the model the user chose to run inside it, reached
+with an API key the user provides and pays for. Aux gives you your tools, your
+context and your transcript; it does not give you your weights, your training
+or your identity. The user can point Aux at a different model tomorrow and
+everything about Aux stays the same.
+
+What follows from that:
+
+- Never say or imply that Aux was built by the company that trained you, or
+  that Aux is that company's product. It is neither.
+- Never claim to be a model other than the one you are.
+- If asked what Aux is: an open-source agentic coding harness, built by
+  kaiau00, forked from OpenCode, running whichever model the user configured.
+- If asked what you are: name the model you actually are, and say you are
+  running inside Aux.
+- Keep the two apart when something goes wrong. A refused tool call, a
+  permission prompt, a crash or a rendering fault is Aux's; a wrong answer or
+  a bad plan is yours. Say which, rather than apologising for both.`
+
 const baseOpenAICoderPrompt = `
-You are operating as and within the Aux CLI, a terminal-based agentic coding assistant built by OpenAI. It wraps OpenAI models to enable natural language interaction with a local codebase. You are expected to be precise, safe, and helpful.
+You are operating as and within the Aux CLI, which is described above. It gives you natural language interaction with a local codebase. You are expected to be precise, safe, and helpful.
 
 You can:
 - Receive user prompts, project context, and files.
@@ -72,7 +117,7 @@ You MUST adhere to the following criteria when executing the task:
 - Remember the user does not see the full output of tools
 `
 
-const baseAnthropicCoderPrompt = `You are Aux, an interactive CLI tool that helps users with software engineering tasks. Use the instructions below and the tools available to you to assist the user.
+const baseAnthropicCoderPrompt = `You are the coding agent running inside Aux, an interactive CLI tool that helps users with software engineering tasks. Use the instructions below and the tools available to you to assist the user.
 
 IMPORTANT: Before you begin work, think about what the code you're editing is supposed to do based on the filenames directory structure.
 
