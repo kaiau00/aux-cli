@@ -4,10 +4,10 @@
 │  > 24000 tokens · large.go                                         │
 │    3000 tokens · project_manifest [fixed]                          │
 │    2000 tokens · tests.go [pinned]                                 │
-│    1000 tokens · msg:user [fixed]                                  │
+│    1000 tokens · user message [fixed]                              │
 │    900 tokens · output [excluded]                                  │
-│    Compact now                                                     │
+│    Compact now (transcript)                                        │
 │    Continue anyway                                                 │
-│  ↑/↓ move · x exclude · p pin · Enter · Esc continue               │
+│  x exclude/p pin: later prompts; Enter/Esc                         │
 │                                                                    │
 ╰────────────────────────────────────────────────────────────────────╯

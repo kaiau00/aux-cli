@@ -24,7 +24,10 @@ func TestCompactionPagesRankAndPersistControls(t *testing.T) {
 		t.Fatal(err)
 	}
 	tasks := task.NewStore(conn)
-	if err = tasks.CreateTask(ctx, task.Task{ID: "task", SessionID: sess.ID, Mode: task.ModeImplementation, Status: task.StatusRunning}); err != nil {
+	if err = tasks.CreateTask(ctx, task.Task{ID: "task", SessionID: sess.ID, Mode: task.ModeImplementation, Status: task.StatusRunning, CreatedAt: 2}); err != nil {
+		t.Fatal(err)
+	}
+	if err := tasks.CreateTask(ctx, task.Task{ID: "old-task", SessionID: sess.ID, Mode: task.ModeImplementation, Status: task.StatusRunning, CreatedAt: 1}); err != nil {
 		t.Fatal(err)
 	}
 	ledger := cost.NewService(conn)
@@ -60,6 +63,9 @@ func TestCompactionPagesRankAndPersistControls(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if top[0].Name != "view result" {
+		t.Fatalf("unnamed page: %+v", top[0])
+	}
 	if len(top) != 5 || top[0].Tokens != 700 || top[4].Tokens != 300 || top[0].ToolCallIDs[0] != "tool-7" {
 		t.Fatalf("ranking: %+v", top)
 	}
@@ -83,4 +89,21 @@ func TestCompactionPagesRankAndPersistControls(t *testing.T) {
 	if err != nil || pins["tool-7"] {
 		t.Fatalf("unpin: %v %v", pins, err)
 	}
+	// A missing message must keep the ranking available with its stable identity.
+	missing, err := pages.UpsertPage(ctx, "", contextstore.KindToolDigest, "msg:missing", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	version, err := pages.UpsertVersion(ctx, missing.ID, "missing", "", 1000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := pages.Bind(ctx, contextstore.Binding{ID: "missing", TaskID: "task", ModelCallID: "call", PageVersionID: version.ID, State: contextstore.StateResident, TokenCount: 1000}); err != nil {
+		t.Fatal(err)
+	}
+	top, err = m.CompactionPages(sess.ID)
+	if err != nil || len(top) != 5 || top[0].Name != "msg:missing" {
+		t.Fatalf("missing-message fallback: %+v %v", top, err)
+	}
+
 }

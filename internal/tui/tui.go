@@ -457,6 +457,10 @@ func (a appModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.showCommandDialog = false
 		return a, nil
 
+	case compactFailedMsg:
+		a.isCompacting = false
+		return a, util.ReportError(msg.err)
+
 	case startCompactSessionMsg, page.CompactSessionMsg:
 		// Start compacting the current session
 		a.isCompacting = true
@@ -470,7 +474,9 @@ func (a appModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Start the summarization process
 		return a, func() tea.Msg {
 			ctx := context.Background()
-			a.app.CoderAgent.Summarize(ctx, a.selectedSession.ID)
+			if err := a.app.CoderAgent.Summarize(ctx, a.selectedSession.ID); err != nil {
+				return compactFailedMsg{err}
+			}
 			return nil
 		}
 
@@ -1304,3 +1310,5 @@ If there are Cursor rules (in .cursor/rules/ or .cursorrules) or Copilot rules (
 
 	return model
 }
+
+type compactFailedMsg struct{ err error }

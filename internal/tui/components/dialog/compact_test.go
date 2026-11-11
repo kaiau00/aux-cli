@@ -2,6 +2,7 @@ package dialog
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -48,6 +49,12 @@ func TestCompactDialogFitsAndActionsRemainReachable(t *testing.T) {
 		d.Update(tea.WindowSizeMsg{Width: size[0], Height: size[1]})
 		for i := 0; i < 7; i++ {
 			view := d.View()
+			if i == 5 && !strings.Contains(view, "Compact now") {
+				t.Fatal("compact action hidden")
+			}
+			if i == 6 && !strings.Contains(view, "Continue anyway") {
+				t.Fatal("continue action hidden")
+			}
 			if lipgloss.Width(view) > size[0] || lipgloss.Height(view) > size[1] {
 				t.Fatalf("%v: %dx%d", size, lipgloss.Width(view), lipgloss.Height(view))
 			}

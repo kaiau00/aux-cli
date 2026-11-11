@@ -34,6 +34,7 @@ type CompactDialog struct {
 	Apply                   func(CompactPage, bool) error
 	selected, width, height int
 	pending                 bool
+	AutoCompact             bool
 }
 
 func NewCompactDialog(pages []CompactPage, apply func(CompactPage, bool) error) *CompactDialog {
@@ -46,6 +47,9 @@ func (d *CompactDialog) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		d.width, d.height = m.Width, m.Height
 	case compactAppliedMsg:
 		d.pending = false
+		if m.index < 0 || m.index >= len(d.Pages) {
+			return d, nil
+		}
 		if m.err != nil {
 			return d, util.ReportError(m.err)
 		}
@@ -104,7 +108,11 @@ func (d *CompactDialog) View() string {
 		}
 		items = append(items, fmt.Sprintf("%d tokens · %s%s", p.Tokens, p.Name, state))
 	}
-	items = append(items, "Compact now", "Continue anyway")
+	continueLabel := "Continue anyway"
+	if d.AutoCompact {
+		continueLabel = "Continue (auto-compact)"
+	}
+	items = append(items, "Compact now (transcript)", continueLabel)
 	// Scroll the selection into the available rows; actions remain reachable
 	// even on short terminals rather than growing the managed region.
 	visible := max(1, rows-2)
@@ -117,7 +125,7 @@ func (d *CompactDialog) View() string {
 		}
 		lines = append(lines, ansi.Truncate(marker+items[i], w, "…"))
 	}
-	lines = append(lines, ansi.Truncate("↑/↓ move · x exclude · p pin · Enter · Esc continue", w, "…"))
+	lines = append(lines, ansi.Truncate("x exclude/p pin: later prompts; Enter/Esc", w, "…"))
 	t := theme.CurrentTheme()
 	return styles.BaseStyle().Background(t.Background()).Foreground(t.Text()).
 		Border(lipgloss.RoundedBorder()).BorderForeground(t.Primary()).Padding(1, 2).

@@ -109,14 +109,15 @@ func (p *chatPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ContextPressureMsg:
 		return p, p.contextPressure(msg)
 	case compactionPagesMsg:
+		if state := p.pressure[msg.SessionID]; state != nil {
+			state.opening = false
+		}
 		if msg.SessionID != p.session.ID {
 			return p, nil
 		}
-		if msg.Err != nil {
-			return p, util.ReportError(msg.Err)
-		}
 		if msg.Open {
 			p.compactDialog = dialog.NewCompactDialog(msg.Pages, p.contextPane.ApplyCompactionControl)
+			p.compactDialog.AutoCompact = p.pressure[msg.SessionID].auto && p.pressure[msg.SessionID].used >= p.pressure[msg.SessionID].limit*95/100
 			p.compactDialog.Update(tea.WindowSizeMsg{Width: p.termWidth, Height: p.termHeight})
 			p.pressure[msg.SessionID].shown = true
 			p.pressureSession = msg.SessionID
@@ -231,7 +232,7 @@ func (p *chatPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	if p.compactDialog != nil {
+	if _, resize := msg.(tea.WindowSizeMsg); p.compactDialog != nil && !resize {
 		_, cmd := p.compactDialog.Update(msg)
 		cmds = append(cmds, cmd)
 	}
@@ -448,9 +449,9 @@ type ContextPressureMsg struct {
 // CompactSessionMsg delegates to the TUI's existing summarization flow.
 type CompactSessionMsg struct{}
 type compactionPressure struct {
-	warned, shown bool
-	used, limit   int64
-	auto          bool
+	warned, shown, opening bool
+	used, limit            int64
+	auto                   bool
 }
 type compactionPagesMsg struct {
 	SessionID string
@@ -476,17 +477,25 @@ func (p *chatPage) contextPressure(msg ContextPressureMsg) tea.Cmd {
 		state.warned = false
 		return nil
 	}
+	if p.compactDialog != nil {
+		p.compactDialog.AutoCompact = msg.Auto && msg.Used >= msg.Limit*95/100
+	}
+	if msg.Used >= msg.Limit*95/100 && state.shown && p.compactDialog == nil && msg.Auto {
+		return util.CmdHandler(CompactSessionMsg{})
+	}
+	if state.opening {
+		return nil
+	}
 	open := msg.Used >= msg.Limit*90/100 && !state.shown
 	if open || !state.warned {
 		state.warned = true
+		state.opening = true
 		sid := msg.SessionID
 		return func() tea.Msg {
 			pages, err := p.contextPane.CompactionPages(sid)
 			return compactionPagesMsg{SessionID: sid, Open: open, Pages: pages, Err: err}
 		}
 	}
-	if msg.Used >= msg.Limit*95/100 && state.shown && p.compactDialog == nil && msg.Auto {
-		return util.CmdHandler(CompactSessionMsg{})
-	}
+
 	return nil
 }

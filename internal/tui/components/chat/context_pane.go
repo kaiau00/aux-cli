@@ -695,7 +695,7 @@ func (m *ContextPaneCmp) refreshWorkbench() {
 	if err != nil || len(tasks) == 0 {
 		return
 	}
-	latest := tasks[len(tasks)-1]
+	latest := tasks[0]
 
 	validationVM := m.buildValidation(ctx, latest.ID)
 	changesVM := m.buildChanges(ctx, latest.ID)
@@ -1044,7 +1044,7 @@ func (m *ContextPaneCmp) CompactionPages(sessionID string) ([]dialog.CompactPage
 	if err != nil || len(tasks) == 0 {
 		return nil, err
 	}
-	taskID := tasks[len(tasks)-1].ID
+	taskID := tasks[0].ID
 	calls, err := m.app.Cost.ListCallsByTask(ctx, taskID)
 	if err != nil || len(calls) == 0 {
 		return nil, err
@@ -1070,9 +1070,12 @@ func (m *ContextPaneCmp) CompactionPages(sessionID string) ([]dialog.CompactPage
 		if strings.HasPrefix(b.StableKey, "msg:") && m.app.Messages != nil {
 			msg, err := m.app.Messages.Get(ctx, strings.TrimPrefix(b.StableKey, "msg:"))
 			if err != nil {
-				return nil, err
+				pages = append(pages, p)
+				continue
 			}
+			p.Name = string(msg.Role) + " message"
 			for _, result := range msg.ToolResults() {
+				p.Name = result.Name + " result"
 				p.ToolCallIDs = append(p.ToolCallIDs, result.ToolCallID)
 				p.Pinned = p.Pinned || pins[result.ToolCallID]
 				p.Excluded = p.Excluded || excluded[result.ToolCallID]

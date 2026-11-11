@@ -12,14 +12,20 @@ import (
 
 // Reuse the shared ANSI stripping and golden update flag.
 func TestCompactDialogGolden(t *testing.T) {
-	for name, size := range map[string][2]int{"wide": {80, 24}, "narrow": {40, 14}} {
+	for name, size := range map[string][2]int{"wide": {80, 24}, "narrow": {40, 14}, "auto": {80, 24}} {
 		d := dialog.NewCompactDialog([]dialog.CompactPage{
 			{Name: "large.go", Tokens: 24000, ToolCallIDs: []string{"tool"}},
 			{Name: "project_manifest", Tokens: 3000},
 			{Name: "tests.go", Tokens: 2000, ToolCallIDs: []string{"test"}, Pinned: true},
-			{Name: "msg:user", Tokens: 1000},
+			{Name: "user message", Tokens: 1000},
 			{Name: "output", Tokens: 900, ToolCallIDs: []string{"out"}, Excluded: true},
 		}, nil)
+		if name == "auto" {
+			d.AutoCompact = true
+			for i := 0; i < 6; i++ {
+				d.Update(tea.KeyMsg{Type: tea.KeyDown})
+			}
+		}
 		d.Update(tea.WindowSizeMsg{Width: size[0], Height: size[1]})
 		got := plain(d.View())
 		path := filepath.Join("testdata", "compact."+name+".golden")
