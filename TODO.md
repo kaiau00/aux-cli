@@ -63,7 +63,13 @@ have rolled these files back. #52's content reached `main` by hand through
 #54 -- verified addition by addition before closing -- and #55 recorded only
 up to #56. This entry replaces both.
 
-**Next:** **M2.5 compaction as a decision**, then M2.6-M2.8, then M3. The UI
+**M2.5 working tree:** wired 80% largest-page warning, 90% decision dialog,
+and 95% safety net after review. Added dialog goldens, occupancy-sequence,
+layout, and persistent-control tests. `gofmt -l .` is empty; vet and race
+execution are blocked by the sandbox's read-only Go build cache. Goldens
+remain unverified until those tests can run.
+
+**Next:** finish M2.5 verification, then M2.6-M2.8, then M3. The UI
 pass is finished in code and the palette is closed (the accent stays amber --
 see the plan's D17). M2.5 was deliberately sequenced after it: it builds a
 dialog into the transcript, and the transcript's rendering model is now

@@ -1,0 +1,13 @@
+╭─────────────────────────────────────╮
+│                                     │
+│  Context near capacity              │
+│  > 24000 tokens · large.go          │
+│    3000 tokens · project_manifest…  │
+│    2000 tokens · tests.go [pinned]  │
+│    1000 tokens · msg:user [fixed]   │
+│    900 tokens · output [excluded]   │
+│    Compact now                      │
+│    Continue anyway                  │
+│  ↑/↓ move · x exclude · p pin · E…  │
+│                                     │
+╰─────────────────────────────────────╯

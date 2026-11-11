@@ -1063,7 +1063,10 @@ in M1.6.
 - [ ] Startup under a second (not a plan item; D19): MCP discovery and the
       SQLite Wasm compile are off the startup path (#61), 14s to 0.5s
       measured. The `@`-completion scan still blocks it outside a repository
-- [ ] M2.5 compaction, M2.6 memory UX, M2.7 text, M2.8 trimming — merged
+- [ ] M2.5 compaction — implemented in working tree: 80/90/95 flow, dialog
+      goldens and control/layout tests; vet/race blocked by read-only Go build
+      cache, goldens not yet verified; not merged
+- [ ] M2.6 memory UX, M2.7 text, M2.8 trimming — merged
 - [ ] M3.5 `--version` local builds
 - [ ] M3.7 coverage ≥ 45%, floor raised
 - [ ] M3.6 README rewrite, reviewed by a non-author against a scratch session

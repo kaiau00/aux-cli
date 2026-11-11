@@ -14,6 +14,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/kaiau00/aux-cli/internal/app"
+	"github.com/kaiau00/aux-cli/internal/contextstore"
 	"github.com/kaiau00/aux-cli/internal/eventstore"
 	"github.com/kaiau00/aux-cli/internal/llm/tools"
 	"github.com/kaiau00/aux-cli/internal/message"
@@ -21,6 +22,7 @@ import (
 	"github.com/kaiau00/aux-cli/internal/session"
 	"github.com/kaiau00/aux-cli/internal/tui/components/activity"
 	"github.com/kaiau00/aux-cli/internal/tui/components/contextbudget"
+	"github.com/kaiau00/aux-cli/internal/tui/components/dialog"
 	"github.com/kaiau00/aux-cli/internal/tui/components/workbench"
 	"github.com/kaiau00/aux-cli/internal/tui/styles"
 	"github.com/kaiau00/aux-cli/internal/tui/theme"
@@ -1028,4 +1030,86 @@ func max(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// CompactionPages reads the latest call only when pressure needs reviewing.
+// Transcript pages map to all their tool results; fixed system/prose pages
+// remain visible in the ranking but cannot pretend to support those controls.
+func (m *ContextPaneCmp) CompactionPages(sessionID string) ([]dialog.CompactPage, error) {
+	if m.app == nil || m.app.Tasks == nil || m.app.Cost == nil || m.app.Pages == nil {
+		return nil, nil
+	}
+	ctx := context.Background()
+	tasks, err := m.app.Tasks.ListBySession(ctx, sessionID)
+	if err != nil || len(tasks) == 0 {
+		return nil, err
+	}
+	taskID := tasks[len(tasks)-1].ID
+	calls, err := m.app.Cost.ListCallsByTask(ctx, taskID)
+	if err != nil || len(calls) == 0 {
+		return nil, err
+	}
+	bindings, err := m.app.Pages.BindingsForCall(ctx, calls[len(calls)-1].ID)
+	if err != nil {
+		return nil, err
+	}
+	pins, err := m.app.Pages.Pins(ctx, taskID)
+	if err != nil {
+		return nil, err
+	}
+	excluded, err := m.app.Pages.Exclusions(ctx, taskID)
+	if err != nil {
+		return nil, err
+	}
+	var pages []dialog.CompactPage
+	for _, b := range bindings {
+		if b.State != contextstore.StateResident && b.State != contextstore.StatePinned {
+			continue
+		}
+		p := dialog.CompactPage{Name: b.StableKey, Tokens: b.TokenCount, TaskID: taskID}
+		if strings.HasPrefix(b.StableKey, "msg:") && m.app.Messages != nil {
+			msg, err := m.app.Messages.Get(ctx, strings.TrimPrefix(b.StableKey, "msg:"))
+			if err != nil {
+				return nil, err
+			}
+			for _, result := range msg.ToolResults() {
+				p.ToolCallIDs = append(p.ToolCallIDs, result.ToolCallID)
+				p.Pinned = p.Pinned || pins[result.ToolCallID]
+				p.Excluded = p.Excluded || excluded[result.ToolCallID]
+				var meta tools.ViewResponseMetadata
+				if json.Unmarshal([]byte(result.Metadata), &meta) == nil && meta.FilePath != "" {
+					p.Name = removeWorkingDirPrefix(meta.FilePath)
+				}
+			}
+		}
+		pages = append(pages, p)
+	}
+	sort.Slice(pages, func(i, j int) bool {
+		if pages[i].Tokens == pages[j].Tokens {
+			return pages[i].Name < pages[j].Name
+		}
+		return pages[i].Tokens > pages[j].Tokens
+	})
+	return pages[:min(5, len(pages))], nil
+}
+
+// ApplyCompactionControl uses the same persistent overrides as the pane keys.
+func (m *ContextPaneCmp) ApplyCompactionControl(p dialog.CompactPage, pin bool) error {
+	ctx := context.Background()
+	for _, id := range p.ToolCallIDs {
+		var err error
+		if pin {
+			if p.Pinned {
+				err = m.app.Pages.Unpin(ctx, p.TaskID, id)
+			} else {
+				err = m.app.Pages.Pin(ctx, p.TaskID, id)
+			}
+		} else {
+			err = m.app.Pages.Exclude(ctx, p.TaskID, id)
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

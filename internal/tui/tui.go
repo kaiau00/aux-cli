@@ -457,7 +457,7 @@ func (a appModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.showCommandDialog = false
 		return a, nil
 
-	case startCompactSessionMsg:
+	case startCompactSessionMsg, page.CompactSessionMsg:
 		// Start compacting the current session
 		a.isCompacting = true
 		a.compactingMessage = "Starting summarization..."
@@ -487,12 +487,7 @@ func (a appModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.isCompacting = false
 			return a, util.ReportInfo("Session summarization complete")
 		} else if payload.Done && payload.Type == agent.AgentEventTypeResponse && a.selectedSession.ID != "" {
-			model := a.app.CoderAgent.Model()
-			contextWindow := model.ContextWindow
-			tokens := a.selectedSession.ContextTokens
-			if (tokens >= int64(float64(contextWindow)*0.95)) && config.Get().AutoCompact {
-				return a, util.CmdHandler(startCompactSessionMsg{})
-			}
+			return a, util.CmdHandler(page.ContextPressureMsg{SessionID: a.selectedSession.ID, Used: a.selectedSession.ContextTokens, Limit: a.app.CoderAgent.Model().ContextWindow, Auto: config.Get().AutoCompact})
 		}
 		// Continue listening for events
 		return a, nil
