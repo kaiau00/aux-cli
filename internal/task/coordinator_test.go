@@ -7,10 +7,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/kaiau00/aux-cli/internal/contextstore"
 	"github.com/kaiau00/aux-cli/internal/db/dbtest"
 	"github.com/kaiau00/aux-cli/internal/eventstore"
 	"github.com/kaiau00/aux-cli/internal/llm/tools"
 	"github.com/kaiau00/aux-cli/internal/memory"
+	"github.com/kaiau00/aux-cli/internal/message"
 	"github.com/kaiau00/aux-cli/internal/multirepo"
 	"github.com/kaiau00/aux-cli/internal/profile"
 	"github.com/kaiau00/aux-cli/internal/project"
@@ -388,5 +390,57 @@ func TestStoreStatusAndListBySession(t *testing.T) {
 	list, _ := store.ListBySession(ctx, "s1")
 	if len(list) != 1 {
 		t.Fatalf("expected 1 task for session, got %d", len(list))
+	}
+}
+
+func TestBeginCarriesOverridesToSecondTaskPrompt(t *testing.T) {
+	coord, _, _ := newCoordinator(t)
+	pages := contextstore.NewStore(dbtest.New(t))
+	coord.WithPages(pages)
+	ctx := context.Background()
+	_, first, err := coord.Begin(ctx, "session", "first")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := pages.Exclude(ctx, first, "excluded"); err != nil {
+		t.Fatal(err)
+	}
+	if err := pages.Pin(ctx, first, "pinned"); err != nil {
+		t.Fatal(err)
+	}
+	_, second, err := coord.Begin(ctx, "session", "second")
+	if err != nil {
+		t.Fatal(err)
+	}
+	excluded, err := pages.Exclusions(ctx, second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pinned, err := pages.Pins(ctx, second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !excluded["excluded"] || !pinned["pinned"] {
+		t.Fatalf("lost controls: %v %v", excluded, pinned)
+	}
+	history := []message.Message{
+		{Role: message.Assistant, Parts: []message.ContentPart{message.ToolCall{ID: "excluded", Name: "bash"}}},
+		{Role: message.Tool, Parts: []message.ContentPart{message.ToolResult{ToolCallID: "excluded", Name: "bash", Content: "SECRET LARGE RESULT"}}},
+	}
+	compiled := promptcompiler.NewCompatibilityCompiler().Compile(promptcompiler.Input{TaskID: second, History: history, ExcludedToolCallIDs: excluded, PinnedToolCallIDs: pinned})
+	for _, msg := range compiled.Messages {
+		for _, result := range msg.ToolResults() {
+			if result.Content == "SECRET LARGE RESULT" {
+				t.Fatal("excluded content reached second task prompt")
+			}
+		}
+	}
+	_, other, err := coord.Begin(ctx, "other-session", "other")
+	if err != nil {
+		t.Fatal(err)
+	}
+	overrides, err := pages.Exclusions(ctx, other)
+	if err != nil || len(overrides) != 0 {
+		t.Fatalf("leaked across sessions: %v %v", overrides, err)
 	}
 }

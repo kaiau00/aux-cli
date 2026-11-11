@@ -44,6 +44,9 @@ type chatPage struct {
 	commandCompletion     dialog.CompletionDialog
 	showCommandCompletion bool
 	showContextDrawer     bool
+	compactDialog         *dialog.CompactDialog
+	pressure              map[string]*compactionPressure
+	pressureSession       string
 	// width/height are the live region Aux manages; termWidth/termHeight are
 	// the terminal itself, which overlays may use in full.
 	width, height         int
@@ -96,8 +99,46 @@ func (p *chatPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		ws.Height = liveRegionHeight(ws.Height)
 		msg = ws
 	}
+	if p.compactDialog != nil {
+		if _, ok := msg.(tea.KeyMsg); ok {
+			_, cmd := p.compactDialog.Update(msg)
+			return p, cmd
+		}
+	}
 	switch msg := msg.(type) {
+	case ContextPressureMsg:
+		return p, p.contextPressure(msg)
+	case compactionPagesMsg:
+		if state := p.pressure[msg.SessionID]; state != nil {
+			state.opening = false
+		}
+		if msg.SessionID != p.session.ID {
+			return p, nil
+		}
+		if msg.Open {
+			p.compactDialog = dialog.NewCompactDialog(msg.Pages, p.contextPane.ApplyCompactionControl)
+			p.compactDialog.AutoCompact = p.pressure[msg.SessionID].auto && p.pressure[msg.SessionID].used >= p.pressure[msg.SessionID].limit*95/100
+			p.compactDialog.Update(tea.WindowSizeMsg{Width: p.termWidth, Height: p.termHeight})
+			p.pressure[msg.SessionID].shown = true
+			p.pressureSession = msg.SessionID
+			return p, nil
+		}
+		name := "page accounting unavailable"
+		if len(msg.Pages) > 0 {
+			name = fmt.Sprintf("largest: %s (%d tokens)", msg.Pages[0].Name, msg.Pages[0].Tokens)
+		}
+		return p, util.ReportWarn("Context at 80%+ - " + name)
+	case dialog.CompactChoiceMsg:
+		p.compactDialog = nil
+		state := p.pressure[p.pressureSession]
+		if msg.Compact || (state != nil && state.used >= state.limit*95/100 && state.auto) {
+			return p, util.CmdHandler(CompactSessionMsg{})
+		}
+		return p, nil
 	case tea.WindowSizeMsg:
+		if p.compactDialog != nil {
+			p.compactDialog.Update(tea.WindowSizeMsg{Width: p.termWidth, Height: p.termHeight})
+		}
 		p.width, p.height = msg.Width, msg.Height
 		cmds = append(cmds, p.layout.SetSize(msg.Width, msg.Height))
 	case dialog.CompletionDialogCloseMsg:
@@ -141,6 +182,7 @@ func (p *chatPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return p, util.ReportInfo(fmt.Sprintf("Dropped %s from context", msg.Path))
 	case chat.SessionSelectedMsg:
 		p.session = msg
+		p.compactDialog = nil
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, keyMap.ShowCompletionDialog) && !p.showCommandCompletion:
@@ -190,6 +232,10 @@ func (p *chatPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	if _, resize := msg.(tea.WindowSizeMsg); p.compactDialog != nil && !resize {
+		_, cmd := p.compactDialog.Update(msg)
+		cmds = append(cmds, cmd)
+	}
 	u, cmd := p.layout.Update(msg)
 	cmds = append(cmds, cmd)
 	p.layout = u.(layout.SplitPaneLayout)
@@ -253,7 +299,7 @@ func (p *chatPage) View() string {
 	// The drawer and the completion popups are placed onto this view and
 	// bounded by it. The live region is only a few rows, so without growing it
 	// first the drawer renders as a clipped sliver.
-	if p.showContextDrawer || p.showCompletionDialog || p.showCommandCompletion {
+	if p.FillsScreen() {
 		// Upwards, for the same reason as the overlays in tui.go: the composer
 		// stays on the bottom row it was already on.
 		layoutView = lipgloss.NewStyle().
@@ -308,6 +354,10 @@ func (p *chatPage) View() string {
 		)
 	}
 
+	if p.compactDialog != nil {
+		overlay := p.compactDialog.View()
+		layoutView = layout.PlaceOverlay(max(0, (p.termWidth-lipgloss.Width(overlay))/2), max(0, (p.termHeight-lipgloss.Height(overlay))/2), overlay, layoutView, false)
+	}
 	return layoutView
 }
 
@@ -386,5 +436,66 @@ func NewChatPage(app *app.App, commands *dialog.CommandRegistry) tea.Model {
 // instead of collapsing to its content. The drawer and the completion popups
 // are placed onto the view and bounded by it, so each one grows it first.
 func (p *chatPage) FillsScreen() bool {
-	return p.showContextDrawer || p.showCompletionDialog || p.showCommandCompletion
+	return p.compactDialog != nil || p.showContextDrawer || p.showCompletionDialog || p.showCommandCompletion
+}
+
+// ContextPressureMsg uses the same provider-reported occupancy as the meter.
+type ContextPressureMsg struct {
+	SessionID   string
+	Used, Limit int64
+	Auto        bool
+}
+
+// CompactSessionMsg delegates to the TUI's existing summarization flow.
+type CompactSessionMsg struct{}
+type compactionPressure struct {
+	warned, shown, opening bool
+	used, limit            int64
+	auto                   bool
+}
+type compactionPagesMsg struct {
+	SessionID string
+	Open      bool
+	Pages     []dialog.CompactPage
+	Err       error
+}
+
+func (p *chatPage) contextPressure(msg ContextPressureMsg) tea.Cmd {
+	if msg.SessionID == "" || msg.SessionID != p.session.ID || msg.Limit <= 0 {
+		return nil
+	}
+	if p.pressure == nil {
+		p.pressure = make(map[string]*compactionPressure)
+	}
+	state := p.pressure[msg.SessionID]
+	if state == nil {
+		state = &compactionPressure{}
+		p.pressure[msg.SessionID] = state
+	}
+	state.used, state.limit, state.auto = msg.Used, msg.Limit, msg.Auto
+	if msg.Used < msg.Limit*80/100 {
+		state.warned = false
+		return nil
+	}
+	if p.compactDialog != nil {
+		p.compactDialog.AutoCompact = msg.Auto && msg.Used >= msg.Limit*95/100
+	}
+	if msg.Used >= msg.Limit*95/100 && state.shown && p.compactDialog == nil && msg.Auto {
+		return util.CmdHandler(CompactSessionMsg{})
+	}
+	if state.opening {
+		return nil
+	}
+	open := msg.Used >= msg.Limit*90/100 && !state.shown
+	if open || !state.warned {
+		state.warned = true
+		state.opening = true
+		sid := msg.SessionID
+		return func() tea.Msg {
+			pages, err := p.contextPane.CompactionPages(sid)
+			return compactionPagesMsg{SessionID: sid, Open: open, Pages: pages, Err: err}
+		}
+	}
+
+	return nil
 }

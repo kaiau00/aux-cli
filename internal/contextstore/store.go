@@ -237,3 +237,26 @@ func (s *Store) BindingsForCall(ctx context.Context, callID string) ([]BoundPage
 	}
 	return out, rows.Err()
 }
+
+// CopyOverrides carries user controls forward to the next task in a session.
+func (s *Store) CopyOverrides(ctx context.Context, from, to string) error {
+	pins, err := s.Pins(ctx, from)
+	if err != nil {
+		return err
+	}
+	exclusions, err := s.Exclusions(ctx, from)
+	if err != nil {
+		return err
+	}
+	for id := range pins {
+		if err := s.Pin(ctx, to, id); err != nil {
+			return err
+		}
+	}
+	for id := range exclusions {
+		if err := s.Exclude(ctx, to, id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
