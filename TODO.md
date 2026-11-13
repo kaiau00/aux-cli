@@ -52,7 +52,8 @@ Update this section and the plan's §6 checklist in every PR that moves an item.
 | The printed transcript separates its messages (UI pass) | #59 |
 | The user's own messages sit on the right (UI pass) | #60 |
 | Startup: no wait on MCP, no SQLite recompile (not a plan item) | #61 |
-| M2.7 text that says the wrong thing; the dashboard token out of the transcript | #64, #65 |
+| M2.5 compaction as a decision: 80% warning, 90% dialog, 95% safety net | #65 |
+| M2.7 text that says the wrong thing; the dashboard token out of the transcript | #64 |
 
 **Open:** nothing. The UI pass merged as #48, #49, #50, #51, #53, #54, #56,
 #57, #58, #59 and #60, and the startup work as #61; `main`'s own post-merge
@@ -64,15 +65,15 @@ have rolled these files back. #52's content reached `main` by hand through
 #54 -- verified addition by addition before closing -- and #55 recorded only
 up to #56. This entry replaces both.
 
-**M2.5 implemented:** 80% largest-page warning, 90% decision dialog,
-and 95% safety net after review, with dialog goldens and control/layout tests.
-PR #65; gates green; not merged.
+**M2.5 merged** as #65 on 2026-11-11: 80% largest-page warning, 90% decision
+dialog, 95% safety net, with dialog goldens and control/layout tests. It was
+deliberately sequenced after the UI pass -- it builds a dialog into the
+transcript, and the transcript's rendering model had to settle first, or the
+dialog would have been built twice.
 
-**Next:** merge M2.5 after approval, then M2.6-M2.8, then M3. The UI
-pass is finished in code and the palette is closed (the accent stays amber --
-see the plan's D17). M2.5 was deliberately sequenced after it: it builds a
-dialog into the transcript, and the transcript's rendering model is now
-settled, so it will not be built twice.
+**Next:** M2.6 memory UX, then M2.8 trimming, then M3. M2.7 is implemented and
+open as #64. The palette is closed (the accent stays amber -- see the plan's
+D17).
 
 Eleven parts. Six were planned work on the rendering model: the working
 indicator (#48), the transcript's visibility defects (#49), the canvas (#50),
