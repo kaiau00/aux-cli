@@ -64,7 +64,11 @@ have rolled these files back. #52's content reached `main` by hand through
 #54 -- verified addition by addition before closing -- and #55 recorded only
 up to #56. This entry replaces both.
 
-**Next:** **M2.5 compaction as a decision**, then M2.6-M2.8, then M3. The UI
+**M2.5 implemented:** 80% largest-page warning, 90% decision dialog,
+and 95% safety net after review, with dialog goldens and control/layout tests.
+PR #65; gates green; not merged.
+
+**Next:** merge M2.5 after approval, then M2.6-M2.8, then M3. The UI
 pass is finished in code and the palette is closed (the accent stays amber --
 see the plan's D17). M2.5 was deliberately sequenced after it: it builds a
 dialog into the transcript, and the transcript's rendering model is now

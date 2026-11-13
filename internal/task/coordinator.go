@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/kaiau00/aux-cli/internal/checkpoint"
+	"github.com/kaiau00/aux-cli/internal/contextstore"
 	"github.com/kaiau00/aux-cli/internal/eventstore"
 	"github.com/kaiau00/aux-cli/internal/history"
 	"github.com/kaiau00/aux-cli/internal/hooks"
@@ -73,6 +74,7 @@ type Coordinator struct {
 	hooks       *hooks.Registry
 	related     RelatedProjectReader
 	workdir     string
+	pages       *contextstore.Store
 
 	mu     sync.Mutex
 	cached *project.Resolution
@@ -155,8 +157,24 @@ func (c *Coordinator) Begin(ctx context.Context, sessionID, objective string) (c
 	if err != nil {
 		return ctx, "", err
 	}
+	var previous []Task
+	if c.pages != nil {
+		previous, err = c.store.ListBySession(ctx, sessionID)
+		if err != nil {
+			return ctx, "", err
+		}
+	}
 	parentTaskID, _ := ctx.Value(tools.ParentTaskIDContextKey).(string)
-	return c.beginWithParent(ctx, sessionID, objective, res, parentTaskID)
+	nextCtx, id, err := c.beginWithParent(ctx, sessionID, objective, res, parentTaskID)
+	if err != nil {
+		return ctx, "", err
+	}
+	if len(previous) > 0 {
+		if err := c.pages.CopyOverrides(ctx, previous[0].ID, id); err != nil {
+			return ctx, "", err
+		}
+	}
+	return nextCtx, id, nil
 }
 
 // beginWithParent is Begin's implementation, generalized to (a) an explicit
@@ -567,3 +585,5 @@ func eventPayload(t Task, profileVersionID string) eventstore.TaskPayload {
 		ProfileVersionID: profileVersionID,
 	}
 }
+
+func (c *Coordinator) WithPages(pages *contextstore.Store) *Coordinator { c.pages = pages; return c }
