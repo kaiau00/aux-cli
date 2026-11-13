@@ -29,6 +29,7 @@ type Server struct {
 	services Services
 	redactor redactor
 	token    string
+	baseURL  string
 	url      string
 
 	httpServer *http.Server
@@ -71,7 +72,12 @@ func Start(parent context.Context, services Services, options Options) (*Server,
 		cancel:   cancel,
 		clients:  make(map[chan DashboardEvent]struct{}),
 	}
-	server.url = fmt.Sprintf("http://%s/?token=%s", listener.Addr().String(), token)
+	// Two forms, deliberately. baseURL says where the dashboard is; url is the
+	// one that opens it. Printing the address without the credential is what
+	// lets the intro message and the startup line name the dashboard without
+	// writing a key into the user's scrollback and session transcript (D10).
+	server.baseURL = fmt.Sprintf("http://%s", listener.Addr().String())
+	server.url = fmt.Sprintf("%s/?token=%s", server.baseURL, token)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", server.handleIndex)
 	mux.HandleFunc("GET /tasks", server.handleTasksPage)
@@ -108,11 +114,23 @@ func Start(parent context.Context, services Services, options Options) (*Server,
 	return server, nil
 }
 
+// URL opens the dashboard. It carries the access token, so it belongs only
+// where the user asked for it -- `d` in the context pane -- and never in a
+// message, a log line or anything else that is written down. Use BaseURL to
+// say where the dashboard is.
 func (s *Server) URL() string {
 	if s == nil {
 		return ""
 	}
 	return s.url
+}
+
+// BaseURL is the dashboard's address with no credential in it.
+func (s *Server) BaseURL() string {
+	if s == nil {
+		return ""
+	}
+	return s.baseURL
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {

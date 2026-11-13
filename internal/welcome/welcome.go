@@ -54,7 +54,12 @@ func MaybeShow(ctx context.Context, sessions session.Service, messages message.S
 		return Result{}
 	}
 
-	body := buildIntroBody(dash)
+	// Only the address is passed in, never the server. The intro is written to
+	// the database and into the terminal's scrollback, so the function that
+	// writes it is deliberately given no access to the dashboard's access
+	// token -- it cannot leak what it does not hold (D10). The tokened link
+	// lives behind `d` in the context pane.
+	body := buildIntroBody(dash.BaseURL())
 
 	title := "Welcome to Aux"
 	sess, err := sessions.Create(ctx, title)
@@ -97,7 +102,7 @@ func dataDirForDisplay() string {
 	return ".aux"
 }
 
-func buildIntroBody(dash *dashboard.Server) string {
+func buildIntroBody(dashboardAddr string) string {
 	var b strings.Builder
 	b.WriteString("```\n")
 	b.WriteString(strings.TrimPrefix(banner, "\n"))
@@ -110,10 +115,15 @@ func buildIntroBody(dash *dashboard.Server) string {
 	b.WriteString("- Press `@` to attach files, `ctrl+o` to switch models, `ctrl+t` to switch themes.\n")
 	b.WriteString("- Press `ctrl+k` for commands (init, compact, …), `ctrl+s` to switch sessions.\n\n")
 
-	if dash != nil && dash.URL() != "" {
+	if dashboardAddr != "" {
 		b.WriteString("**Dashboard**\n")
-		b.WriteString(fmt.Sprintf("A live dashboard is available at: %s\n", dash.URL()))
-		b.WriteString("Open it in your browser to watch the session unfold in real time.\n\n")
+		b.WriteString(fmt.Sprintf("A live dashboard is running at %s — watch the session unfold in real time.\n", dashboardAddr))
+		// The address, not the credential. This message is written to the
+		// database, printed into the terminal's scrollback and carried into
+		// anything exported from the transcript; the token is what guards the
+		// whole session, so it is handed over only when asked for, with `d`
+		// in the context pane (D10).
+		b.WriteString("It needs an access token: press `d` in the context pane for the full link.\n\n")
 	} else {
 		b.WriteString("**Dashboard**\n")
 		b.WriteString("The local dashboard is currently disabled. Enable it with `dashboard.enabled: true` in your aux config to get a live web view of this session.\n\n")

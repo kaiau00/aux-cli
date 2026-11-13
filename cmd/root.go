@@ -25,10 +25,20 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:   "aux",
-	Short: "Terminal-based AI assistant for software development",
-	Long: `Aux is a powerful terminal-based AI assistant that helps with software development tasks.
-It provides an interactive chat interface with AI capabilities, code analysis, and LSP integration
-to assist developers in writing, debugging, and understanding code directly from the terminal.`,
+	Short: "Open-source agentic coding harness for your terminal",
+	Long: `Aux is an open-source agentic coding harness for the terminal.
+
+It gives a language model your project's context and a set of tools -- reading
+and editing files, running commands, searching the tree, LSP diagnostics -- and
+keeps you in front of them: edits, writes, and any command that could change
+something ask for approval first, while a short list of read-only commands runs
+without a prompt.
+
+The model is yours. Aux runs whichever one you configure, on your own API key,
+and ctrl+o switches it mid-session. Sessions, messages, and costs are stored
+locally under .aux and are not sent anywhere else.
+
+Forked from OpenCode.`,
 	Example: `
   # Run in interactive mode
   aux
@@ -151,7 +161,11 @@ to assist developers in writing, debugging, and understanding code directly from
 			return err
 		}
 		if app.Dashboard != nil {
-			fmt.Fprintf(os.Stderr, "Aux dashboard: %s\n", app.Dashboard.URL())
+			// The address only. This line lands in the user's scrollback above
+			// the banner, and anything they paste from their terminal carries
+			// it; the tokened link is behind `d` in the context pane (D10).
+			fmt.Fprintf(os.Stderr, "Aux dashboard: %s (press d in the context pane for the link with its access token)\n",
+				app.Dashboard.BaseURL())
 		} else if !quiet {
 			fmt.Fprintln(os.Stderr, "Aux dashboard: disabled (set dashboard.enabled: true in your aux config to enable)")
 		}

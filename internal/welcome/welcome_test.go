@@ -8,7 +8,7 @@ import (
 // The intro is the only place a new user is told what Aux does with their
 // code before it starts doing it, so the claims it makes are load-bearing.
 func TestIntroExplainsWhatHappensToTheUsersCode(t *testing.T) {
-	body := buildIntroBody(nil)
+	body := buildIntroBody("")
 
 	for _, want := range []struct{ substr, why string }{
 		{"sent to your configured model provider", "a user must know their files leave the machine"},
@@ -23,7 +23,7 @@ func TestIntroExplainsWhatHappensToTheUsersCode(t *testing.T) {
 }
 
 func TestIntroRendersWithoutADashboard(t *testing.T) {
-	body := buildIntroBody(nil)
+	body := buildIntroBody("")
 	if body == "" {
 		t.Fatal("the intro must render when the dashboard is disabled")
 	}
