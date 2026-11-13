@@ -1065,8 +1065,11 @@ in M1.6.
       measured. The `@`-completion scan still blocks it outside a repository
 - [x] M2.5 compaction — merged (#65, 2026-11-11): 80/90/95 flow, dialog
       goldens and control/layout tests
-- [ ] M2.6 memory UX, M2.8 trimming — merged. M2.7 text is implemented and
-      open as #64
+- [x] M2.7 text that says the wrong thing — merged (#64, 2026-11-13): one
+      identity block in front of all nine providers' prompts, `aux --help`
+      rewritten, `AUX.md` the single name `/init` writes, and the dashboard
+      token out of the transcript (D10)
+- [ ] M2.6 memory UX, M2.8 provider trimming
 - [ ] M3.5 `--version` local builds
 - [ ] M3.7 coverage ≥ 45%, floor raised
 - [ ] M3.6 README rewrite, reviewed by a non-author against a scratch session
