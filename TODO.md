@@ -71,8 +71,8 @@ deliberately sequenced after the UI pass -- it builds a dialog into the
 transcript, and the transcript's rendering model had to settle first, or the
 dialog would have been built twice.
 
-**Next:** M2.6 memory UX, then M2.8 trimming, then M3. M2.7 is implemented and
-open as #64. The palette is closed (the accent stays amber -- see the plan's
+**Next:** M2.6 memory UX, then M2.8 trimming, then M3. M2.7 merged as #64 on
+2026-11-13. The palette is closed (the accent stays amber -- see the plan's
 D17).
 
 Eleven parts. Six were planned work on the rendering model: the working
@@ -534,7 +534,9 @@ Real, small, or low-confidence. None of it blocks anything.
 - **Memory beyond project scope.** Where does user- or org-level memory live?
   Blocks the `supersede`/`expire`/`scope` primitives in A8 (old numbering).
 - **Distribution identity.** `aux-ai` is not yours. Tap and AUR under
-  `kaiau00`, or neither for 0.1?
+  `kaiau00`, or neither for 0.1? Since #64 the handle is also what the coder
+  prompt and `aux --help` say built Aux, so a real name or an org is a change
+  in three places, not one.
 - **Windows.** Not supported; the shell tool is Unix-only. Decide whether
   that is permanent and say so in the README (it currently does).
 - **Package maintainer identity** on deb/rpm is `kaiau00 <noreply>`. Change if
