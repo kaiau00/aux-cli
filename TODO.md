@@ -17,7 +17,7 @@ disagree, the plan wins and this file gets corrected.
 
 ---
 
-## Progress (as of 2026-10-14)
+## Progress (as of 2026-11-13)
 
 Update this section and the plan's §6 checklist in every PR that moves an item.
 
@@ -189,7 +189,9 @@ outside findings taper off.
 
 ## Claims: what is defensible today
 
-Aux should only say true things about itself. Verified 2026-10-02.
+Aux should only say true things about itself. Rows verified 2026-10-02; the
+two gate figures below were re-measured 2026-11-13 and nothing else in this
+section was re-checked on that date.
 
 **Defensible now.**
 
@@ -197,8 +199,8 @@ Aux should only say true things about itself. Verified 2026-10-02.
 | --- | --- |
 | Builds and vets clean | `go build ./... && go vet ./...` at `278b9f1` |
 | Race-clean under `-race` | Full suite, 2m03s, exit 0, locally and on `main`'s own post-merge CI run |
-| No unreachable code outside a declared baseline | `scripts/deadcode.sh`, 48 accepted entries, unchanged |
-| Coverage cannot regress | `scripts/coverage.sh`: 33.8% on CI against a 33.8% floor (raised from 30.8 in M0.3) |
+| No unreachable code outside a declared baseline | `scripts/deadcode.sh`, 47 accepted entries, unchanged (48 at `278b9f1`) |
+| Coverage cannot regress | `scripts/coverage.sh`: 39.3% against a 38.4% floor, raised in steps from 30.8 in M0.3. The ratchet is the claim; the figure moves |
 | Upgrades across schema versions work | Tested from every recorded version with a populated database |
 | A database from a newer build is refused | `ensureNotNewer`, tested |
 | Reads outside the project need approval | `RequireReadAccess` canonicalizes through symlinks and fails closed |
