@@ -120,11 +120,19 @@ seems wrong.
 
 ---
 
-## 3. Verified state at `278b9f1` (do not re-audit)
+## 3. Verified state at `278b9f1` — a snapshot, not today (do not re-audit)
 
-Build, vet, `go test -race ./...` (2m03s), `scripts/coverage.sh` (33.8% vs
-floor 30.8%), `scripts/deadcode.sh` (48 entries) all pass. CI is green on
-`main`'s own post-merge runs. PR #28 is open, green, and small.
+**Everything in this section describes `278b9f1` as audited on 2026-10-02.** It
+is kept because the work items below were written against it, and re-auditing
+it wastes a session. It is not a statement about `main` now: most of the
+findings in the table below have since been fixed and merged, and the figures
+have moved. Run the gates in Appendix A for current numbers — on 2026-11-13
+they were coverage 39.3% against a floor of 38.4% and 47 reachability entries.
+
+At `278b9f1`: build, vet, `go test -race ./...` (2m03s),
+`scripts/coverage.sh` (33.8% vs floor 30.8%) and `scripts/deadcode.sh`
+(48 entries) all passed, CI was green on `main`'s own post-merge runs, and
+PR #28 was open, green and small (merged in M0.3).
 
 Confirmed good, leave alone unless an item says otherwise: read confinement
 (`internal/llm/tools/readaccess.go`), dashboard token handling
@@ -183,7 +191,7 @@ internal/profile/                Scanners → effective profile (Manifest string
 internal/memory/                 Store (SaveCandidate, Retrieve, Promote…), Extract, Service
 internal/validation/             PlanIntents (plan.go), ShellRunner + Approver (runner.go),
                                  Service.RunIntent / ProofOfDone / SuccessfulCommands (service.go)
-internal/skill/, govpolicy/      Evaluation-gated candidates
+internal/skill/                  Evaluation-gated candidates
 internal/cost/                   Ledger, Governor (governor.go), Budget (budget.go:45 DefaultBudget)
 internal/contextstore/           Pages, versions, bindings (states: resident/available/pinned/evicted/faulted)
 internal/permission/             Request/Grant/GrantPersistant/AutoApproveSession; fingerprinted grants
@@ -981,8 +989,8 @@ session and finds no false sentence. Record their name and date in `TODO.md`.
 
 ### M3.7 Coverage: entry points and file history — **M**
 
-33.8% against a stated 80%. For 0.1.0 the floor must rise meaningfully, not
-reach 80. Priority by blast radius:
+39.3% against a stated 80% (33.8% when this item was written). For 0.1.0 the
+floor must rise meaningfully, not reach 80. Priority by blast radius:
 
 1. `cmd` — every subcommand gets a test against a seeded SQLite DB in a temp
    dir (`internal/db/dbtest` helpers exist). M2.4 starts this file.

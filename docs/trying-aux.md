@@ -39,7 +39,7 @@ is ideal.
 
 ## Install
 
-Requires Go 1.24+.
+Requires Go 1.25.5+, the version in `go.mod`.
 
 ```
 git clone https://github.com/kaiau00/aux-cli && cd aux-cli && go build -o aux .
@@ -91,7 +91,7 @@ up properly.
 
 ## Known gaps, so you do not spend time on them
 
-- Test coverage is around 30%, well under the 80% this project asks for.
+- Test coverage is around 39%, well under the 80% this project asks for.
 - The performance comparison against other harnesses rests on one Python
   repository and five tasks. It does not generalise yet.
 - Demand paging (`--paging`) defaults to off because nothing has shown it
