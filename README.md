@@ -61,7 +61,7 @@ fail at the first command it ran.
 
 ### Install
 
-Build from source. Requires Go 1.24 or newer.
+Build from source. Requires Go 1.25.5 or newer.
 
 ```bash
 git clone https://github.com/kaiau00/aux-cli
@@ -86,7 +86,7 @@ cd your-project
 aux
 ```
 
-Aux resolves the project, compiles its profile, and prints a token-gated localhost dashboard URL — open it any time to watch what's happening. Type an objective in the composer and Aux gets to work.
+Aux resolves the project, compiles its profile, and prints a localhost dashboard address — press `d` in the context pane for the link with its access token, then open it any time to watch what's happening. Type an objective in the composer and Aux gets to work.
 
 For a one-shot, non-interactive run:
 
@@ -151,7 +151,7 @@ resolve the project from the current directory.
 
 ## The dashboard
 
-The dashboard starts automatically on every run, bound to `127.0.0.1` on a random free port, and is **read-only** by design — there is no mutation endpoint anywhere in its API. Every route requires a token, generated fresh per run and printed at startup, either as `?token=` or an `X-Aux-Dashboard-Token` header. Static assets (`/css`, `/js`) are the one deliberate exception, since a browser can't attach a token to a stylesheet request — they carry no data.
+The dashboard starts automatically on every run, bound to `127.0.0.1` on a random free port, and is **read-only** by design — there is no mutation endpoint anywhere in its API. Every route requires a token, generated fresh per run and sent either as `?token=` or an `X-Aux-Dashboard-Token` header. The token is deliberately kept out of the startup line and the transcript: both are written to the database and to your terminal's scrollback, where a token would outlive the session that issued it. Press `d` in the context pane for the full link. Static assets (`/css`, `/js`) are the one deliberate exception, since a browser can't attach a token to a stylesheet request — they carry no data.
 
 | Route | View |
 | --- | --- |
@@ -166,7 +166,7 @@ Set `dashboard.fullContent: true` if you want the dashboard to show full local p
 
 ## The TUI
 
-Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea). A right-hand context pane lists everything currently in the agent's context; a composer at the bottom sends messages; the message list scrolls independently.
+Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea). Aux does not take over your screen. It prints each settled message into the terminal's own scrollback and keeps a live region at the bottom for whatever is still changing, so the scroll wheel, text selection and copy all behave as they do in any other program. Your messages are right-aligned and the agent's output left. A right-hand context pane lists everything currently in the agent's context, and the composer stays on the last row.
 
 ### Global
 
@@ -321,7 +321,7 @@ Aux looks for configuration in, in order: `$HOME/.aux.json`, `$XDG_CONFIG_HOME/a
 
 - **`context.paging`** (`off`/`on`, default `off`) dedups repeated identical tool output: earlier copies become a pointer to the latest one. Per-page exclusion works either way. `context.virtualization` (`off`/`observe`/`on`) controls whether large tool output gets replaced with a compact digest plus an artifact reference.
 - **`costGovernor.mode`** (`off`/`observe`/`on`) controls the one-key cost governor. `off` disables it; `observe` measures without changing behavior; `on` actively governs. Compare the effect with `aux eval ab` on a fixed task set run both ways.
-- **`autoCompact`** (default `true`) summarizes the conversation automatically at ~95% of the model's context window, starting a new session with the summary instead of hitting a hard context error.
+- **`autoCompact`** (default `true`) governs only the last step of a three-stage flow, so compaction is a decision rather than an ambush: at **80%** of the model's context window Aux warns once, naming the largest thing in context; at **90%** it opens a dialog and asks; at **95%** it summarizes and continues in a new session as a safety net. The warning and the dialog appear either way — setting this to `false` removes only the automatic step, leaving you to compact when you choose. A session that jumps straight past 90% still gets the dialog first; nothing is ever compacted silently.
 - **`semanticRetrieval`** tunes the AST-backed, PageRank-scored retrieval layer that narrows which files get read into context.
 
 ### Local dashboard
@@ -474,7 +474,8 @@ heard of. Upgrade again, or move the file aside.
 
 ### Prerequisites
 
-- Go 1.24 or higher
+- Go 1.25.5 or higher — the version in `go.mod`. There is no `toolchain`
+  directive, so an older Go refuses to build rather than fetching a newer one.
 
 ### Building from source
 
@@ -490,9 +491,15 @@ go build -o aux
 ```bash
 go build ./...
 go vet ./...
-go test ./...          # full suite, deterministic and offline — no provider credentials needed
+go test ./...          # full suite; no credentials, no model calls
 go test ./... -race
 ```
+
+It is not fully hermetic, though. The suite loads your real `~/.aux.json`, and
+a configured `local`/OpenAI-compatible provider has its model list discovered
+over the network, so a run can fail with `model local.<id> is not supported`
+when that endpoint is unreachable. Redirect `HOME` to a temporary directory for
+a result that depends on neither your configuration nor your connection.
 
 Live evaluation gates that need real provider credentials and budget (governed-vs-baseline, skill-vs-baseline) are opt-in via `aux eval ab`; they are never required for normal development.
 
