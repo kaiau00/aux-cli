@@ -58,9 +58,17 @@ type safeCommand struct {
 // wraps another command (env, timeout, nohup, …) or executes project code
 // (go test, go run, …) belongs here: either turns the prefix match into "run
 // anything".
+//
+// Reading is not the only harm. A command that prints the value of an
+// environment variable does not change anything and is still not safe: the
+// provider API key lives there, and a tool result is written to the session
+// database and printed into the terminal's scrollback, so a key read without a
+// prompt outlives the session that read it. That is why `printenv` is absent
+// despite being read-only -- a bare run dumps every variable and a named run
+// can ask for the key directly, so no argument filter saves it.
 var safeReadOnlyCommands = []safeCommand{
 	{prefix: "ls"}, {prefix: "echo"}, {prefix: "pwd"}, {prefix: "cal"}, {prefix: "uptime"}, {prefix: "whoami"},
-	{prefix: "id"}, {prefix: "groups"}, {prefix: "printenv"}, {prefix: "which"}, {prefix: "type"}, {prefix: "whereis"},
+	{prefix: "id"}, {prefix: "groups"}, {prefix: "which"}, {prefix: "type"}, {prefix: "whereis"},
 	{prefix: "whatis"}, {prefix: "uname"}, {prefix: "df"}, {prefix: "du"}, {prefix: "free"}, {prefix: "ps"},
 	{prefix: "date", argsOK: dateDisplayOnly},
 	{prefix: "hostname", argsOK: onlyFlags("-s", "--short", "-f", "--fqdn", "--long", "-d", "--domain",
@@ -258,7 +266,7 @@ Before executing the command, please follow these steps:
 
 Usage notes:
 - The command argument is required.
-- You can specify an optional timeout in milliseconds (up to 600000ms / 10 minutes). If not specified, commands will timeout after 30 minutes.
+- You can specify an optional timeout in milliseconds, up to %dms (%d minutes). If not specified, commands time out after %dms (%d minute(s)), so set it explicitly for anything slower, such as a build or a full test run.
 - VERY IMPORTANT: You MUST avoid using search commands like 'find' and 'grep'. Instead use Grep, Glob, or Agent tools to search. You MUST avoid read tools like 'cat', 'head', 'tail', and 'ls', and use FileRead and LS tools to read files.
 - When issuing multiple commands, use the ';' or '&&' operator to separate them. DO NOT use newlines (newlines are ok in quoted strings).
 - IMPORTANT: All commands share the same shell session. Shell state (environment variables, virtual environments, current directory, etc.) persist between commands. For example, if you set an environment variable as part of a command, the environment variable will persist for subsequent commands.
@@ -376,7 +384,8 @@ EOF
 
 Important:
 - Return an empty response - the user will see the gh output directly
-- Never update git config`, bannedCommandsStr, safeCommandsStr, MaxOutputLength)
+- Never update git config`, bannedCommandsStr, safeCommandsStr, MaxOutputLength,
+		MaxTimeout, MaxTimeout/60000, DefaultTimeout, DefaultTimeout/60000)
 }
 
 func NewBashTool(permission permission.Service) BaseTool {

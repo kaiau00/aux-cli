@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/kaiau00/aux-cli/internal/permission"
@@ -162,7 +164,6 @@ func TestIsSafeReadOnlyKeepsReadOnlyArguments(t *testing.T) {
 		"hostname",
 		"hostname -s",
 		"ls -la internal",
-		"printenv HOME",
 	}
 	for _, cmd := range cases {
 		t.Run(cmd, func(t *testing.T) {
@@ -232,5 +233,61 @@ func TestBashRunRejectsBannedCommandAfterOperator(t *testing.T) {
 	}
 	if len(perms.requests) != 0 {
 		t.Fatalf("a banned command must be refused before any prompt; got %d requests", len(perms.requests))
+	}
+}
+
+// A safe-listed command must not be able to print the value of an environment
+// variable. The provider API key lives there, and a tool result is persisted to
+// the session database and printed into the terminal's scrollback -- so a key
+// read without a prompt outlives the session that read it. This is D10's
+// reasoning (the dashboard token is kept out of the transcript) applied to the
+// secret that actually costs money.
+//
+// `printenv` was on the safe list with no argument restriction, so a bare
+// `printenv` dumped every variable with no prompt at all.
+func TestNoSafeCommandPrintsAnEnvironmentValue(t *testing.T) {
+	cases := []string{
+		"printenv",
+		"printenv HOME",
+		"printenv ANTHROPIC_API_KEY",
+		"printenv -0",
+	}
+	for _, cmd := range cases {
+		t.Run(cmd, func(t *testing.T) {
+			if isSafeReadOnly(cmd) {
+				t.Fatalf("isSafeReadOnly(%q) = true; a key read without a prompt lands in the transcript", cmd)
+			}
+		})
+	}
+}
+
+// The permission prompt is the actual guarantee: reaching Run must ask, not
+// merely fail the fast-path check.
+func TestBashRunAsksBeforePrintingTheEnvironment(t *testing.T) {
+	perms := &recordingPermissions{grant: false}
+	if _, err := runBash(t, perms, "printenv"); !errors.Is(err, permission.ErrorPermissionDenied) {
+		t.Fatalf("Run error = %v; want ErrorPermissionDenied", err)
+	}
+	if len(perms.requests) != 1 {
+		t.Fatalf("permission requests = %d; want 1", len(perms.requests))
+	}
+}
+
+// The description is the model's only account of how the tool behaves. It said
+// commands time out after 30 minutes while DefaultTimeout was one minute, so a
+// model that reasonably left the timeout unset had its build or test run killed
+// at 60s with nothing explaining why.
+func TestBashDescriptionStatesTheRealDefaultTimeout(t *testing.T) {
+	desc := bashDescription()
+	if strings.Contains(desc, "30 minutes") {
+		t.Error("the description still claims a 30 minute default")
+	}
+	wantDefault := fmt.Sprintf("%d", DefaultTimeout/1000/60)
+	if !strings.Contains(desc, wantDefault+" minute") {
+		t.Errorf("the description never states the real default of %s minute(s)", wantDefault)
+	}
+	wantMax := fmt.Sprintf("%dms", MaxTimeout)
+	if !strings.Contains(desc, wantMax) {
+		t.Errorf("the description never states the real maximum %s", wantMax)
 	}
 }
