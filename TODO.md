@@ -509,10 +509,22 @@ Real, small, or low-confidence. None of it blocks anything.
   Tier 2 → Tier 3, not deleting Tier 2
 - **Bash safe list still reads outside the project without a prompt (by
   reading, found during M0.1b).** `ls ~/.ssh` and `du ~` list names outside
-  the working directory, and `printenv` prints every environment variable,
-  provider API keys included, into the transcript. Nothing is written or
-  sent anywhere new, but it sits awkwardly next to "Reads outside the project
-  need approval", which is about the read tools, not bash
+  the working directory. Nothing is written or sent anywhere new, but it sits
+  awkwardly next to "Reads outside the project need approval", which is about
+  the read tools, not bash. The `printenv` half of this is fixed: it printed
+  provider API keys into a transcript that is persisted and scrolled back, and
+  it now asks
+- **Three safe-listed commands can still print a credential's value**, the
+  same class as `printenv` and left out of its fix deliberately, because each
+  needs a judgement `printenv` did not. `git config --list` dumps all config;
+  `git config --get <key>` reads one, and either can carry a token in
+  `url.<base>.insteadOf` or `http.<url>.extraHeader`, or in
+  `remote.origin.url` as `https://TOKEN@host/`. `go env` and `go env -json`
+  print `GOPROXY`/`GOPRIVATE`, which hold credentials for a private module
+  proxy. All three have legitimate uses the agent relies on (`go env GOMOD`,
+  `git config --get remote.origin.url`), so the fix is an argument filter or a
+  key denylist, not removal -- and a key denylist is guesswork. Decide the
+  shape before writing it
 - **End-of-task validation runs every profile command.** The impact graph's
   targeted-vs-broad decision is not consulted (the agent has no `Impact`
   dependency). Fine for small repos; slow for a large test suite
