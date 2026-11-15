@@ -100,24 +100,59 @@ Join the scan, the architecture and the links into one `graph@1`.
 
 Test shape: a fixture repo with a known architecture, asserted as a golden `graph@1`.
 
-### F3 — Persist the map, detect staleness — **M**
+### F3 — Store the map, detect staleness — **S** — done
 
-- goose migration + sqlc queries for the authored layer and the built graph.
-- A description records the content hash it was written against (`sig`). When the file
-  moves on, the description is **flagged stale, not deleted** — a stale summary that
-  says so is still worth reading.
-- Incremental rebuild keyed on git HEAD plus the dirty set, so a one-file edit does
-  not rescan 593 files.
+Decision 1 removed most of this phase: with the authored layer in repository
+files there is no migration, no sqlc, and no database schema.
 
-### F4 — Build on startup — **M**
+- `floorplan/architecture.json` and `floorplan/descriptions/<area>.json`, written
+  indented through a temporary file and renamed, so an interrupted write cannot
+  replace a good map with half of one.
+- One description file per area, so describing one area cannot damage another's prose.
+- A missing map and a damaged one are different errors. Reporting a truncated file as
+  "no map" would overwrite authored work with an empty document.
+- An area id becomes a filename, and an authored document is not a trustworthy source
+  of filenames, so ids that could escape the map directory are rejected.
+- **Staleness is keyed on a signature, not on content.** The signature hashes what a
+  file offers -- its exported names, the routes it serves, its doc comment -- so
+  rewriting a body or reformatting does not invalidate a description, and adding an
+  exported function does. This is what makes staleness usable at all: with 505
+  descriptions, a check keyed on exact content would flag nearly all of them nearly
+  all of the time, which is the same as having no check.
 
-Wire the measured build into `internal/app/app.go`, after impact indexing.
+Verified by loading the reference's own map: 70 areas, 5 edges, 5 annotations, 3 flows
+with 14 steps (none empty), 7 tour stops and all 505 descriptions, named and with
+prose.
 
-- **Hard requirement: this must not slow startup.** Measure before and after. Full
-  scan happens off the startup path; the fast path is incremental.
-- There is existing overlap here worth resolving: `internal/impact` already walks the
-  tree and parses every Go file's imports at startup. Either floorplan reuses those
-  edges or the two share one walk. Two full walks per start is not acceptable.
+**One honest limit.** Descriptions written by the reference carry no signature, so
+their staleness cannot be judged and they are reported as unknown rather than as
+current. Only descriptions Aux writes record one.
+
+### F4 — Build the map on first use — **M**
+
+Measured on this repository, after folding four reads and three parses per Go file
+into one of each:
+
+| stage | |
+|---|---|
+| scan and analyse 593 files | 189 ms |
+| derive 1,062 links | 4 ms |
+| assemble the document | 4 ms |
+| **total** | **196 ms** |
+
+The built document is 274 KB.
+
+196 ms is cheap for a page and expensive for `aux cost`, so **the map is built on
+first use rather than at startup.** Nothing that does not open the floor plan or ask
+the agent for context pays for it. That is a change from the original plan, which had
+it built during startup beside the impact index.
+
+- Cache the built document, keyed on the git head plus the set of dirty files, and
+  re-analyse only what changed. With an unchanged head the steady state is a few
+  milliseconds.
+- `internal/impact` still walks the tree and parses every Go file at startup for its
+  own graph. That walk and this one should become one; the single-pass analyzer here
+  is the half of the work that makes it possible.
 - `aux floorplan status` reports what is built, what is described, and what is stale.
 
 ### F5 — The agent writes the prose — **L**

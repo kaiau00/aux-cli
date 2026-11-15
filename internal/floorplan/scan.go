@@ -69,23 +69,39 @@ const gitListTimeout = 20 * time.Second
 // missing from the counts is visible, whereas an aborted scan leaves the
 // dashboard with nothing to show.
 func Scan(ctx context.Context, root string) ([]ScannedFile, error) {
+	files, _, err := ScanAndAnalyze(ctx, root)
+	return files, err
+}
+
+// ScanAndAnalyze measures every source file and, in the same pass, derives
+// everything readable from its contents.
+//
+// One read and one parse per file. The imports, the served routes, the URL
+// paths and the signature a description depends on all come from the bytes the
+// scan has already loaded, so gathering them costs no additional I/O -- which
+// matters because this runs whenever Aux starts.
+func ScanAndAnalyze(ctx context.Context, root string) ([]ScannedFile, Facts, error) {
 	rels, err := listFiles(ctx, root)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	out := make([]ScannedFile, 0, len(rels))
+	facts := make(Facts, len(rels))
 	for _, rel := range rels {
 		if inSkippedDir(rel) {
 			continue
 		}
-		f, ok := measure(filepath.Join(root, filepath.FromSlash(rel)), rel)
+		f, data, ok := measure(filepath.Join(root, filepath.FromSlash(rel)), rel)
 		if !ok {
 			continue
 		}
 		out = append(out, f)
+		if data != nil {
+			facts[rel] = analyzeFile(rel, f.Lang, data)
+		}
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Path < out[j].Path })
-	return out, nil
+	return out, facts, nil
 }
 
 // listFiles returns the repo-relative paths to measure, preferring git's own
@@ -167,24 +183,24 @@ func inSkippedDir(rel string) bool {
 // An asset is classified from its name and never opened: a font or an archive
 // has no line count, and reading a hundred megabytes to hash bytes nobody will
 // compare is pure waste.
-func measure(abs, rel string) (ScannedFile, bool) {
+func measure(abs, rel string) (ScannedFile, []byte, bool) {
 	info, err := os.Stat(abs)
 	if err != nil || info.IsDir() {
-		return ScannedFile{}, false
+		return ScannedFile{}, nil, false
 	}
 	category, lang := classify(rel, info.Size())
 	f := ScannedFile{Path: rel, Category: category, Lang: lang, Bytes: info.Size()}
 	if category == CategoryAsset || category == CategoryGenerated {
-		return f, true
+		return f, nil, true
 	}
 	data, err := os.ReadFile(abs)
 	if err != nil {
-		return ScannedFile{}, false
+		return ScannedFile{}, nil, false
 	}
 	f.LOC = countLines(data)
 	sum := sha256.Sum256(data)
 	f.Hash = hex.EncodeToString(sum[:])[:hashLen]
-	return f, true
+	return f, data, true
 }
 
 // countLines counts the lines that have something on them.

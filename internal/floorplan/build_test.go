@@ -41,16 +41,16 @@ func buildFixture(t *testing.T) (string, Architecture) {
 func buildFixtureGraph(t *testing.T) Graph {
 	t.Helper()
 	root, arch := buildFixture(t)
-	files, err := Scan(context.Background(), root)
+	files, facts, err := ScanAndAnalyze(context.Background(), root)
 	if err != nil {
-		t.Fatalf("Scan: %v", err)
+		t.Fatalf("ScanAndAnalyze: %v", err)
 	}
-	imports := FileImports(root, files)
 	g, err := Build(BuildInput{
 		Root:  root,
 		Arch:  arch,
 		Files: files,
-		Links: append(BuildLinks(root, files, imports), ExternalLinks(files, imports, arch)...),
+		Facts: facts,
+		Links: append(BuildLinks(root, files, facts), ExternalLinks(files, facts, arch)...),
 		Repos: []Repo{{Path: ".", Name: "m", Branch: "main", Head: "abc123"}},
 		Agent: "aux",
 		Now:   time.Date(2026, 11, 15, 12, 0, 0, 0, time.UTC),

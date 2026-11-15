@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func routeFixture(t *testing.T) (string, []ScannedFile) {
+func routeFixture(t *testing.T) (string, []ScannedFile, Facts) {
 	t.Helper()
 	root := writeTree(t, map[string]string{
 		"go.mod": "module example.com/m\n",
@@ -29,19 +29,19 @@ func routes() {
 `,
 		"notes.md": "# not Go\n",
 	})
-	files, err := Scan(context.Background(), root)
+	files, facts, err := ScanAndAnalyze(context.Background(), root)
 	if err != nil {
-		t.Fatalf("Scan: %v", err)
+		t.Fatalf("ScanAndAnalyze: %v", err)
 	}
-	return root, files
+	return root, files, facts
 }
 
 // Go 1.22's ServeMux takes the method in the pattern. A route table that
 // reports every one of them as ANY is not a description of the server: it
 // cannot distinguish a page from the endpoint that changes it.
 func TestGoRoutesReadsTheMethodFromThePattern(t *testing.T) {
-	root, files := routeFixture(t)
-	got := GoRoutes(root, files)
+	_, files, facts := routeFixture(t)
+	got := GoRoutes(files, facts)
 
 	byPath := map[string]Route{}
 	for _, r := range got {
@@ -63,8 +63,8 @@ func TestGoRoutesReadsTheMethodFromThePattern(t *testing.T) {
 // The line number is what makes a route on the map clickable, so it has to be
 // the line the route is registered on.
 func TestGoRoutesRecordTheirFileAndLine(t *testing.T) {
-	root, files := routeFixture(t)
-	for _, r := range GoRoutes(root, files) {
+	_, files, facts := routeFixture(t)
+	for _, r := range GoRoutes(files, facts) {
 		if r.F != "server.go" {
 			t.Errorf("route %s %s file = %q; want server.go", r.M, r.P, r.F)
 		}
@@ -77,8 +77,8 @@ func TestGoRoutesRecordTheirFileAndLine(t *testing.T) {
 // A pattern built at runtime cannot be read from the source. Guessing one
 // would put an endpoint on the map that may not exist.
 func TestGoRoutesSkipNonLiteralPatterns(t *testing.T) {
-	root, files := routeFixture(t)
-	for _, r := range GoRoutes(root, files) {
+	_, files, facts := routeFixture(t)
+	for _, r := range GoRoutes(files, facts) {
 		if r.P == "" || r.P == "dynamicPattern" {
 			t.Errorf("a non-literal pattern was recorded: %+v", r)
 		}
@@ -86,8 +86,8 @@ func TestGoRoutesSkipNonLiteralPatterns(t *testing.T) {
 }
 
 func TestGoRoutesAreDeterministic(t *testing.T) {
-	root, files := routeFixture(t)
-	first, second := GoRoutes(root, files), GoRoutes(root, files)
+	_, files, facts := routeFixture(t)
+	first, second := GoRoutes(files, facts), GoRoutes(files, facts)
 	if len(first) != len(second) {
 		t.Fatalf("counts differ: %d then %d", len(first), len(second))
 	}
@@ -113,16 +113,16 @@ const (
 `,
 		"internal/llm/other.go": "package llm\n\nconst u = \"https://example.invalid/x\"\n",
 	})
-	files, err := Scan(context.Background(), root)
+	files, facts, err := ScanAndAnalyze(context.Background(), root)
 	if err != nil {
-		t.Fatalf("Scan: %v", err)
+		t.Fatalf("ScanAndAnalyze: %v", err)
 	}
 	arch := Architecture{Nodes: []Area{
 		{ID: "ext.copilot", Label: "Copilot", Kind: KindExternal, Hosts: []string{"api.github.com", "api.githubcopilot.com"}},
 		{ID: "ext.openai", Label: "OpenAI", Kind: KindExternal, Hosts: []string{"api.openai.com"}},
 	}}
 
-	got := HostLinks(root, files, arch)
+	got := HostLinks(files, facts, arch)
 	if len(got) != 1 {
 		t.Fatalf("got %d links; want 1 (%+v)", len(got), got)
 	}
@@ -149,11 +149,11 @@ func TestHostLinksMatchWholeHostnames(t *testing.T) {
 		"go.mod":  "module example.com/m\n",
 		"main.go": "package main\n\nconst u = \"https://notapi.openai.com.evil.test/x\"\n",
 	})
-	files, _ := Scan(context.Background(), root)
+	files, facts, _ := ScanAndAnalyze(context.Background(), root)
 	arch := Architecture{Nodes: []Area{
 		{ID: "ext.openai", Label: "OpenAI", Kind: KindExternal, Hosts: []string{"api.openai.com"}},
 	}}
-	if got := HostLinks(root, files, arch); len(got) != 0 {
+	if got := HostLinks(files, facts, arch); len(got) != 0 {
 		t.Fatalf("matched a lookalike host: %+v", got)
 	}
 }
@@ -173,15 +173,15 @@ const unrelated = "hello"
 `,
 		"calls.go": "package m\n\nconst u = \"https://api.githubcopilot.com/chat\"\n",
 	})
-	files, err := Scan(context.Background(), root)
+	files, facts, err := ScanAndAnalyze(context.Background(), root)
 	if err != nil {
-		t.Fatalf("Scan: %v", err)
+		t.Fatalf("ScanAndAnalyze: %v", err)
 	}
 	arch := Architecture{Nodes: []Area{
 		{ID: "ext.copilot", Label: "Copilot", Kind: KindExternal, Hosts: []string{"api.githubcopilot.com"}},
 	}}
 
-	got := HostLinks(root, files, arch)
+	got := HostLinks(files, facts, arch)
 	for _, l := range got {
 		if l.A == "f:mentions.go" {
 			t.Errorf("drew a link from a hostname that only appears in a comment: %+v", l)
@@ -195,7 +195,7 @@ const unrelated = "hello"
 // routeCallFixture has a server, a Go caller, a JavaScript caller whose file
 // also contains a regular expression with a quote in it, and a file whose only
 // path-like strings are import paths.
-func routeCallFixture(t *testing.T) (string, []ScannedFile, []Route) {
+func routeCallFixture(t *testing.T) ([]ScannedFile, Facts, []Route) {
 	t.Helper()
 	root := writeTree(t, map[string]string{
 		"go.mod": "module example.com/m\n",
@@ -232,18 +232,18 @@ var _ = json.Marshal
 var _ = dashboard.Serve
 `,
 	})
-	files, err := Scan(context.Background(), root)
+	files, facts, err := ScanAndAnalyze(context.Background(), root)
 	if err != nil {
-		t.Fatalf("Scan: %v", err)
+		t.Fatalf("ScanAndAnalyze: %v", err)
 	}
-	return root, files, GoRoutes(root, files)
+	return files, facts, GoRoutes(files, facts)
 }
 
 func routeLinksByPair(t *testing.T) map[string]Link {
 	t.Helper()
-	root, files, routes := routeCallFixture(t)
+	files, facts, routes := routeCallFixture(t)
 	out := map[string]Link{}
-	for _, l := range RouteLinks(root, files, routes) {
+	for _, l := range RouteLinks(files, facts, routes) {
 		out[l.A+"|"+l.B] = l
 	}
 	return out
@@ -314,8 +314,8 @@ func TestRouteLinksIgnoreTheRootPath(t *testing.T) {
 }
 
 func TestRouteLinksAreDeterministic(t *testing.T) {
-	root, files, routes := routeCallFixture(t)
-	first, second := RouteLinks(root, files, routes), RouteLinks(root, files, routes)
+	files, facts, routes := routeCallFixture(t)
+	first, second := RouteLinks(files, facts, routes), RouteLinks(files, facts, routes)
 	if !reflect.DeepEqual(first, second) {
 		t.Fatalf("two runs differ:\n%+v\n%+v", first, second)
 	}

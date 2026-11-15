@@ -13,6 +13,7 @@ type BuildInput struct {
 	Root   string
 	Arch   Architecture
 	Files  []ScannedFile
+	Facts  Facts
 	Links  []Link
 	Routes []Route
 	Repos  []Repo
@@ -66,7 +67,7 @@ func Build(in BuildInput) (Graph, error) {
 			continue
 		}
 		area := assigner.Assign(sf.Path)
-		rec := FileRec{P: sf.Path, N: area, R: repoName, L: sf.Lang, LOC: sf.LOC, H: sf.Hash}
+		rec := FileRec{P: sf.Path, N: area, R: repoName, L: sf.Lang, LOC: sf.LOC, H: sf.Hash, S: in.Facts[sf.Path].Signature}
 		if d, ok := in.Descriptions[sf.Path]; ok {
 			rec.Name, rec.D, rec.Doc, rec.Note, rec.Tags, rec.Sig = d.Name, d.D, d.Doc, d.Note, d.Tags, d.Sig
 		}

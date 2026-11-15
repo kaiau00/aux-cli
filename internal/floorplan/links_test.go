@@ -37,11 +37,11 @@ func main() { fmt.Println(store.X, cost.Y, party.Z) }
 
 func importLinks(t *testing.T, root string) []Link {
 	t.Helper()
-	files, err := Scan(context.Background(), root)
+	files, facts, err := ScanAndAnalyze(context.Background(), root)
 	if err != nil {
-		t.Fatalf("Scan: %v", err)
+		t.Fatalf("ScanAndAnalyze: %v", err)
 	}
-	return BuildLinks(root, files, FileImports(root, files))
+	return BuildLinks(root, files, facts)
 }
 
 // An import names a package, but the map is drawn between files, so each
@@ -191,11 +191,11 @@ import (
 `,
 		"internal/llm/client.go": "package llm\n\nimport \"github.com/anthropics/anthropic-sdk-go\"\n",
 	})
-	files, err := Scan(context.Background(), root)
+	files, facts, err := ScanAndAnalyze(context.Background(), root)
 	if err != nil {
-		t.Fatalf("Scan: %v", err)
+		t.Fatalf("ScanAndAnalyze: %v", err)
 	}
-	got := ExternalLinks(files, FileImports(root, files), archWithExternals())
+	got := ExternalLinks(files, facts, archWithExternals())
 
 	byPair := map[string]Link{}
 	for _, l := range got {
@@ -230,8 +230,8 @@ func TestExternalLinksClaimNothingFromAHostnameAlone(t *testing.T) {
 		"go.mod":  "module example.com/m\n",
 		"main.go": "package main\n\nimport \"net/http\"\n",
 	})
-	files, _ := Scan(context.Background(), root)
-	for _, l := range ExternalLinks(files, FileImports(root, files), archWithExternals()) {
+	files, facts, _ := ScanAndAnalyze(context.Background(), root)
+	for _, l := range ExternalLinks(files, facts, archWithExternals()) {
 		if l.B == "n:ext.copilot" {
 			t.Errorf("claimed a link to a host-only external: %+v", l)
 		}
@@ -244,8 +244,8 @@ func TestExternalLinksMatchOnPathBoundaries(t *testing.T) {
 		"go.mod":  "module example.com/m\n",
 		"main.go": "package main\n\nimport \"github.com/pressly/goosebumps\"\n",
 	})
-	files, _ := Scan(context.Background(), root)
-	if got := ExternalLinks(files, FileImports(root, files), archWithExternals()); len(got) != 0 {
+	files, facts, _ := ScanAndAnalyze(context.Background(), root)
+	if got := ExternalLinks(files, facts, archWithExternals()); len(got) != 0 {
 		t.Fatalf("goosebumps matched goose: %+v", got)
 	}
 }

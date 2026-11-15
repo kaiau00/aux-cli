@@ -2,13 +2,7 @@ package floorplan
 
 import (
 	"bytes"
-	"go/ast"
-	"go/parser"
-	"go/token"
-	"os"
-	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 )
 
@@ -25,67 +19,12 @@ var httpMethods = map[string]bool{
 	"DELETE": true, "CONNECT": true, "OPTIONS": true, "TRACE": true,
 }
 
-// GoRoutes finds the HTTP routes a repository serves, by reading the patterns
-// passed to ServeMux registrations.
-//
-// Since Go 1.22 a pattern may carry its method -- "GET /tasks" -- and the
-// method is the most important thing about a route: it is what separates a
-// page you can read from an endpoint that changes something. A route table
-// that reported every route as ANY would not describe the server.
-//
-// A pattern assembled at runtime cannot be read from source, so it is skipped
-// rather than guessed at: an endpoint on the map that does not exist is worse
-// than one that is missing.
-func GoRoutes(root string, files []ScannedFile) []Route {
-	var out []Route
-	for _, f := range files {
-		if f.Lang != "go" {
-			continue
-		}
-		out = append(out, goRoutesIn(root, f.Path)...)
-	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].F != out[j].F {
-			return out[i].F < out[j].F
-		}
-		return out[i].L < out[j].L
-	})
-	return out
-}
-
-// goRoutesIn reads one file's route registrations.
-func goRoutesIn(root, rel string) []Route {
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, filepath.Join(root, filepath.FromSlash(rel)), nil, 0)
-	if err != nil {
-		return nil
-	}
-	var out []Route
-	ast.Inspect(file, func(n ast.Node) bool {
-		call, ok := n.(*ast.CallExpr)
-		if !ok || len(call.Args) == 0 {
-			return true
-		}
-		sel, ok := call.Fun.(*ast.SelectorExpr)
-		if !ok || !routeRegistrars[sel.Sel.Name] {
-			return true
-		}
-		lit, ok := call.Args[0].(*ast.BasicLit)
-		if !ok || lit.Kind != token.STRING {
-			return true // built at runtime: not readable here
-		}
-		pattern, err := strconv.Unquote(lit.Value)
-		if err != nil || pattern == "" {
-			return true
-		}
-		method, path := splitPattern(pattern)
-		out = append(out, Route{F: rel, M: method, P: path, L: fset.Position(lit.Pos()).Line})
-		return true
-	})
-	return out
-}
-
 // splitPattern separates an optional leading method from the path.
+//
+// Since Go 1.22 a ServeMux pattern may carry its method -- "GET /tasks" -- and
+// the method is the most important thing about a route: it separates a page
+// you can read from an endpoint that changes something. Reading only the path
+// would report every route as ANY, which is not a description of a server.
 func splitPattern(pattern string) (method, path string) {
 	if head, rest, found := strings.Cut(pattern, " "); found {
 		if httpMethods[strings.ToUpper(head)] {
@@ -102,13 +41,13 @@ func splitPattern(pattern string) (method, path string) {
 // evidence is a hostname in the source. In Go only string literals are
 // searched, because a hostname in a comment is a mention and not a call: one
 // file in this repository names api.githubcopilot.com in a note about model
-// ids and never contacts it, and a link drawn from that would be a false
-// claim about what the file does.
+// ids and never contacts it, and a link drawn from that would be a false claim
+// about what the file does.
 //
 // Even in a literal this is good evidence rather than proof -- the string may
 // sit behind a branch that never runs -- so every link is marked inferred, and
 // the map distinguishes what it read from what it concluded.
-func HostLinks(root string, files []ScannedFile, arch Architecture) []Link {
+func HostLinks(files []ScannedFile, facts Facts, arch Architecture) []Link {
 	type ext struct {
 		id    string
 		hosts []string
@@ -128,9 +67,8 @@ func HostLinks(root string, files []ScannedFile, arch Architecture) []Link {
 		if !CountsTowardLOC(f.Category) {
 			continue
 		}
-		abs := filepath.Join(root, filepath.FromSlash(f.Path))
-		haystacks, ok := stringLiterals(abs, f.Lang)
-		if !ok {
+		haystacks := facts[f.Path].Literals
+		if len(haystacks) == 0 {
 			continue
 		}
 		for _, e := range exts {
@@ -144,128 +82,12 @@ func HostLinks(root string, files []ScannedFile, arch Architecture) []Link {
 			})
 		}
 	}
-	sort.Slice(links, func(i, j int) bool {
-		if links[i].A != links[j].A {
-			return links[i].A < links[j].A
-		}
-		return links[i].B < links[j].B
-	})
+	sortLinks(links)
 	return links
 }
 
-// stringLiterals returns the places in a file a hostname may legitimately be
-// found.
-//
-// Go is parsed, so comments are excluded and so are import paths -- an import
-// of ".../internal/impact" contains "/impact" and would otherwise look like a
-// call to the route of that name, which is how nearly fifty false links were
-// drawn before this excluded them.
-//
-// For any other language the whole file is searched. There is no parser here,
-// and writing one is not worth it: a hostname is distinctive enough that a
-// boundary check carries the weight, and these links are marked inferred in
-// any case.
-func stringLiterals(abs, lang string) ([][]byte, bool) {
-	if lang == "go" {
-		lits, err := goStringLiterals(abs)
-		return lits, err == nil
-	}
-	data, err := os.ReadFile(abs)
-	if err != nil {
-		return nil, false
-	}
-	return [][]byte{data}, true
-}
-
-// goStringLiterals returns the value of every string literal in a Go file,
-// except the paths of its imports.
-func goStringLiterals(abs string) ([][]byte, error) {
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, abs, nil, 0)
-	if err != nil {
-		return nil, err
-	}
-	imports := make(map[*ast.BasicLit]bool, len(file.Imports))
-	for _, spec := range file.Imports {
-		imports[spec.Path] = true
-	}
-	var out [][]byte
-	ast.Inspect(file, func(n ast.Node) bool {
-		lit, ok := n.(*ast.BasicLit)
-		if !ok || lit.Kind != token.STRING || imports[lit] {
-			return true
-		}
-		if v, err := strconv.Unquote(lit.Value); err == nil {
-			out = append(out, []byte(v))
-		}
-		return true
-	})
-	return out, nil
-}
-
-// pathCandidates returns the URL paths a file appears to address.
-//
-// Go is parsed and its literals read. For every other language the file is
-// scanned for a path that opens a quoted string -- `"/api/snapshot"` -- rather
-// than tokenised into strings first. Tokenising looked simpler and was wrong:
-// sessions.js contains the regular expression /[&<>"']/g, whose quote
-// desynchronises a naive scanner so that every string after it is
-// mis-read, and the three endpoints that file actually calls went unseen.
-// Matching the quote and the path together needs no lexer and cannot drift.
-func pathCandidates(abs, lang string) ([]string, bool) {
-	if lang == "go" {
-		lits, err := goStringLiterals(abs)
-		if err != nil {
-			return nil, false
-		}
-		var out []string
-		for _, l := range lits {
-			if p, ok := urlPath(string(l)); ok {
-				out = append(out, p)
-			}
-		}
-		return out, true
-	}
-	data, err := os.ReadFile(abs)
-	if err != nil {
-		return nil, false
-	}
-	return quotedPaths(data), true
-}
-
-// pathEnd characters cannot continue a URL path written in source.
-func isPathEnd(c byte) bool {
-	switch c {
-	case '"', '\'', '`', ' ', '\t', '\n', '\r', '+', ')', '?', '#', ',', ';':
-		return true
-	default:
-		return false
-	}
-}
-
-// quotedPaths finds every root-relative path that begins a quoted string.
-func quotedPaths(data []byte) []string {
-	var out []string
-	for i := 0; i+1 < len(data); i++ {
-		q := data[i]
-		if q != '"' && q != '\'' && q != '`' {
-			continue
-		}
-		if data[i+1] != '/' {
-			continue
-		}
-		end := i + 1
-		for end < len(data) && !isPathEnd(data[end]) {
-			end++
-		}
-		out = append(out, string(data[i+1:end]))
-	}
-	return out
-}
-
 // matchedHosts returns the hosts named anywhere in the haystacks, each once,
-// in a stable order. A hostname must end at a character that cannot continue
-// it, so "api.openai.com" does not match "notapi.openai.com.evil.test".
+// in a stable order.
 func matchedHosts(haystacks [][]byte, hosts []string) []string {
 	var out []string
 	for _, h := range hosts {
@@ -280,7 +102,8 @@ func matchedHosts(haystacks [][]byte, hosts []string) []string {
 	return out
 }
 
-// containsHost reports whether data names host as a whole hostname.
+// containsHost reports whether data names host as a whole hostname, so
+// "api.openai.com" does not match "notapi.openai.com.evil.test".
 func containsHost(data []byte, host string) bool {
 	needle := []byte(host)
 	for off := 0; ; {
@@ -289,12 +112,10 @@ func containsHost(data []byte, host string) bool {
 			return false
 		}
 		start := off + i
-		end := start + len(needle)
-		if !hostBoundary(data, start-1) || !hostBoundary(data, end) {
-			off = start + 1
-			continue
+		if hostBoundary(data, start-1) && hostBoundary(data, start+len(needle)) {
+			return true
 		}
-		return true
+		off = start + 1
 	}
 }
 
@@ -305,8 +126,7 @@ func hostBoundary(data []byte, i int) bool {
 	if i < 0 || i >= len(data) {
 		return true
 	}
-	c := data[i]
-	switch {
+	switch c := data[i]; {
 	case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z', c >= '0' && c <= '9':
 		return false
 	case c == '.' || c == '-':
@@ -330,9 +150,8 @@ const minRoutePathLen = 2
 // this edge.
 //
 // Like host matching this reads strings, so it is inference and is marked as
-// such. Wildcard segments are trimmed to their literal prefix, since a caller
-// writes "/api/v1/tasks/abc123" where the pattern says "{id}".
-func RouteLinks(root string, files []ScannedFile, routes []Route) []Link {
+// such.
+func RouteLinks(files []ScannedFile, facts Facts, routes []Route) []Link {
 	type target struct {
 		prefix string
 		label  string
@@ -355,8 +174,8 @@ func RouteLinks(root string, files []ScannedFile, routes []Route) []Link {
 		if !CountsTowardLOC(f.Category) {
 			continue
 		}
-		candidates, ok := pathCandidates(filepath.Join(root, filepath.FromSlash(f.Path)), f.Lang)
-		if !ok {
+		candidates := facts[f.Path].Paths
+		if len(candidates) == 0 {
 			continue
 		}
 		// One file may call several routes served by the same file; that is
@@ -378,12 +197,7 @@ func RouteLinks(root string, files []ScannedFile, routes []Route) []Link {
 			})
 		}
 	}
-	sort.Slice(links, func(i, j int) bool {
-		if links[i].A != links[j].A {
-			return links[i].A < links[j].A
-		}
-		return links[i].B < links[j].B
-	})
+	sortLinks(links)
 	return links
 }
 
@@ -441,8 +255,7 @@ func pathBoundary(data []byte, i int) bool {
 	if i >= len(data) {
 		return true
 	}
-	c := data[i]
-	switch {
+	switch c := data[i]; {
 	case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z', c >= '0' && c <= '9':
 		return false
 	case c == '-' || c == '_':
@@ -452,6 +265,44 @@ func pathBoundary(data []byte, i int) bool {
 	}
 }
 
+// isPathEnd reports whether a character cannot continue a URL path written in
+// source.
+func isPathEnd(c byte) bool {
+	switch c {
+	case '"', '\'', '`', ' ', '\t', '\n', '\r', '+', ')', '?', '#', ',', ';':
+		return true
+	default:
+		return false
+	}
+}
+
+// quotedPaths finds every root-relative path that begins a quoted string.
+//
+// This matches the quote and the path together rather than tokenising the file
+// into strings first. Tokenising looked simpler and was wrong: sessions.js
+// contains the regular expression /[&<>"']/g, whose quote desynchronises a
+// naive scanner so every string after it is misread, and the three endpoints
+// that file actually calls went unseen.
+func quotedPaths(data []byte) []string {
+	var out []string
+	for i := 0; i+1 < len(data); i++ {
+		switch data[i] {
+		case '"', '\'', '`':
+		default:
+			continue
+		}
+		if data[i+1] != '/' {
+			continue
+		}
+		end := i + 1
+		for end < len(data) && !isPathEnd(data[end]) {
+			end++
+		}
+		out = append(out, string(data[i+1:end]))
+	}
+	return out
+}
+
 func containsLabel(labels []string, label string) bool {
 	for _, l := range labels {
 		if l == label {
@@ -459,4 +310,18 @@ func containsLabel(labels []string, label string) bool {
 		}
 	}
 	return false
+}
+
+// sortLinks orders links so a rebuild over unchanged source produces a
+// byte-identical document.
+func sortLinks(links []Link) {
+	sort.Slice(links, func(i, j int) bool {
+		if links[i].A != links[j].A {
+			return links[i].A < links[j].A
+		}
+		if links[i].B != links[j].B {
+			return links[i].B < links[j].B
+		}
+		return links[i].K < links[j].K
+	})
 }

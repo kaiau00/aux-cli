@@ -1,8 +1,6 @@
 package floorplan
 
 import (
-	"go/parser"
-	"go/token"
 	"os"
 	"path"
 	"path/filepath"
@@ -27,7 +25,7 @@ import (
 // Everything here is derived from source. Links that cross a boundary no
 // parser can see -- a child process, an HTTP call, a queue -- cannot be found
 // this way and are only ever authored.
-func BuildLinks(root string, files []ScannedFile, imports map[string][]string) []Link {
+func BuildLinks(root string, files []ScannedFile, facts Facts) []Link {
 	module := modulePath(root)
 	if module == "" {
 		return nil // nothing distinguishes this module's packages from any other
@@ -40,7 +38,7 @@ func BuildLinks(root string, files []ScannedFile, imports map[string][]string) [
 		if f.Lang != "go" {
 			continue
 		}
-		for _, imp := range imports[f.Path] {
+		for _, imp := range facts[f.Path].Imports {
 			dir, ok := moduleDir(module, imp)
 			if !ok {
 				continue // outside the module: somebody else's code
@@ -118,25 +116,6 @@ func moduleDir(module, importPath string) (string, bool) {
 	return rest, true
 }
 
-// FileImports reads every Go file's import paths, once.
-//
-// Both kinds of derived link need this: the file-to-file links below and the
-// links to external services. Parsing the tree twice to answer the same
-// question would double the cost of building the map on startup, which is
-// already the part of this feature most likely to be felt.
-func FileImports(root string, files []ScannedFile) map[string][]string {
-	out := make(map[string][]string, len(files))
-	for _, f := range files {
-		if f.Lang != "go" {
-			continue
-		}
-		if imps := goImports(filepath.Join(root, filepath.FromSlash(f.Path))); len(imps) > 0 {
-			out[f.Path] = imps
-		}
-	}
-	return out
-}
-
 // goPackagePrefix marks an external's declared package as a Go import path.
 // The prefix exists so one external can claim packages in several languages.
 const goPackagePrefix = "go:"
@@ -150,7 +129,7 @@ const goPackagePrefix = "go:"
 // external area, and this only applies it. The weight is how many of the
 // external's packages a file imports, and the matched paths are carried on the
 // link so the claim can be checked rather than taken on trust.
-func ExternalLinks(files []ScannedFile, imports map[string][]string, arch Architecture) []Link {
+func ExternalLinks(files []ScannedFile, facts Facts, arch Architecture) []Link {
 	type ext struct {
 		id       string
 		prefixes []string
@@ -176,7 +155,7 @@ func ExternalLinks(files []ScannedFile, imports map[string][]string, arch Archit
 
 	var links []Link
 	for _, f := range files {
-		imps := imports[f.Path]
+		imps := facts[f.Path].Imports
 		if len(imps) == 0 {
 			continue
 		}
@@ -217,24 +196,6 @@ func matchedPackages(imports, prefixes []string) []string {
 		}
 	}
 	sort.Strings(out)
-	return out
-}
-
-// goImports reads one Go file's import paths. Only the imports are parsed, so
-// a file whose body does not compile still contributes its dependencies.
-func goImports(abs string) []string {
-	fset := token.NewFileSet()
-	f, err := parser.ParseFile(fset, abs, nil, parser.ImportsOnly)
-	if err != nil {
-		return nil
-	}
-	out := make([]string, 0, len(f.Imports))
-	for _, spec := range f.Imports {
-		if spec.Path == nil {
-			continue
-		}
-		out = append(out, strings.Trim(spec.Path.Value, `"`))
-	}
 	return out
 }
 
