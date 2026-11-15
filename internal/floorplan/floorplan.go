@@ -9,9 +9,13 @@
 // prose is missing renders as undescribed rather than guessing, because a
 // plausible-sounding summary that nobody verified is worse than a blank one.
 //
-// The schemas match Floorplan (https://github.com/haydenschmitty/floorplan,
-// MIT, Copyright (c) 2026 Hayden Smith), so a map Aux builds can be read by
-// that project's tooling and vice versa.
+// The design is Floorplan's (https://github.com/haydenschmitty/floorplan, MIT,
+// Copyright (c) 2026 Hayden Smith): its two schemas, its file classification
+// rules, its area-assignment precedence, and its definition of the signature a
+// description depends on. This is a new Go implementation of them, verified by
+// measuring this repository both ways and diffing the results. Keeping to the
+// schemas means a map Aux builds can be read by that project's tooling and
+// vice versa. See NOTICE at the repository root for the licence.
 package floorplan
 
 // Schema identifiers written into the documents Aux produces and expects.
