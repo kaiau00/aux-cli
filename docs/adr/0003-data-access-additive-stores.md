@@ -40,6 +40,16 @@ serve legacy paths.
 Adopt sqlc generation for a domain once sqlc is part of the toolchain and the domain's query set
 is stable.
 
+- 2026-11-13: **the trigger has fired, and half the Context above is no longer true.** `sqlc`
+  installs again — `CGO_ENABLED=0 go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.29.0` builds,
+  though the default cgo build still fails on the current macOS SDK (`strchrnul` in
+  `pg_query_go`) — and M2.4 used it to generate `GetMostRecentSession` rather than hand-edit four
+  generated files. What still holds is the second half: regenerating also emits ~481 lines of
+  structs for the tables the raw-SQL stores own, which is precisely the arrangement this ADR
+  rejected, so `models.go` was left alone. Whether to adopt generation per domain is therefore
+  still open, and deliberately unscheduled for 0.1.0. The Decision above stands; only its
+  justification has narrowed.
+
 ## Orphaned tables
 
 - 2026-10-03: `governor_policies` (migration `20260724000011`) and `governor_policy_evaluations`
