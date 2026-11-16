@@ -78,6 +78,11 @@ Each phase is one PR and must pass all five gates (`gofmt -l .`, `go vet ./...`,
 `AUX_UNICODE_ICONS=1 go test -race ./...`, `scripts/deadcode.sh`,
 `scripts/coverage.sh`).
 
+**Order as it now stands.** F1 to F3 are done and on PR #69. F5 is parked for want of
+an API key, and nothing downstream waits on it, so the order is F4, F7, F8, F9, F10,
+F6, F11, with F5 rejoining whenever credentials exist. F6 sits late because feeding the
+map to the agent is worth much more once there is prose to feed.
+
 ### F1 — Scan, classify, assign, link — **S** — done
 
 `internal/floorplan`: `floorplan.go` (both schemas), `scan.go` (git-based listing),
@@ -155,10 +160,36 @@ it built during startup beside the impact index.
   is the half of the work that makes it possible.
 - `aux floorplan status` reports what is built, what is described, and what is stale.
 
-### F5 — The agent writes the prose — **L**
+### F5 — The agent writes the prose — **L** — parked
 
-A tool the agent calls, in the shape of `internal/impact/tool.go`, that writes area
-labels and summaries, file names and descriptions, annotations, flows and the tour.
+Parked deliberately, not blocked. It is the only phase that spends money, and there is
+no API key available at present. Nothing downstream needs it: a map with no prose
+renders as undescribed by design, so F6 through F11 can all proceed without it.
+
+A Claude Pro/Max subscription does not open a path here. It covers Claude Code and the
+Claude apps; API access is billed separately, and the OAuth token Claude Code stores is
+scoped to Claude Code. Lifting it into Aux is outside what the subscription grants and
+will not be built. The Copilot provider looks like a counter-example and is not one:
+`internal/config/config.go` reads the credential file GitHub's own CLI writes, which
+works because GitHub's subscription explicitly covers third-party CLI integrations.
+Anthropic's does not.
+
+When it resumes, it splits in two, and this ordering is better than the original:
+
+**F5a — the tool.** In the shape of `internal/impact/tool.go`: writes area labels and
+summaries, file names and descriptions, annotations, flows and the tour. Testable end
+to end against `ProviderMock` and `launch3.sh` with no credentials and no spend.
+
+**F5b — this repository's descriptions, written by hand.** ~70 area summaries, produced
+by an agent reading the code in a session rather than by a billed API call.
+
+F5b should land **first**. It gives F5a the one thing F1 to F3 had and the original
+plan did not: reference output to diff against. Three of the eight wrong assumptions in
+F1/F2 were caught only because Floorplan had already mapped this repository and its
+output was on disk. A generator with nothing to check against but its author's judgment
+is the exact trap that caught.
+
+Constraints that still hold whenever the tool runs:
 
 - Runs **by default** after the measured build (chosen deliberately, over the cheaper
   on-demand option).
@@ -167,8 +198,12 @@ labels and summaries, file names and descriptions, annotations, flows and the to
   repo this size that is dollars, not cents, on the first run. Show the estimate,
   show progress, and record the spend in the existing cost ledger.
 - Scope control: describe only what is undescribed or stale, so the full cost is paid
-  once rather than every start.
+  once rather than every start. `StaleDescriptions` in `signature.go` already answers
+  "what is stale"; it is the input to the scope decision.
 - Needs a ceiling and a sane refusal for very large repositories.
+- Alternatives for a user without an Anthropic key: a Copilot subscription works today
+  via `~/.config/github-copilot/`; `LOCAL_ENDPOINT` against Ollama or LM Studio is free
+  and noticeably worse at prose. The known offline-start bug bites the local path.
 
 ### F6 — The map as agent context — **M**
 
