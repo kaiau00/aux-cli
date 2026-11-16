@@ -78,9 +78,9 @@ Each phase is one PR and must pass all five gates (`gofmt -l .`, `go vet ./...`,
 `AUX_UNICODE_ICONS=1 go test -race ./...`, `scripts/deadcode.sh`,
 `scripts/coverage.sh`).
 
-**Order as it now stands.** F1 to F3 are done and on PR #69. F5 is parked for want of
-an API key, and nothing downstream waits on it, so the order is F4, F7, F8, F9, F10,
-F6, F11, with F5 rejoining whenever credentials exist. F6 sits late because feeding the
+**Order as it now stands.** F1 to F4 are done. F5 is parked for want of an API key,
+and nothing downstream waits on it, so the order from here is F7, F8, F9, F10, F6,
+F11, with F5 rejoining whenever credentials exist. F6 sits late because feeding the
 map to the agent is worth much more once there is prose to feed.
 
 ### F1 — Scan, classify, assign, link — **S** — done
@@ -133,32 +133,50 @@ prose.
 their staleness cannot be judged and they are reported as unknown rather than as
 current. Only descriptions Aux writes record one.
 
-### F4 — Build the map on first use — **M**
+### F4 — Build the map on first use — **M** — done
 
-Measured on this repository, after folding four reads and three parses per Go file
-into one of each:
+`internal/floorplan/service.go` (lazy build, incremental rescan) and `git.go`
+(repository state for the document's `meta.repos`).
 
-| stage | |
+The map is built on first use rather than at startup, so nothing that never opens
+the floor plan pays the ~235ms to read and parse the repository. Within a session the
+document is held and re-served until something on disk moves.
+
+Measured on this repository:
+
+| | |
 |---|---|
-| scan and analyse 593 files | 189 ms |
-| derive 1,062 links | 4 ms |
-| assemble the document | 4 ms |
-| **total** | **196 ms** |
+| cold build — read and parse 618 files | 235 ms |
+| warm check — nothing changed | 28 ms |
+| &nbsp;&nbsp;of which `git ls-files` | 27 ms |
+| &nbsp;&nbsp;of which statting 618 files | 1.2 ms |
 
-The built document is 274 KB.
+**Two things the plan had wrong, both settled by measuring rather than reasoning.**
 
-196 ms is cheap for a page and expensive for `aux cost`, so **the map is built on
-first use rather than at startup.** Nothing that does not open the floor plan or ask
-the agent for context pays for it. That is a change from the original plan, which had
-it built during startup beside the impact index.
+The cache was to be keyed on git head plus the dirty set. Reading that state costs
+four subprocesses and 84ms — *three times* what checking every file costs, and it
+says nothing about a directory that is not a repository. Invalidation is stat-based
+instead: size and modification time per file, which is what build systems use.
 
-- Cache the built document, keyed on the git head plus the set of dirty files, and
-  re-analyse only what changed. With an unchanged head the steady state is a few
-  milliseconds.
+"With an unchanged head the steady state is a few milliseconds" was also wrong. It is
+28ms, and the statting is not the reason — one `git ls-files` subprocess is 27ms of
+it. Listing from directory mtimes would remove most of that, and is not worth the
+complexity until something asks for the map far more often than a page load does.
+
+Stat-based invalidation is wrong in one narrow case, a file rewritten to the same
+length inside one filesystem timestamp tick. `Service.Rebuild` is the answer to it.
+
+Still open, and deliberately not done here:
+
+- **No disk persistence.** It would save one 235ms build per process, once. The
+  valuable cache is the in-memory one, and persisting the snapshot means a schema, a
+  version, and corruption handling for a saving a user notices once per session.
 - `internal/impact` still walks the tree and parses every Go file at startup for its
-  own graph. That walk and this one should become one; the single-pass analyzer here
-  is the half of the work that makes it possible.
-- `aux floorplan status` reports what is built, what is described, and what is stale.
+  own graph. That walk and this one should become one.
+- `aux floorplan status` reports what is built, described and stale — it needs a
+  command to live in, so it lands with F11.
+- Nothing calls `Service` outside its tests yet. The wiring lands with F9, when there
+  is a page to serve it.
 
 ### F5 — The agent writes the prose — **L** — parked
 
